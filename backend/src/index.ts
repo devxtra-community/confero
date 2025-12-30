@@ -1,6 +1,9 @@
-import app from "./app.js";
-const PORT = process.env.PORT || 5000;
+import dotenv from 'dotenv';
+import { connection } from './config/db.js';
+import app from './app.js';
+dotenv.config();
 
-app.listen(PORT, () => {
-  console.log(`Backend running on http://localhost:${PORT}`);
+app.listen(process.env.PORT, async () => {
+  await connection();
+  console.log(`Backend running on http://localhost:${process.env.PORT}`);
 });
