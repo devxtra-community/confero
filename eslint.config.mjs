@@ -16,7 +16,7 @@ export default [
         sourceType: 'module',
       },
       globals: {
-        ...globals.node, // ✅ THIS fixes `process` errors
+        ...globals.node, 
       },
     },
     plugins: {
