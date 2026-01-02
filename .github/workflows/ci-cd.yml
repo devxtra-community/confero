@@ -11,7 +11,7 @@ on:
 
 jobs:
   ci:
-    name: CI (Lint & Build)
+    name: CI (Lint & Backend Build)
     runs-on: ubuntu-latest
 
     steps:
@@ -22,7 +22,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
 
       - name: Enable pnpm
         run: |
@@ -35,8 +34,8 @@ jobs:
       - name: Lint (frontend + backend)
         run: pnpm lint
 
-      - name: Build (frontend + backend)
-        run: pnpm build
+      - name: Build backend only
+        run: pnpm --filter backend build
 
   cd:
     name: CD (Deploy Backend to EC2)
@@ -52,9 +51,12 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
           script: |
+            set -e
             cd /var/www/confero
             git pull origin main
+            corepack enable
+            corepack prepare pnpm@10.26.2 --activate
             pnpm install --frozen-lockfile
             pnpm --filter backend build
-            pm2 restart confero-backend || pm2 start backend/dist/index.js --name confero-backend
+            pm2 reload confero-backend || pm2 start backend/dist/index.js --name confero-backend
             pm2 save
