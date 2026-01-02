@@ -9,7 +9,7 @@
     "lint:root": "eslint .",
     "format": "prettier --write .",
     "prepare": "husky install",
-    "build": "tsc"
+    "build": "pnpm --filter backend build"
   },
   "keywords": [],
   "author": "",
