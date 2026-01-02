@@ -5,13 +5,7 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: [
-      '**/.next/**',
-      'frontend/.next/**',
-      '**/node_modules/**',
-      '**/dist/**',
-      '**/build/**',
-    ],
+    ignores: ['dist', 'node_modules'],
   },
   {
     files: ['**/*.ts'],
@@ -32,7 +26,15 @@ export default [
       ...js.configs.recommended.rules,
       ...tseslint.configs.recommended.rules,
 
-      // Backend-safe rules
+      // 🔒 BLOCK commits if backend vars are unused
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
+
       'no-console': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
     },
