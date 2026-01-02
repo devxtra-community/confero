@@ -16,7 +16,7 @@ export default [
         sourceType: 'module',
       },
       globals: {
-        ...globals.node, // ✅ THIS fixes `process` errors
+        ...globals.node, 
       },
     },
     plugins: {
@@ -28,7 +28,7 @@ export default [
 
       // Practical backend rules
       'no-console': 'off',
-      '@typescript-eslint/no-explicit-any': 'off', // relax for now
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 ];
