@@ -30,17 +30,17 @@ Monorepo setup using pnpm workspaces
 
 ### **Frontend**
 
-***Next.js
+**_Next.js
 React
 TypeScript
-Tailwind CSS***
+Tailwind CSS_**
 
 **Backend**
 
-***Node.js
+**_Node.js
 Express
 WebSocket / Socket.IO
-WebRTC***
+WebRTC_**
 
 ## Infrastructure & Tools
 
