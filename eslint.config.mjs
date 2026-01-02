@@ -5,7 +5,13 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['dist', 'node_modules'],
+    ignores: [
+      '**/.next/**',
+      'frontend/.next/**',
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/build/**',
+    ],
   },
   {
     files: ['**/*.ts'],
@@ -16,7 +22,7 @@ export default [
         sourceType: 'module',
       },
       globals: {
-        ...globals.node, 
+        ...globals.node,
       },
     },
     plugins: {
@@ -26,9 +32,9 @@ export default [
       ...js.configs.recommended.rules,
       ...tseslint.configs.recommended.rules,
 
-      // Practical backend rules
+      // Backend-safe rules
       'no-console': 'off',
-      '@typescript-eslint/no-explicit-any': 'off', // relax for now
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 ];

@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "pnpm -r lint",
+    "lint:root": "eslint .",
     "format": "prettier --write .",
-    "lint": "eslint .",
     "prepare": "husky install",
     "build": "tsc"
   },
