@@ -1,3 +1,54 @@
+name: Confero CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - sameer
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  ci:
+    name: CI (Lint & Backend Build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.26.2 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Build backend only
+        run: pnpm --filter backend build
+
+      - name: Prepare backend artifact
+        run: |
+          mkdir backend-prod
+          cp -r apps/backend/dist backend-prod/
+          cp apps/backend/package.json backend-prod/
+
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-prod
+          path: backend-prod
+
   cd:
     name: CD (Deploy Backend to EC2)
     needs: ci
