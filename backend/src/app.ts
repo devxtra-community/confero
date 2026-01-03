@@ -3,7 +3,7 @@ import cors from 'cors';
 import healthRouter from './routes/health.js';
 import { morganMiddleware } from './config/morgan.js';
 const app = express();
-
+// checking cd is working correct
 app.use(morganMiddleware);
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
