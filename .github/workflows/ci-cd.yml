@@ -51,43 +51,43 @@ jobs:
           path: backend-prod
 
   cd:
-  name: CD (Deploy Backend to EC2)
-  needs: ci
-  if: github.ref == 'refs/heads/main'
-  runs-on: ubuntu-latest
+    name: CD (Deploy Backend to EC2)
+    needs: ci
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
 
-  steps:
-    - name: Download backend artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: backend-prod
-        path: backend-prod
+    steps:
+      - name: Download backend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-prod
+          path: backend-prod
 
-    - name: Debug – verify artifact
-      run: |
-        pwd
-        ls -la
-        echo "---- backend-prod ----"
-        ls -la backend-prod
+      - name: Debug – verify artifact
+        run: |
+          pwd
+          ls -la
+          echo "---- backend-prod ----"
+          ls -la backend-prod
 
-    - name: Upload backend to EC2
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        debug: true
-        host: ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.EC2_KEY }}
-        source: 'backend-prod'
-        target: '/var/www/confero'
+      - name: Upload backend to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          debug: true
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_KEY }}
+          source: backend-prod
+          target: /var/www/confero
 
-    - name: Restart backend on EC2
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.EC2_KEY }}
-        script: |
-          cd /var/www/confero/backend-prod
-          npm install --omit=dev
-          pm2 reload confero-backend || pm2 start dist/index.js --name confero-backend
-          pm2 save
+      - name: Restart backend on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            cd /var/www/confero/backend-prod
+            npm install --omit=dev
+            pm2 reload confero-backend || pm2 start dist/index.js --name confero-backend
+            pm2 save
