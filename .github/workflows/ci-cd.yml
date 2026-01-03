@@ -40,8 +40,8 @@ jobs:
       - name: Prepare backend artifact
         run: |
           mkdir backend-prod
-          cp -r apps/backend/dist backend-prod/
-          cp apps/backend/package.json backend-prod/
+          cp -r backend/dist backend-prod/
+          cp backend/package.json backend-prod/
 
       - name: Upload backend artifact
         uses: actions/upload-artifact@v4
