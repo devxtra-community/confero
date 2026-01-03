@@ -1,0 +1,3 @@
+#!/bin/sh
+pnpm run format
+pnpm lint 
