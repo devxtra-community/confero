@@ -39,6 +39,7 @@ jobs:
 
       - name: Prepare backend artifact
         run: |
+          rm -rf backend-prod
           mkdir backend-prod
           cp -r backend/dist backend-prod/
           cp backend/package.json backend-prod/
@@ -61,11 +62,19 @@ jobs:
         with:
           name: backend-prod
 
+      - name: Debug – verify artifact
+        run: |
+          pwd
+          ls -la
+          echo "---- backend-prod ----"
+          ls -la backend-prod
+
       - name: Upload backend to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
+          debug: true
           host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
+          username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           source: "backend-prod"
           target: "/var/www/confero"
@@ -74,7 +83,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
+          username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
             cd /var/www/confero/backend-prod
