@@ -1,12 +1,12 @@
-import { Router } from "express";
-import { createProxyMiddleware } from "http-proxy-middleware";
+import { Router } from 'express';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 
 const router = Router();
 
 router.use(
-  "/auth",
+  '/auth',
   createProxyMiddleware({
-    target: "http://localhost:4040",
+    target: 'http://localhost:4040',
     changeOrigin: true,
   })
 );
