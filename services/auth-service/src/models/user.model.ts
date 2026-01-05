@@ -1,8 +1,7 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Document, Schema } from 'mongoose';
 
-
-export type UserRole = "user" | "admin";
-export type AccountStatus = "active" | "suspended" | "deleted";
+export type UserRole = 'user' | 'admin';
+export type AccountStatus = 'active' | 'suspended' | 'deleted';
 export interface IUser extends Document {
   email: string;
   password: string;
@@ -24,7 +23,6 @@ export interface IUser extends Document {
   availableForCall: boolean;
   lastActiveAt: Date;
 
-
   lastLoginAt?: Date;
 
   createdAt: Date;
@@ -35,25 +33,25 @@ const userSchema = new Schema<IUser>(
   {
     email: {
       type: String,
-      required: [true, "Email is required"],
+      required: [true, 'Email is required'],
       unique: true,
       lowercase: true,
       trim: true,
       match: [
         /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-        "Please provide a valid email address",
+        'Please provide a valid email address',
       ],
     },
 
     password: {
       type: String,
-      required: [true, "Password hash is required"],
+      required: [true, 'Password hash is required'],
       select: false,
     },
 
     firstName: {
       type: String,
-      required: [true, "First name is required"],
+      required: [true, 'First name is required'],
       trim: true,
     },
 
@@ -69,20 +67,20 @@ const userSchema = new Schema<IUser>(
 
     role: {
       type: String,
-      enum: ["user", "admin"],
-      default: "user",
+      enum: ['user', 'admin'],
+      default: 'user',
     },
 
     accountStatus: {
       type: String,
-      enum: ["active", "suspended", "deleted"],
-      default: "active",
+      enum: ['active', 'suspended', 'deleted'],
+      default: 'active',
     },
 
     jobTitle: {
       type: String,
       trim: true,
-      default: "",
+      default: '',
     },
 
     linkedinId: {
@@ -92,7 +90,7 @@ const userSchema = new Schema<IUser>(
 
     profilePicture: {
       type: String,
-      default: "",
+      default: '',
     },
 
     skills: {
@@ -117,7 +115,6 @@ const userSchema = new Schema<IUser>(
       default: Date.now,
     },
 
-
     lastLoginAt: {
       type: Date,
       default: null,
@@ -128,9 +125,8 @@ const userSchema = new Schema<IUser>(
   }
 );
 
-
 userSchema.index({ email: 1 }, { unique: true });
 userSchema.index({ skills: 1 });
 userSchema.index({ availableForCall: 1 });
 
-export const UserModel = mongoose.model<IUser>("User", userSchema);
+export const UserModel = mongoose.model<IUser>('User', userSchema);
