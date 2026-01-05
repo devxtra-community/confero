@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { signJwt } from './jwtService.js';
 import { userRepository } from '../repositories/user.repository.js';
-import { env } from '../config/env.js';
+// import { env } from '../config/env.js';
 import { AppError } from '../errors/app.error.js';
 
 export const authService = {
