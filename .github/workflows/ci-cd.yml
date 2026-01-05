@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - ahmd
       - sameer
   pull_request:
     branches:
