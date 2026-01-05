@@ -11,7 +11,7 @@ on:
 
 jobs:
   ci:
-    name: CI (Lint & Backend Build)
+    name: CI (Lint & Auth Service Build)
     runs-on: ubuntu-latest
 
     steps:
@@ -34,60 +34,60 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Build backend only
-        run: pnpm --filter backend build
+      - name: Build auth service only
+        run: pnpm --filter auth-service build
 
-      - name: Prepare backend artifact
+      - name: Prepare auth service artifact
         run: |
-          rm -rf backend-prod
-          mkdir backend-prod
-          cp -r backend/dist backend-prod/
-          cp backend/package.json backend-prod/
+          rm -rf auth-service-prod
+          mkdir auth-service-prod
+          cp -r services/auth-service/dist auth-service-prod/
+          cp services/auth-service/package.json auth-service-prod/
 
-      - name: Upload backend artifact
+      - name: Upload auth service artifact
         uses: actions/upload-artifact@v4
         with:
-          name: backend-prod
-          path: backend-prod
+          name: auth-service-prod
+          path: auth-service-prod
 
   cd:
-    name: CD (Deploy Backend to EC2)
+    name: CD (Deploy Auth Service to EC2)
     needs: ci
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download backend artifact
+      - name: Download auth service artifact
         uses: actions/download-artifact@v4
         with:
-          name: backend-prod
-          path: backend-prod
+          name: auth-service-prod
+          path: auth-service-prod
 
       - name: Debug – verify artifact
         run: |
           pwd
           ls -la
-          echo "---- backend-prod ----"
-          ls -la backend-prod
+          echo "---- auth-service-prod ----"
+          ls -la auth-service-prod
 
-      - name: Upload backend to EC2
+      - name: Upload auth service to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           debug: true
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
-          source: backend-prod
+          source: auth-service-prod
           target: /var/www/confero
 
-      - name: Restart backend on EC2
+      - name: Restart auth service on EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
-            cd /var/www/confero/backend-prod
+            cd /var/www/confero/auth-service-prod
             npm install --omit=dev
-            pm2 reload confero-backend || pm2 start dist/index.js --name confero-backend
+            pm2 reload confero-auth-service || pm2 start dist/index.js --name confero-auth-service
             pm2 save
