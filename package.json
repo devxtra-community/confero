@@ -1,19 +1,18 @@
 {
   "name": "confero",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
   "type": "module",
   "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "dev:auth": "pnpm --filter auth-service dev",
+    "dev:gateway": "pnpm --filter gateway dev",
+    "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "lint:root": "eslint .",
-    "format": "prettier --write .",
     "prepare": "husky install",
-    "build": "pnpm --filter backend build"
+    "format": "prettier --write ."
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "packageManager": "pnpm@10.26.2",
   "devDependencies": {
     "@commitlint/cli": "^20.2.0",
