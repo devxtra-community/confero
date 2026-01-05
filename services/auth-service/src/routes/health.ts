@@ -26,5 +26,4 @@ healthRouter.get('/health', (_req, res) => {
   });
 });
 
-
 export default healthRouter;
