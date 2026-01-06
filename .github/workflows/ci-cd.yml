@@ -6,6 +6,7 @@ on:
       - main
       - ahmd
       - sameer
+      - dev
   pull_request:
     branches:
       - main
