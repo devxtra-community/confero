@@ -34,7 +34,6 @@ const userSchema = new Schema<IUser>(
     email: {
       type: String,
       required: [true, 'Email is required'],
-      unique: true,
       lowercase: true,
       trim: true,
       match: [
@@ -96,7 +95,6 @@ const userSchema = new Schema<IUser>(
     skills: {
       type: [String],
       default: [],
-      index: true,
     },
 
     interests: {
@@ -107,7 +105,6 @@ const userSchema = new Schema<IUser>(
     availableForCall: {
       type: Boolean,
       default: false,
-      index: true,
     },
 
     lastActiveAt: {

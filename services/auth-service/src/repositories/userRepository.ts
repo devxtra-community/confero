@@ -1,8 +1,9 @@
-import { UserModel } from '../models/user.model.js';
+import { UserModel } from '../models/userModel.js';
 
 export interface createUserInput {
   email: string;
   password: string;
+  firstName:string
 }
 
 export const userRepository = {
