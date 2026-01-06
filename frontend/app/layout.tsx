@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Poetsen_One, Geist_Mono } from "next/font/google";
+import { Poetsen_One, Geist_Mono } from 'next/font/google';
 import './globals.css';
 
 const poetsenOne = Poetsen_One({

@@ -31,6 +31,7 @@ The goal is to build a system that is predictable under load, easy to reason abo
 ## Tech Stack
 
 ### Frontend
+
 ![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs)
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
@@ -39,6 +40,7 @@ The goal is to build a system that is predictable under load, easy to reason abo
 ---
 
 ### Backend
+
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)
 ![Express](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express)
 ![WebSocket](https://img.shields.io/badge/WebSockets-000000?style=for-the-badge)
@@ -67,7 +69,6 @@ Client (Browser)
 ├── Redis (Presence, ephemeral state)
 ├── RabbitMQ (Async events)
 └── Core Services
-
 
 This separation allows real-time media traffic to remain isolated from control and background processing logic.
 
@@ -101,4 +102,3 @@ Core real-time communication and signaling infrastructure is in place.
 Additional scalability, observability, and reliability improvements are ongoing.
 
 ---
-

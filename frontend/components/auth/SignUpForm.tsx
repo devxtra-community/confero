@@ -59,12 +59,12 @@ export function SignUpForm() {
 
       router.push('/signin');
     } catch (err) {
-  if (err instanceof Error) {
-    setError(err.message);
-  } else {
-    setError("Something went wrong");
-  }
-}
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Something went wrong');
+      }
+    }
   };
 
   return (
