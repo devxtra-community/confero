@@ -3,7 +3,7 @@ import { UserModel } from '../models/userModel.js';
 export interface createUserInput {
   email: string;
   password: string;
-  firstName:string
+  firstName: string;
 }
 
 export const userRepository = {

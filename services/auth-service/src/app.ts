@@ -13,7 +13,6 @@ app.use(express.json());
 
 app.use(errorHandler);
 
-
 app.use('/auth', authRouter);
 app.use(healthRouter);
 
