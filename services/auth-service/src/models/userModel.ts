@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export type UserRole = 'user' | 'admin';
 export type AccountStatus = 'active' | 'suspended' | 'deleted';
+
 export interface IUser extends Document {
   email: string;
   password: string;
@@ -24,7 +25,7 @@ export interface IUser extends Document {
   lastActiveAt: Date;
 
   lastLoginAt?: Date;
-
+  emailVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -110,6 +111,10 @@ const userSchema = new Schema<IUser>(
     lastActiveAt: {
       type: Date,
       default: Date.now,
+    },
+    emailVerified: {
+      type: Boolean,
+      default: false,
     },
 
     lastLoginAt: {

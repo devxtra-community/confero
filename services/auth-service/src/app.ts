@@ -11,9 +11,9 @@ app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-app.use(errorHandler);
-
 app.use('/auth', authRouter);
 app.use(healthRouter);
+
+app.use(errorHandler);
 
 export default app;

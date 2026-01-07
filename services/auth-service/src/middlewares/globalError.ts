@@ -1,4 +1,3 @@
-// middlewares/error.middleware.ts
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from './errorHandller.js';
 import { logger } from '../config/logger.js';
