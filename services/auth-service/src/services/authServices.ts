@@ -9,7 +9,6 @@ import { logger } from '../config/logger.js';
 
 export const authService = {
   registerUser: async (email: string, password: string, firstName: string) => {
-
     if (!email || !password || !firstName) {
       throw new AppError('All fields are required', 400);
     }
@@ -64,5 +63,4 @@ export const authService = {
 
     return;
   },
-
 };
