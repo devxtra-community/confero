@@ -46,7 +46,7 @@ const userSchema = new Schema<IUser>(
     password: {
       type: String,
       required: [true, 'Password hash is required'],
-      select: false,
+      // select: false,
     },
 
     firstName: {

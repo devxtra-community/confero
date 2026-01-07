@@ -30,3 +30,17 @@ export const verifyOtp = async (req: Request, res: Response) => {
     message: 'Email verified successfully,Registration completed',
   });
 };
+
+export const login = async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+  
+  const result = await authService.loginUser(email, password);
+
+  logger.info('Login Succesfull');
+
+  res.status(200).json({
+    message: 'Login Successfullly Completed',
+    success: true,
+    result
+  });
+};
