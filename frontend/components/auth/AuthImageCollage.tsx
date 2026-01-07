@@ -4,7 +4,7 @@ export function AuthImageCollage() {
   return (
     <div className="relative hidden lg:block w-full h-full bg-white">
       {/* Top main image */}
-      <div className="absolute top-10 right-84 rotate-[-3deg] rounded-2xl overflow-hidden shadow-2xl">
+      <div className="absolute top-10 right-84 -rotate-3 rounded-2xl overflow-hidden shadow-2xl">
         <Image
           src="/auth/img1.jpg"
           alt="Video call"
@@ -26,7 +26,7 @@ export function AuthImageCollage() {
       </div>
 
       {/* Center bottom image */}
-      <div className="absolute top-[350px] right-88 rotate-[2deg] rounded-2xl overflow-hidden shadow-2xl">
+      <div className="absolute top-88 right-88 rotate-2 rounded-2xl overflow-hidden shadow-2xl">
         <Image
           src="/auth/img3.jpg"
           alt="Online meeting"
@@ -37,7 +37,7 @@ export function AuthImageCollage() {
       </div>
 
       {/* Bottom right image */}
-      <div className="absolute bottom-10 right-32 rotate-[-6deg] rounded-2xl overflow-hidden shadow-xl">
+      <div className="absolute bottom-10 right-32 -rotate-6 rounded-2xl overflow-hidden shadow-xl">
         <Image
           src="/auth/img4.jpg"
           alt="Job search"
