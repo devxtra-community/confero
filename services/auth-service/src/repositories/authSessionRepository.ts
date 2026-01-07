@@ -19,11 +19,11 @@ export const authSessionRepository = {
   },
 
   revokeAllForUser: async (userId: Types.ObjectId) => {
-  return AuthSession.updateMany(
-    { userId, revokedAt: null },
-    { revokedAt: new Date() }
-  );
-},
+    return AuthSession.updateMany(
+      { userId, revokedAt: null },
+      { revokedAt: new Date() }
+    );
+  },
 
   revoke: async (refreshTokenHash: string) => {
     return AuthSession.updateOne(
@@ -32,4 +32,3 @@ export const authSessionRepository = {
     );
   },
 };
-

@@ -80,7 +80,7 @@ export const authService = {
 
     // IMPORTANT: must fetch password explicitly if select:false
     const user = await userRepository.findByEmail(email);
-    
+
     if (!user || !user.password) {
       throw new AppError('Invalid credentials', 401);
     }

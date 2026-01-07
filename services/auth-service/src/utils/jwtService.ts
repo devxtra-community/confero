@@ -3,7 +3,6 @@ import crypto from 'crypto';
 import { env } from '../config/env.js';
 import { AppError } from '../middlewares/errorHandller.js';
 
-
 export const signJwt = (
   payload: object,
   expiresIn: SignOptions['expiresIn'] = '15m'
@@ -18,8 +17,6 @@ export const verifyJwt = <T = JwtPayload>(token: string): T => {
     throw new AppError('Invalid or expired token', 401);
   }
 };
-
-
 
 export const generateAccessToken = (userId: string, email: string): string => {
   return signJwt(
