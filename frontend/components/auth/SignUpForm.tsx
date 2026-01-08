@@ -3,16 +3,20 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { FcGoogle } from 'react-icons/fc';
+import { Eye, EyeOff } from 'lucide-react';
+import GoogleButton from './GoogleButton';
+import { Button } from '../ui/button';
+import { axiosInstance } from '@/lib/axiosInstance';
+import Link from 'next/link';
+import axios from 'axios';
 
 export function SignUpForm() {
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
 
   const [form, setForm] = useState({
-    firstName: '',
-    lastName: '',
+    fullName: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -37,73 +41,54 @@ export function SignUpForm() {
     setLoading(true);
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/auth/register`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            firstName: form.firstName,
-            lastName: form.lastName,
-            email: form.email,
-            password: form.password,
-          }),
-          credentials: 'include',
-        }
-      );
+      const res = await axiosInstance.post('/auth/register', {
+        fullName: form.fullName,
+        email: form.email,
+        password: form.password,
+      });
+      console.log(res);
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || 'Signup failed');
-      }
+      const temp_token = res.data.verificationToken;
 
-      router.push('/signin');
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
+      localStorage.setItem('temp_token', temp_token);
+      router.push('/verifyotp');
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        setError(
+          error.response?.data?.message || 'Signup failed. Please try again.'
+        );
       } else {
-        setError('Something went wrong');
+        setError('Signup failed. Please try again.');
       }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Header */}
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="text-sm text-muted-foreground hover:text-foreground"
+        <Link
+          href="/login"
+          className="text-lg text-primary font-sans hover:text-foreground cursor-pointer"
         >
           ← Go back
-        </button>
+        </Link>
       </div>
 
-      <h1 className="text-3xl font-sans">Sign Up</h1>
+      <h1 className="text-4xl font-sans">Sign Up</h1>
 
-      {/* First Name */}
       <div className="space-y-2">
-        <label className="text-sm font-medium">First Name</label>
+        <label className="text-sm font-medium">Full Name</label>
         <Input
-          name="firstName"
+          name="fullName"
           placeholder="Enter your first name"
           required
+          className="mt-1"
           onChange={handleChange}
         />
       </div>
 
-      {/* Last Name */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Last Name</label>
-        <Input
-          name="lastName"
-          placeholder="Enter your last name"
-          onChange={handleChange}
-        />
-      </div>
-
-      {/* Email */}
       <div className="space-y-2">
         <label className="text-sm font-medium">Email address</label>
         <Input
@@ -111,42 +96,56 @@ export function SignUpForm() {
           name="email"
           placeholder="Enter your email"
           required
+          className="mt-1"
           onChange={handleChange}
         />
       </div>
 
-      {/* Password */}
-      <div className="space-y-2">
+      <div className="space-y-2 relative">
         <label className="text-sm font-medium">Password</label>
         <Input
-          type="password"
+          type={showPassword ? 'text' : 'password'}
           name="password"
           placeholder="Password"
           required
+          className="mt-1"
           minLength={6}
           onChange={handleChange}
         />
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute  top-9 right-3 text-primary cursor-pointer "
+        >
+          {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+        </button>
       </div>
 
-      {/* Confirm Password */}
-      <div className="space-y-2">
+      <div className="space-y-2 relative">
         <label className="text-sm font-medium">Confirm Password</label>
         <Input
-          type="password"
+          type={showPassword ? 'text' : 'password'}
           name="confirmPassword"
           placeholder="Confirm password"
           required
+          className="mt-1"
           minLength={6}
           onChange={handleChange}
         />
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute  top-9 right-3 text-primary cursor-pointer "
+        >
+          {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+        </button>
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      {/* Submit */}
       <Button
         type="submit"
-        className="w-full bg-green-700 hover:bg-green-800"
+        className="w-full bg-primary hover:bg-primary/90 cursor-pointer"
         disabled={loading}
       >
         {loading ? 'Signing up...' : 'Signup'}
@@ -154,15 +153,7 @@ export function SignUpForm() {
 
       <Separator />
 
-      {/* Google signup */}
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full flex items-center justify-center gap-2"
-      >
-        <FcGoogle size={20} />
-        Sign up with Google
-      </Button>
+      <GoogleButton />
     </form>
   );
 }

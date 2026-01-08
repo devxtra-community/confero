@@ -2,14 +2,12 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export type UserRole = 'user' | 'admin';
 export type AccountStatus = 'active' | 'suspended' | 'deleted';
-
+export type AuthProvider = 'local' | 'google';
 export interface IUser extends Document {
   email: string;
   password: string;
-
-  firstName: string;
-  lastName?: string;
-  displayName?: string;
+  authProvider: AuthProvider;
+  fullName: string;
 
   role: UserRole;
   accountStatus: AccountStatus;
@@ -49,22 +47,11 @@ const userSchema = new Schema<IUser>(
       select: false,
     },
 
-    firstName: {
+    fullName: {
       type: String,
       required: [true, 'First name is required'],
       trim: true,
     },
-
-    lastName: {
-      type: String,
-      trim: true,
-    },
-
-    displayName: {
-      type: String,
-      trim: true,
-    },
-
     role: {
       type: String,
       enum: ['user', 'admin'],

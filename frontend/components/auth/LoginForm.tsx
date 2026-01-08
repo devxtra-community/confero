@@ -1,11 +1,14 @@
 'use client';
 
+import { Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
-import { FcGoogle } from 'react-icons/fc';
+import GoogleButton from './GoogleButton';
+import Link from 'next/link';
 
 export function LoginRight() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className="w-full lg:w-1/2 bg-background flex flex-col min-h-screen">
@@ -28,15 +31,22 @@ export function LoginRight() {
               onChange={e => setEmail(e.target.value)}
               className="w-full h-11 px-4 rounded-md border border-input bg-background focus:ring-2 focus:ring-ring outline-none"
             />
-
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="w-full h-11 px-4 rounded-md border border-input bg-background focus:ring-2 focus:ring-ring outline-none"
-            />
-
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="w-full h-11 px-4 rounded-md border border-input bg-background focus:ring-2 focus:ring-ring outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute  top-3 right-3 text-primary cursor-pointer "
+              >
+                {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+              </button>
+            </div>
             <button className="w-full h-11 mt-3 rounded-md bg-primary text-primary-foreground font-medium hover:opacity-90">
               Signup
             </button>
@@ -51,15 +61,12 @@ export function LoginRight() {
 
           <p className="text-sm text-center text-muted-foreground">
             Don&apos;t have an account?{' '}
-            <span className="text-primary font-medium cursor-pointer">
+            <Link href="/signup" className="text-primary hover:underline">
               Signup
-            </span>
+            </Link>
           </p>
 
-          <button className="w-full h-11 rounded-md border border-border flex items-center justify-center gap-3 text-sm">
-            <FcGoogle size={20} />
-            Sign in with Google
-          </button>
+          <GoogleButton />
         </div>
       </div>
     </div>

@@ -8,8 +8,8 @@ import { sendOtpMail } from '../utils/sendOtp.js';
 import { logger } from '../config/logger.js';
 
 export const authService = {
-  registerUser: async (email: string, password: string, firstName: string) => {
-    if (!email || !password || !firstName) {
+  registerUser: async (email: string, password: string, fullName: string) => {
+    if (!email || !password || !fullName) {
       throw new AppError('All fields are required', 400);
     }
 
@@ -23,10 +23,10 @@ export const authService = {
     await userRepository.create({
       email,
       password: hashedPassword,
-      firstName,
+      fullName,
     });
 
-    const otp = generateOtp();
+    const otp = generateOtp().toString();
     await otpRepository.create(email, otp);
     await sendOtpMail(email, otp);
 
@@ -41,16 +41,13 @@ export const authService = {
     return verificationToken;
   },
 
-  verifyOtp: async (otp: number, verificationToken: string) => {
+  verifyOtp: async (otp: string, verificationToken: string) => {
     const payload = verifyJwt(verificationToken);
-
-    if (payload.type !== 'email_verification') {
-      throw new AppError('Invalid verification token', 401);
-    }
 
     const email = payload.email;
 
     const record = await otpRepository.find(email, otp);
+
     if (!record) {
       throw new AppError('Invalid or expired OTP', 403);
     }

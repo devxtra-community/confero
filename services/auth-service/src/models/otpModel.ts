@@ -2,7 +2,7 @@ import mongoose, { Schema } from 'mongoose';
 
 interface Otp {
   email: string;
-  otp: number;
+  otp: string;
   createdAt: Date;
 }
 
@@ -12,7 +12,7 @@ const otpSchema = new Schema<Otp>({
     required: true,
   },
   otp: {
-    type: Number,
+    type: String,
     required: true,
   },
   createdAt: {

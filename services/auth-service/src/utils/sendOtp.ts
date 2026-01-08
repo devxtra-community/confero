@@ -1,7 +1,7 @@
 import { mailer } from './mailer.js';
 import { env } from '../config/env.js';
 
-export const sendOtpMail = async (email: string, otp: number) => {
+export const sendOtpMail = async (email: string, otp: string) => {
   await mailer.sendMail({
     from: env.SMTP_FROM,
     to: email,

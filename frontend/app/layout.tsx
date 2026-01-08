@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Poetsen_One, Geist_Mono } from 'next/font/google';
 import './globals.css';
+import { Toaster } from 'sonner';
 
 const poetsenOne = Poetsen_One({
   subsets: ['latin'],
@@ -28,6 +29,7 @@ export default function RootLayout({
       <body
         className={`${poetsenOne.variable} ${geistMono.variable} antialiased`}
       >
+        <Toaster richColors position="top-center" />
         {children}
       </body>
     </html>

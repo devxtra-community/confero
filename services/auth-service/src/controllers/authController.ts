@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
 import { authService } from '../services/authServices.js';
 import { logger } from '../config/logger.js';
+import { AppError } from '../middlewares/errorHandller.js';
 
 export const register = async (req: Request, res: Response) => {
-  const { email, password, firstName } = req.body;
-
+  const { email, password, fullName } = req.body;
   const verificationToken = await authService.registerUser(
     email,
     password,
-    firstName
+    fullName
   );
 
   logger.info('otp send to email...');
@@ -20,13 +20,24 @@ export const register = async (req: Request, res: Response) => {
 };
 
 export const verifyOtp = async (req: Request, res: Response) => {
-  const { otp, verificationToken } = req.body;
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader?.startsWith('Bearer ')) {
+    throw new AppError('Verification token missing', 401);
+  }
+  const verificationToken = authHeader.split(' ')[1];
+  const { otp } = req.body;
+
+  if (!otp) {
+    throw new AppError('OTP is required', 400);
+  }
 
   await authService.verifyOtp(otp, verificationToken);
 
-  logger.info('email verification completed..');
+  logger.info('email verification completed');
 
   res.status(200).json({
-    message: 'Email verified successfully,Registration completed',
+    success: true,
+    message: 'Email verified successfully. Registration completed.',
   });
 };

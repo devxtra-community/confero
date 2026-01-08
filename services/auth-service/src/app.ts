@@ -7,7 +7,12 @@ import { errorHandler } from './middlewares/globalError.js';
 const app = express();
 // checking cd is working correct
 app.use(morganMiddleware);
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URI,
+    credentials: true,
+  })
+);
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
