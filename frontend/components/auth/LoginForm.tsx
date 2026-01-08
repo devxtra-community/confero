@@ -65,7 +65,6 @@ export function LoginRight() {
               Signup
             </Link>
           </p>
-
           <GoogleButton />
         </div>
       </div>

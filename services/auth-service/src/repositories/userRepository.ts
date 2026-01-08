@@ -1,9 +1,9 @@
 import { IUser, UserModel } from '../models/userModel.js';
 
-export interface createUserInput {
-  email?: string;
-  password?: string;
-  fullName?: string;
+export interface CreateUserInput {
+  email: string;
+  password: string;
+  fullName: string;
   emailVerified?: boolean;
 }
 
@@ -13,11 +13,13 @@ export const userRepository = {
   },
 
   findById: async (id: string) => {
-    return UserModel.findById({ id }).exec();
+    return UserModel.findById(id).exec();
   },
-  create: async (data: createUserInput) => {
+
+  create: async (data: CreateUserInput) => {
     return UserModel.create(data);
   },
+
   updateByEmail: async (email: string, data: Partial<IUser>) => {
     return UserModel.updateOne({ email }, data).exec();
   },
