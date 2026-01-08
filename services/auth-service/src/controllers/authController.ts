@@ -22,7 +22,7 @@ export const register = async (req: Request, res: Response) => {
 
 export const verifyOtp = async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
-  console.log("reached")
+  console.log('reached');
 
   if (!authHeader?.startsWith('Bearer ')) {
     throw new AppError('Verification token missing', 401);
@@ -39,7 +39,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
   logger.info('email verification completed');
 
   res.status(200).json({
-    success:true,
+    success: true,
     message: 'Email verified successfully,Registration completed',
   });
 };
