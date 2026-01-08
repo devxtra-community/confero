@@ -2,14 +2,16 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export type UserRole = 'user' | 'admin';
 export type AccountStatus = 'active' | 'suspended' | 'deleted';
+export type AuthProvider = 'local' | 'google';
 
 export interface IUser extends Document {
   email: string;
-  password: string;
+  password?: string;
 
-  firstName: string;
-  lastName?: string;
-  displayName?: string;
+  authProvider: AuthProvider;
+  googleId?: string;
+
+  fullName: string;
 
   role: UserRole;
   accountStatus: AccountStatus;
@@ -45,26 +47,25 @@ const userSchema = new Schema<IUser>(
 
     password: {
       type: String,
-      required: [true, 'Password hash is required'],
-      // select: false,
+      required: [false, 'Password hash is required'],
     },
 
-    firstName: {
+    authProvider: {
+      type: String,
+      enum: ['local', 'google'],
+      default: 'local',
+    },
+
+    googleId: {
+      type: String,
+      default: null,
+    },
+
+    fullName: {
       type: String,
       required: [true, 'First name is required'],
       trim: true,
     },
-
-    lastName: {
-      type: String,
-      trim: true,
-    },
-
-    displayName: {
-      type: String,
-      trim: true,
-    },
-
     role: {
       type: String,
       enum: ['user', 'admin'],

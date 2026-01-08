@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { authService } from '../services/authServices.js';
 import { logger } from '../config/logger.js';
+import { googleAuthService } from '../services/googleAuth.service.js';
 
 export const register = async (req: Request, res: Response) => {
   const { email, password, firstName } = req.body;
@@ -40,6 +41,18 @@ export const login = async (req: Request, res: Response) => {
 
   res.status(200).json({
     message: 'Login Successfullly Completed',
+    success: true,
+    result,
+  });
+};
+
+export const googleLogin = async (req: Request, res: Response) => {
+  const { idToken } = req.body;
+  // console.log("1")
+  const result = await googleAuthService.authenticate(idToken);
+
+  res.status(200).json({
+    message: 'Google login successful',
     success: true,
     result,
   });

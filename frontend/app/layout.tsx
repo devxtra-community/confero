@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Poetsen_One, Geist_Mono } from 'next/font/google';
 import './globals.css';
+import Providers from '../lib/providers';
 
 const poetsenOne = Poetsen_One({
   subsets: ['latin'],
@@ -20,15 +21,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
       <body
         className={`${poetsenOne.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

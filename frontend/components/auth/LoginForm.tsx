@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { FcGoogle } from 'react-icons/fc';
+import GoogleButton from './GoogleButton';
 
 export function LoginRight() {
   const [email, setEmail] = useState('');
@@ -55,11 +55,7 @@ export function LoginRight() {
               Signup
             </span>
           </p>
-
-          <button className="w-full h-11 rounded-md border border-border flex items-center justify-center gap-3 text-sm">
-            <FcGoogle size={20} />
-            Sign in with Google
-          </button>
+          <GoogleButton />
         </div>
       </div>
     </div>
