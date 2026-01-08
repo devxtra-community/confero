@@ -4,12 +4,12 @@ import { logger } from '../config/logger.js';
 import { googleAuthService } from '../services/googleAuth.service.js';
 
 export const register = async (req: Request, res: Response) => {
-  const { email, password, firstName } = req.body;
+  const { email, password, fullName } = req.body;
 
   const verificationToken = await authService.registerUser(
     email,
     password,
-    firstName
+    fullName
   );
 
   logger.info('otp send to email...');

@@ -3,7 +3,7 @@ import { IUser, UserModel } from '../models/userModel.js';
 export interface CreateUserInput {
   email: string;
   password: string;
-  firstName: string;
+  fullName: string;
   emailVerified?: boolean;
 }
 

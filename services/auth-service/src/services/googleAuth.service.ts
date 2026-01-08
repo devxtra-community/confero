@@ -68,7 +68,7 @@ export const googleAuthService = {
       user: {
         id: userId,
         email: user.email,
-        firstName: user.fullName,
+        fullName: user.fullName,
       },
       accessToken,
       refreshToken,

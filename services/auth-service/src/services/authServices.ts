@@ -16,8 +16,8 @@ import {
 
 export const authService = {
   // -- REGISTER --
-  registerUser: async (email: string, password: string, firstName: string) => {
-    if (!email || !password || !firstName) {
+  registerUser: async (email: string, password: string, fullName: string) => {
+    if (!email || !password || !fullName) {
       throw new AppError('All fields are required', 400);
     }
 
@@ -31,7 +31,7 @@ export const authService = {
     await userRepository.create({
       email,
       password: hashedPassword,
-      firstName,
+      fullName,
     });
 
     const otp = generateOtp();
@@ -114,7 +114,7 @@ export const authService = {
       user: {
         id: userId, // ✅ string, not ObjectId
         email: user.email,
-        firstName: user.firstName,
+        fullName: user.fullName,
       },
       accessToken,
       refreshToken,
