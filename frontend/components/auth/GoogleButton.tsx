@@ -1,13 +1,12 @@
 'use client';
 
 import { GoogleLogin } from '@react-oauth/google';
-import { FcGoogle } from 'react-icons/fc';
 
 export default function GoogleButton() {
   return (
     <div className="w-full">
       <GoogleLogin
-        onSuccess={async (credentialResponse) => {
+        onSuccess={async credentialResponse => {
           const idToken = credentialResponse.credential;
 
           if (!idToken) {

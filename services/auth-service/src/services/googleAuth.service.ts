@@ -7,7 +7,6 @@ import {
   hashRefreshToken,
 } from '../utils/jwtService.js';
 import { authSessionRepository } from '../repositories/authSessionRepository.js';
-import { logger } from '../config/logger.js';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -28,22 +27,13 @@ export const googleAuthService = {
       throw new AppError('Invalid Google token', 401);
     }
 
-    const {
-      email,
-      given_name,
-      family_name,
-      picture,
-      sub: googleId,
-    } = payload;
+    const { email, given_name, picture, sub: googleId } = payload;
 
     let user = await userRepository.findByEmail(email);
 
     // --- CASE 1: Existing LOCAL user tries Google login
     if (user && user.authProvider === 'local') {
-      throw new AppError(
-        'Email already registered with password login',
-        409
-      );
+      throw new AppError('Email already registered with password login', 409);
     }
 
     // --- CASE 2: New Google user
