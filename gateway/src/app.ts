@@ -6,10 +6,12 @@ dotenv.config();
 
 const app = express();
 // test
-app.use(cors({
-  origin:process.env.FRONTEND_URI,
-  credentials:true
-}));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URI,
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

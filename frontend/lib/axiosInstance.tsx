@@ -33,11 +33,7 @@ axiosInstance.interceptors.response.use(
       url.includes('/auth/register') ||
       url.includes('/auth/refresh');
 
-    if (
-      status === 401 &&
-      !originalRequest._retry &&
-      !isAuthEndpoint
-    ) {
+    if (status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
 
       try {
@@ -46,11 +42,10 @@ axiosInstance.interceptors.response.use(
         const newAccessToken = res.data.accessToken;
         localStorage.setItem('accessToken', newAccessToken);
 
-        originalRequest.headers.Authorization =
-          `Bearer ${newAccessToken}`;
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
         return axiosInstance(originalRequest);
-      } catch (err) {
+      } catch (err: unknown) {
         localStorage.removeItem('accessToken');
         window.location.href = '/login';
       }
@@ -59,4 +54,3 @@ axiosInstance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-

@@ -1,7 +1,10 @@
 import { Router } from 'express';
-import { loginLimiter, otpLimiter, registerLimiter } from '../middlewares/rateLimit.js';
+import {
+  loginLimiter,
+  otpLimiter,
+  registerLimiter,
+} from '../middlewares/rateLimit.js';
 import { authProxy } from '../proxies/authProxy.js';
-
 
 const authRouter = Router();
 

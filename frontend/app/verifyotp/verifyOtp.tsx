@@ -11,7 +11,9 @@ export default function VerifyOtpClient() {
 
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
-  const [verificationToken, setVerificationToken] = useState<string | null>(null);
+  const [verificationToken, setVerificationToken] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     const token = localStorage.getItem('verificationToken');

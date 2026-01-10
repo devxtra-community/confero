@@ -6,6 +6,7 @@ import GoogleButton from './GoogleButton';
 import Link from 'next/link';
 import { axiosInstance } from '@/lib/axiosInstance';
 import { useRouter } from 'next/navigation';
+import axios from 'axios';
 
 export function LoginRight() {
   const [email, setEmail] = useState('');
@@ -31,8 +32,12 @@ export function LoginRight() {
       setTimeout(() => {
         router.push('/dashboard');
       }, 1200);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message ?? 'Login failed');
+      } else {
+        setError('Login failed');
+      }
     } finally {
       setLoading(false);
     }
