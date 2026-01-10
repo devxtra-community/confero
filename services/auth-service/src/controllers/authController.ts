@@ -29,7 +29,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
   }
   const verificationToken = authHeader.split(' ')[1];
   const { otp } = req.body;
-
+  console.log(otp);
   if (!otp) {
     throw new AppError('OTP is required', 400);
   }
@@ -47,25 +47,66 @@ export const verifyOtp = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
-  const result = await authService.loginUser(email, password);
+  const { accessToken, refreshToken } = await authService.loginUser(
+    email,
+    password
+  );
 
   logger.info('Login Succesfull');
+
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+    path: '/auth',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
 
   res.status(200).json({
     message: 'Login Successfullly Completed',
     success: true,
-    result,
+    accessToken,
   });
 };
 
 export const googleLogin = async (req: Request, res: Response) => {
   const { idToken } = req.body;
-  // console.log("1")
   const result = await googleAuthService.authenticate(idToken);
 
   res.status(200).json({
     message: 'Google login successful',
     success: true,
     result,
+  });
+};
+
+export const logout = async (req: Request, res: Response) => {
+  const refreshToken = req.cookies?.refreshToken;
+  await authService.logoutUser(refreshToken);
+
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: true,
+    path: '/auth',
+  });
+
+  res.status(200).json({
+    success: true,
+    message: 'Logouted successfully..',
+  });
+};
+
+export const refresh = async (req: Request, res: Response) => {
+  const refreshToken = req.cookies.refreshToken;
+
+  if (!refreshToken) {
+    throw new AppError('Invalid refresh Token', 401);
+  }
+
+  const newAccessToken = await authService.refreshAccessToken(refreshToken);
+
+  res.status(200).json({
+    accessToken: newAccessToken,
   });
 };
