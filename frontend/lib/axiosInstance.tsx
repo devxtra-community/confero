@@ -46,8 +46,14 @@ axiosInstance.interceptors.response.use(
 
         return axiosInstance(originalRequest);
       } catch (err: unknown) {
-        localStorage.removeItem('accessToken');
-        window.location.href = '/login';
+        if (axios.isAxiosError(err)) {
+          if (err.response?.status === 401) {
+            localStorage.removeItem('accessToken');
+            window.location.href = '/login';
+          }
+        } else {
+          console.error('Unexpected error', err);
+        }
       }
     }
 
