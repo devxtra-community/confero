@@ -7,7 +7,7 @@ type SocketNext = (err?: Error) => void;
 
 export const socketMiddleware = (socket: Socket, next: SocketNext) => {
   try {
-    console.log("🛂 auth middleware hit");
+    console.log('🛂 auth middleware hit');
 
     const token = socket.handshake.auth?.token;
     if (!token) {

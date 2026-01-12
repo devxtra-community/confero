@@ -4,7 +4,7 @@ import { Server, Socket } from 'socket.io';
 import { AuthenticatedUser } from '../types/tokenType';
 
 export const socketController = (socket: Socket, io: Server) => {
-  console.log("🎮 socket controller running");
+  console.log('🎮 socket controller running');
   const user = socket.data.user as AuthenticatedUser;
 
   PresenceService.markOnline(user.userId, socket.id);
