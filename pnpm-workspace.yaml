@@ -2,3 +2,4 @@ packages:
   - 'services/*'
   - 'frontend'
   - gateway
+  - live-service
