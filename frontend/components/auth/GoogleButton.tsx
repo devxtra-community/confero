@@ -22,7 +22,7 @@ export default function GoogleButton() {
             const res = await axiosInstance.post('/auth/google', {
               idToken,
             });
-            console.log(res)
+            console.log(res);
             // OPTIONAL: store tokens if not handled by interceptor
             localStorage.setItem('accessToken', res.data.accessToken);
             // localStorage.setItem('refreshToken', res.data.refreshToken);

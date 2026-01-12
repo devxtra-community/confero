@@ -73,8 +73,10 @@ export const verifyOtp = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
-  const { user, accessToken, refreshToken } =
-    await authService.loginUser(email, password);
+  const { user, accessToken, refreshToken } = await authService.loginUser(
+    email,
+    password
+  );
 
   logger.info('Login successful');
 
