@@ -1,9 +1,12 @@
 import { Request, Response } from 'express';
 import { authService } from '../services/authServices.js';
-import { logger } from '../config/logger.js';
 import { googleAuthService } from '../services/googleAuth.service.js';
+import { logger } from '../config/logger.js';
 import { AppError } from '../middlewares/errorHandller.js';
 
+/**
+ * REGISTER (Email + Password)
+ */
 export const register = async (req: Request, res: Response) => {
   const { email, password, fullName } = req.body;
   const verificationToken = await authService.registerUser(
@@ -12,9 +15,10 @@ export const register = async (req: Request, res: Response) => {
     fullName
   );
 
-  logger.info('otp send to email...');
+  logger.info('OTP sent to email');
 
   res.status(201).json({
+    success: true,
     message: 'OTP sent to email',
     verificationToken,
   });
@@ -26,6 +30,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
   if (!authHeader?.startsWith('Bearer ')) {
     throw new AppError('Verification token missing', 401);
   }
+
   const verificationToken = authHeader.split(' ')[1];
   const { otp } = req.body;
   if (!otp) {
@@ -34,11 +39,11 @@ export const verifyOtp = async (req: Request, res: Response) => {
 
   await authService.verifyOtp(otp, verificationToken);
 
-  logger.info('email verification completed');
+  logger.info('Email verification completed');
 
   res.status(200).json({
     success: true,
-    message: 'Email verified successfully,Registration completed',
+    message: 'Email verified successfully. Registration completed',
   });
 };
 
@@ -61,7 +66,7 @@ export const login = async (req: Request, res: Response) => {
   });
 
   res.status(200).json({
-    message: 'Login Successfully Completed',
+    message: ' Login Successfully Completed',
     success: true,
     accessToken,
   });
@@ -69,12 +74,24 @@ export const login = async (req: Request, res: Response) => {
 
 export const googleLogin = async (req: Request, res: Response) => {
   const { idToken } = req.body;
-  const result = await googleAuthService.authenticate(idToken);
+
+  const { accessToken, refreshToken } =
+    await googleAuthService.authenticate(idToken);
+
+  logger.info('Google login successful');
+
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: true,
+    sameSite: true,
+    path: '/auth',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
 
   res.status(200).json({
-    message: 'Google login successful',
     success: true,
-    result,
+    message: 'Google login successfully completed',
+    accessToken,
   });
 };
 

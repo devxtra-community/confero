@@ -1,8 +1,12 @@
 'use client';
 
+import { axiosInstance } from '@/lib/axiosInstance';
 import { GoogleLogin } from '@react-oauth/google';
+import { useRouter } from 'next/navigation';
 
 export default function GoogleButton() {
+  const router = useRouter();
+
   return (
     <div className="w-full">
       <GoogleLogin
@@ -14,17 +18,19 @@ export default function GoogleButton() {
             return;
           }
 
-          const res = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/auth/google`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ idToken }),
-            }
-          );
+          try {
+            const res = await axiosInstance.post('/auth/google', {
+              idToken,
+            });
+            console.log(res);
+            // OPTIONAL: store tokens if not handled by interceptor
+            localStorage.setItem('accessToken', res.data.accessToken);
+            // localStorage.setItem('refreshToken', res.data.refreshToken);
 
-          const data = await res.json();
-          console.log('Google auth success:', data);
+            router.push('/signup');
+          } catch (error) {
+            console.error('Google auth API failed', error);
+          }
         }}
         onError={() => {
           console.error('Google Login Failed');

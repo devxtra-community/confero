@@ -13,5 +13,6 @@ authRouter.post('/register', registerLimiter, authProxy);
 authRouter.post('/verifyOtp', otpLimiter, authProxy);
 authRouter.post('/logout', authProxy);
 authRouter.post('/refresh', authProxy);
+authRouter.post('/google', authProxy);
 
 export default authRouter;
