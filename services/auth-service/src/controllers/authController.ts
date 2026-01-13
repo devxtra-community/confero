@@ -4,7 +4,6 @@ import { googleAuthService } from '../services/googleAuth.service.js';
 import { logger } from '../config/logger.js';
 import { AppError } from '../middlewares/errorHandller.js';
 
-
 /**
  * REGISTER (Email + Password)
  */
@@ -24,7 +23,6 @@ export const register = async (req: Request, res: Response) => {
     verificationToken,
   });
 };
-
 
 export const verifyOtp = async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
@@ -69,7 +67,7 @@ export const login = async (req: Request, res: Response) => {
   });
 
   res.status(200).json({
-    message:" Login Successfully Completed",
+    message: ' Login Successfully Completed',
     success: true,
     accessToken,
   });
@@ -78,17 +76,17 @@ export const login = async (req: Request, res: Response) => {
 export const googleLogin = async (req: Request, res: Response) => {
   const { idToken } = req.body;
 
-  const {accessToken,refreshToken} = await googleAuthService.authenticate(idToken);
+  const { accessToken, refreshToken } =
+    await googleAuthService.authenticate(idToken);
 
   logger.info('Google login successful');
 
-  
   res.cookie('refreshToken', refreshToken, {
-    httpOnly:true,
-    secure:true,
-    sameSite:true,
-    path:"/auth",
-    maxAge: 7 * 24 * 60 * 60 * 1000,  
+    httpOnly: true,
+    secure: true,
+    sameSite: true,
+    path: '/auth',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
   res.status(200).json({
