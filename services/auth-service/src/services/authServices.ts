@@ -56,6 +56,7 @@ export const authService = {
 
     const record = await otpRepository.find(email, otp);
 
+    console.log('this part');
     if (!record) {
       throw new AppError('Invalid or expired OTP', 403);
     }
@@ -67,14 +68,16 @@ export const authService = {
     await otpRepository.delete(email);
   },
 
-  // -- LOGIN --
   loginUser: async (email: string, password: string) => {
     if (!email || !password) {
       throw new AppError('All fields required', 400);
     }
 
-    // IMPORTANT: must fetch password explicitly if select:false
     const user = await userRepository.findByEmail(email);
+
+    if (!user) {
+      throw new AppError('User is not exists', 401);
+    }
 
     if (!user || !user.password) {
       throw new AppError('Invalid credentials', 401);
@@ -86,11 +89,8 @@ export const authService = {
 
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
-      throw new AppError('Invalid credentials', 401);
+      throw new AppError('Password is not verified', 401);
     }
-
-    // 🔥 single-session enforcement
-    await authSessionRepository.revokeAllForUser(user._id);
 
     const userId = user._id.toString();
 
@@ -106,13 +106,39 @@ export const authService = {
     });
 
     return {
-      user: {
-        id: userId, // ✅ string, not ObjectId
-        email: user.email,
-        fullName: user.fullName,
-      },
+      user,
       accessToken,
       refreshToken,
     };
+  },
+  logoutUser: async (refreshToken?: string) => {
+    if (!refreshToken) {
+      throw new AppError('Refresh token is missing', 400);
+    }
+    const refreshTokenHash = hashRefreshToken(refreshToken);
+    await authSessionRepository.deleteByRefreshTokenHash(refreshTokenHash);
+    return true;
+  },
+
+  refreshAccessToken: async (refreshToken: string) => {
+    const refreshTokenHash = hashRefreshToken(refreshToken);
+
+    const session =
+      await authSessionRepository.findValidByTokenHash(refreshTokenHash);
+    if (!session) {
+      throw new AppError('Invalid refresh token', 401);
+    }
+    const userId = session.userId.toString();
+
+    if (session.expiresAt < new Date()) {
+      throw new AppError('Refresh token expired', 401);
+    }
+
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    return generateAccessToken(user._id.toString(), user.email);
   },
 };

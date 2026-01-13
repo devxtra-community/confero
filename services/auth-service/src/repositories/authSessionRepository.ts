@@ -31,4 +31,7 @@ export const authSessionRepository = {
       { revokedAt: new Date() }
     );
   },
+  deleteByRefreshTokenHash: async (refreshTokenHash: string) => {
+    return AuthSession.deleteOne({ refreshTokenHash });
+  },
 };

@@ -13,7 +13,7 @@ on:
 
 jobs:
   ci:
-    name: CI (Lint & Auth Service Build)
+    name: CI (Lint & Build)
     runs-on: ubuntu-latest
 
     steps:
@@ -33,63 +33,90 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint
-        run: pnpm lint
+      # ---- LINT EVERYTHING ----
+      - name: Lint all packages
+        run: pnpm -r lint
 
-      - name: Build auth service only
+      # ---- BUILD BACKEND SERVICES ----
+      - name: Build auth-service
         run: pnpm --filter auth-service build
 
-      - name: Prepare auth service artifact
+      - name: Build live-service
+        run: pnpm --filter live-service build
+
+      # ---- AUTH SERVICE ARTIFACT ----
+      - name: Prepare auth-service artifact
         run: |
           rm -rf auth-service-prod
           mkdir auth-service-prod
           cp -r services/auth-service/dist auth-service-prod/
           cp services/auth-service/package.json auth-service-prod/
 
-      - name: Upload auth service artifact
+      - name: Upload auth-service artifact
         uses: actions/upload-artifact@v4
         with:
           name: auth-service-prod
           path: auth-service-prod
 
+      # ---- LIVE SERVICE ARTIFACT ----
+      - name: Prepare live-service artifact
+        run: |
+          rm -rf live-service-prod
+          mkdir live-service-prod
+          cp -r live-service/dist live-service-prod/
+          cp live-service/package.json live-service-prod/
+
+      - name: Upload live-service artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-service-prod
+          path: live-service-prod
+
   cd:
-    name: CD (Deploy Auth Service to EC2)
+    name: CD (Deploy to EC2)
     needs: ci
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download auth service artifact
+      - name: Download auth-service artifact
         uses: actions/download-artifact@v4
         with:
           name: auth-service-prod
           path: auth-service-prod
 
-      - name: Debug – verify artifact
-        run: |
-          pwd
-          ls -la
-          echo "---- auth-service-prod ----"
-          ls -la auth-service-prod
+      - name: Download live-service artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: live-service-prod
+          path: live-service-prod
 
-      - name: Upload auth service to EC2
+      - name: Upload services to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
-          debug: true
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
-          source: auth-service-prod
+          source: |
+            auth-service-prod
+            live-service-prod
           target: /var/www/confero
 
-      - name: Restart auth service on EC2
+      - name: Restart services
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
+            echo "Restarting auth-service"
             cd /var/www/confero/auth-service-prod
             npm install --omit=dev
             pm2 reload confero-auth-service || pm2 start dist/index.js --name confero-auth-service
+
+            echo "Restarting live-service"
+            cd /var/www/confero/live-service-prod
+            npm install --omit=dev
+            pm2 reload confero-live-service || pm2 start dist/server.js --name confero-live-service
+
             pm2 save

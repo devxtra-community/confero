@@ -68,11 +68,6 @@ export const googleAuthService = {
     });
 
     return {
-      user: {
-        id: userId,
-        email: user.email,
-        fullName: user.fullName,
-      },
       accessToken,
       refreshToken,
     };

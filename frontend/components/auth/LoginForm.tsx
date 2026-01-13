@@ -4,11 +4,44 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
 import GoogleButton from './GoogleButton';
 import Link from 'next/link';
+import { axiosInstance } from '@/lib/axiosInstance';
+import { useRouter } from 'next/navigation';
+import axios from 'axios';
 
 export function LoginRight() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handleLogin = async () => {
+    setError(null);
+    setLoading(true);
+
+    try {
+      const res = await axiosInstance.post('/auth/login', {
+        email,
+        password,
+      });
+
+      const { accessToken } = res.data;
+
+      localStorage.setItem('accessToken', accessToken);
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1200);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message ?? 'Login failed');
+      } else {
+        setError('Login failed');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="w-full lg:w-1/2 bg-background flex flex-col min-h-screen">
@@ -18,10 +51,10 @@ export function LoginRight() {
             <h2 className="text-3xl sm:text-4xl font-bold font-sans pb-4">
               Welcome <span className="text-primary">Back!</span>
             </h2>
-            <p className="text-muted-foreground font-sans text-base sm:text-xl">
-              Log in
-            </p>
+            <p className="text-muted-foreground text-base sm:text-xl">Log in</p>
           </div>
+
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
           <div className="space-y-4">
             <input
@@ -29,30 +62,35 @@ export function LoginRight() {
               placeholder="Email address"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="w-full h-11 px-4 rounded-md border border-input bg-background focus:ring-2 focus:ring-ring outline-none"
+              className="w-full h-11 px-4 rounded-md border border-input"
             />
+
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full h-11 px-4 rounded-md border border-input bg-background focus:ring-2 focus:ring-ring outline-none"
+                className="w-full h-11 px-4 rounded-md border border-input"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute  top-3 right-3 text-primary cursor-pointer "
+                className="absolute top-3 right-3 text-primary"
               >
                 {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
               </button>
             </div>
-            <button className="w-full h-11 mt-3 rounded-md bg-primary text-primary-foreground font-medium hover:opacity-90">
-              Signup
+
+            <button
+              onClick={handleLogin}
+              disabled={loading}
+              className="w-full h-11 mt-3 rounded-md bg-primary text-primary-foreground font-medium hover:opacity-90"
+            >
+              {loading ? 'Logging in...' : 'Login'}
             </button>
           </div>
 
-          {/* Divider */}
           <div className="flex items-center gap-3">
             <div className="h-px flex-1 bg-border" />
             <span className="text-sm text-muted-foreground">Or</span>
@@ -65,6 +103,7 @@ export function LoginRight() {
               Signup
             </Link>
           </p>
+
           <GoogleButton />
         </div>
       </div>
