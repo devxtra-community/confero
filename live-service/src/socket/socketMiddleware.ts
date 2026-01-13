@@ -2,12 +2,13 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { Socket } from 'socket.io';
 import { AuthenticatedUser } from '../types/tokenType';
+import { logger } from '../config/logger';
 
 type SocketNext = (err?: Error) => void;
 
 export const socketMiddleware = (socket: Socket, next: SocketNext) => {
   try {
-    console.log('🛂 auth middleware hit');
+    logger.info(' auth middleware hit');
 
     const token = socket.handshake.auth?.token;
     if (!token) {
@@ -21,7 +22,6 @@ export const socketMiddleware = (socket: Socket, next: SocketNext) => {
       userId: payload.sub,
       email: payload.email,
     };
-
     socket.data.user = user;
     next();
   } catch {

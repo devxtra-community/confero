@@ -2,9 +2,10 @@ import { SOCKET_EVENTS } from './socketEvents';
 import { PresenceService } from '../service/presenceService';
 import { Server, Socket } from 'socket.io';
 import { AuthenticatedUser } from '../types/tokenType';
+import { logger } from '../config/logger';
 
 export const socketController = (socket: Socket, io: Server) => {
-  console.log('🎮 socket controller running');
+  logger.info(' socket controller running');
   const user = socket.data.user as AuthenticatedUser;
 
   PresenceService.markOnline(user.userId, socket.id);

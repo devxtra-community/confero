@@ -56,7 +56,6 @@ export const authService = {
 
     const record = await otpRepository.find(email, otp);
 
-    console.log('this part');
     if (!record) {
       throw new AppError('Invalid or expired OTP', 403);
     }

@@ -22,14 +22,12 @@ export const register = async (req: Request, res: Response) => {
 
 export const verifyOtp = async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
-  console.log('reached');
 
   if (!authHeader?.startsWith('Bearer ')) {
     throw new AppError('Verification token missing', 401);
   }
   const verificationToken = authHeader.split(' ')[1];
   const { otp } = req.body;
-  console.log(otp);
   if (!otp) {
     throw new AppError('OTP is required', 400);
   }
