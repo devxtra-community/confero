@@ -9,4 +9,18 @@ export const SOCKET_EVENTS = {
 
   USER_ONLINE: 'user:online',
   USER_OFFLINE: 'user:offline',
+
+  // call lifecycle events
+  CALL_INITIATE: 'call:initiate',
+  CALL_INCOMING: 'call:incoming',
+  CALL_ACCEPT: 'call:accept',
+  CALL_REJECT: 'call:reject',
+  CALL_TIMEOUT: 'call:timeout',
+  CALL_END: 'call:end',
+
+  // webrtc signaling events
+  WEBRTC_OFFER: 'webrtc:offer',
+  WEBRTC_ANSWER: 'webrtc:answer',
+  WEBRTC_ICE: 'webrtc:ice',
+  WEBRTC_ICE_FAILED: 'webrtc:ice-failed',
 };
