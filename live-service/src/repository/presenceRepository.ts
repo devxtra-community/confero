@@ -31,5 +31,5 @@ export const presenceRepository = {
 
   async isOnline(userId: string) {
     return (await redis.exists(`online:${userId}`)) === 1;
-  }
+  },
 };

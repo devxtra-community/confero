@@ -11,5 +11,5 @@ export const PresenceService = {
 
   markOffline(userId: string, socketId: string) {
     return presenceRepository.removeSocket(userId, socketId);
-  }
+  },
 };
