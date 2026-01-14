@@ -1,10 +1,35 @@
 import redis from '../config/redis';
 
+const PRESENCE_TTL = 90;
+
 export const presenceRepository = {
-  setOnline(userId: string, socketId: string) {
-    return redis.set(`online:${userId}`, socketId, 'EX', 60);
+  async addSocket(userId: string, socketId: string) {
+    const key = `online:${userId}`;
+
+    await redis.sadd(key, socketId);
+    await redis.expire(key, PRESENCE_TTL);
   },
-  remove(userId: string) {
-    return redis.del(`online:${userId}`);
+
+  async refresh(userId: string) {
+    await redis.expire(`online:${userId}`, PRESENCE_TTL);
   },
+
+  async removeSocket(userId: string, socketId: string) {
+    const key = `online:${userId}`;
+
+    await redis.srem(key, socketId);
+
+    const remaining = await redis.scard(key);
+
+    if (remaining === 0) {
+      await redis.del(key);
+      return true; // user fully offline
+    }
+
+    return false; // still online in other tabs
+  },
+
+  async isOnline(userId: string) {
+    return (await redis.exists(`online:${userId}`)) === 1;
+  }
 };

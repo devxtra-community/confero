@@ -2,9 +2,14 @@ import { presenceRepository } from '../repository/presenceRepository';
 
 export const PresenceService = {
   markOnline(userId: string, socketId: string) {
-    return presenceRepository.setOnline(userId, socketId);
+    return presenceRepository.addSocket(userId, socketId);
   },
-  markOffline(userId: string) {
-    return presenceRepository.remove(userId);
+
+  refresh(userId: string) {
+    return presenceRepository.refresh(userId);
   },
+
+  markOffline(userId: string, socketId: string) {
+    return presenceRepository.removeSocket(userId, socketId);
+  }
 };

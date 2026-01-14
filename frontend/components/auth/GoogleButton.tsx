@@ -27,7 +27,7 @@ export default function GoogleButton() {
             localStorage.setItem('accessToken', res.data.accessToken);
             // localStorage.setItem('refreshToken', res.data.refreshToken);
 
-            router.push('/signup');
+            router.push('/dashboard');
           } catch (error) {
             console.error('Google auth API failed', error);
           }
