@@ -61,14 +61,19 @@ export const login = async (req: Request, res: Response) => {
     httpOnly: true,
     secure: true,
     sameSite: 'strict',
-    path: '/auth',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+
+  res.cookie('accessToken', accessToken, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+    maxAge: 15 * 60 * 1000, // 15 minutes
   });
 
   res.status(200).json({
     message: ' Login Successfully Completed',
     success: true,
-    accessToken,
   });
 };
 
@@ -83,15 +88,20 @@ export const googleLogin = async (req: Request, res: Response) => {
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
     secure: true,
-    sameSite: true,
-    path: '/auth',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+
+  res.cookie('accessToken', accessToken, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+    maxAge: 15 * 60 * 1000, // 15 minutes
   });
 
   res.status(200).json({
     success: true,
     message: 'Google login successfully completed',
-    accessToken,
   });
 };
 
@@ -103,7 +113,12 @@ export const logout = async (req: Request, res: Response) => {
     httpOnly: true,
     sameSite: 'strict',
     secure: true,
-    path: '/auth',
+  });
+
+  res.clearCookie('accessToken', {
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: true,
   });
 
   res.status(200).json({

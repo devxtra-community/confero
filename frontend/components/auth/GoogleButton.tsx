@@ -19,15 +19,13 @@ export default function GoogleButton() {
           }
 
           try {
-            const res = await axiosInstance.post('/auth/google', {
+            await axiosInstance.post('/auth/google', {
               idToken,
             });
-            console.log(res);
-            // OPTIONAL: store tokens if not handled by interceptor
-            localStorage.setItem('accessToken', res.data.accessToken);
-            // localStorage.setItem('refreshToken', res.data.refreshToken);
 
-            router.push('/signup');
+            setTimeout(() => {
+              router.push('/dashboard');
+            }, 1200);
           } catch (error) {
             console.error('Google auth API failed', error);
           }
