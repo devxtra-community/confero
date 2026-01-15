@@ -14,6 +14,7 @@ export const SOCKET_EVENTS = {
   CALL_INITIATE: 'call:initiate',
   CALL_INCOMING: 'call:incoming',
   CALL_ACCEPT: 'call:accept',
+  CALL_ACCEPTED: 'call:accepted',
   CALL_REJECT: 'call:reject',
   CALL_TIMEOUT: 'call:timeout',
   CALL_END: 'call:end',

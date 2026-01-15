@@ -4,10 +4,14 @@ import { socketMiddleware } from './socketMiddleware';
 import { createServer } from 'http';
 import { callHandlers, socketController } from './socketController';
 import { logger } from '../config/logger';
+import { env } from '../config/env';
 
 export const initSocket = (httpserver: ReturnType<typeof createServer>) => {
   const io = new Server(httpserver, {
-    cors: { origin: '*' },
+    cors: {
+      origin: env.FRONTEND_URI,
+      credentials: true,
+    },
   });
 
   io.use(socketMiddleware);
