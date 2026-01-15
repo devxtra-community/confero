@@ -34,7 +34,7 @@ export const socketMiddleware = (socket: Socket, next: SocketNext) => {
     socket.data.user = user;
     next();
   } catch (err) {
-    console.error("SOCKET AUTH ERROR:", err);
+    console.error('SOCKET AUTH ERROR:', err);
     next(new Error('INVALID_TOKEN'));
   }
 };

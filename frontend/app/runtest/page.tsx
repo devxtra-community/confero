@@ -50,7 +50,7 @@ export default function SocketTest() {
     });
 
     socketRef.current = socket;
-    (window as any).socket = socket; // dev-only
+    window.socket = socket;
 
     socket.on('auth:success', () => {
       console.log('✅ Auth success');
