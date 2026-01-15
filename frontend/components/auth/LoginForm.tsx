@@ -28,6 +28,7 @@ export function LoginRight() {
       setTimeout(() => {
         router.push('/dashboard');
       }, 1200);
+      
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         toast.error(err.response?.data?.message ?? 'Login failed');
