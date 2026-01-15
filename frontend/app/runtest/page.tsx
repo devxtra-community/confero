@@ -11,11 +11,14 @@ export default function SocketTest() {
         token: localStorage.getItem('accessToken'),
       },
     });
+    window.socket = socket;
 
     socket.on('auth:success', () => {
       console.log('✅ Auth success');
     });
-
+    socket.onAny((event, data) => {
+      console.log('📨 EVENT:', event, data);
+    });
     socket.on('connect_error', err => {
       console.error('❌', err.message);
     });

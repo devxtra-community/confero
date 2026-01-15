@@ -7,36 +7,32 @@ import Link from 'next/link';
 import { axiosInstance } from '@/lib/axiosInstance';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { toast } from 'sonner';
 
 export function LoginRight() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const handleLogin = async () => {
-    setError(null);
     setLoading(true);
 
     try {
-      const res = await axiosInstance.post('/auth/login', {
+      await axiosInstance.post('/auth/login', {
         email,
         password,
       });
 
-      const { accessToken } = res.data;
-
-      localStorage.setItem('accessToken', accessToken);
       setTimeout(() => {
         router.push('/dashboard');
       }, 1200);
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message ?? 'Login failed');
+        toast.error(err.response?.data?.message ?? 'Login failed');
       } else {
-        setError('Login failed');
+        toast.error('Login failed');
       }
     } finally {
       setLoading(false);
@@ -53,8 +49,6 @@ export function LoginRight() {
             </h2>
             <p className="text-muted-foreground text-base sm:text-xl">Log in</p>
           </div>
-
-          {error && <p className="text-sm text-destructive">{error}</p>}
 
           <div className="space-y-4">
             <input

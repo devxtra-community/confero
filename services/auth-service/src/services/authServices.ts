@@ -105,7 +105,6 @@ export const authService = {
     });
 
     return {
-      user,
       accessToken,
       refreshToken,
     };
