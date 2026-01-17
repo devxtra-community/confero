@@ -1,7 +1,7 @@
 'use client';
 
 import { io, Socket } from 'socket.io-client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 
 export default function SocketTest() {
   const socketRef = useRef<Socket | null>(null);
@@ -83,14 +83,15 @@ export default function SocketTest() {
   };
 
   // 🔑 ENSURE ONLY ONE PC EXISTS
-  const getOrCreatePC = () => {
+  const getOrCreatePC = useCallback(() => {
     if (pcRef.current) return pcRef.current;
 
     const pc = createPeerConnection();
     pcRef.current = pc;
     return pc;
-  };
-  
+  }, []);
+
+
   /* ============================
      SOCKET SETUP
   ============================ */
