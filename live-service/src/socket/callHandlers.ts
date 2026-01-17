@@ -32,8 +32,15 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
 
     callService.update(callId, 'CONNECTING');
 
-    // 🔑 NOTIFY BOTH CALLER & CALLEE
-    io.to(call.from).to(call.to).emit(SOCKET_EVENTS.CALL_ACCEPTED, { callId });
+    io.to(call.from).emit(SOCKET_EVENTS.CALL_ACCEPTED, {
+      callId,
+      to: call.to,
+    });
+
+    io.to(call.to).emit(SOCKET_EVENTS.CALL_ACCEPTED, {
+      callId,
+      to: call.from,
+    });
   });
 
   socket.on(SOCKET_EVENTS.WEBRTC_OFFER, ({ callId, offer, to }) => {
