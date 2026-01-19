@@ -380,6 +380,7 @@ export default function SocketTest() {
 
   // Auto-start media on mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     getMediaStream();
   }, [getMediaStream]);
 
