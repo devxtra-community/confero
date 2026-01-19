@@ -36,11 +36,6 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
       callId,
       to: call.to,
     });
-
-    io.to(call.to).emit(SOCKET_EVENTS.CALL_ACCEPTED, {
-      callId,
-      to: call.from,
-    });
   });
 
   socket.on(SOCKET_EVENTS.WEBRTC_OFFER, ({ callId, offer, to }) => {
@@ -59,6 +54,7 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
 
     const userId = socket.data.user.userId;
     if (userId !== call.from && userId !== call.to) return;
+
     io.to(to).emit(SOCKET_EVENTS.WEBRTC_ANSWER, { callId, answer });
   });
 
@@ -68,6 +64,7 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
 
     const userId = socket.data.user.userId;
     if (userId !== call.from && userId !== call.to) return;
+
     io.to(to).emit(SOCKET_EVENTS.WEBRTC_ICE, { callId, candidate });
   });
 
