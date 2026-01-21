@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRouter from './routes/authRoute.js';
+import { liveProxy } from './proxies/liveProxty.js';
+import helmet from 'helmet';
 dotenv.config();
 
 const app = express();
@@ -12,9 +14,11 @@ app.use(
     credentials: true,
   })
 );
+app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/auth', authRouter);
+app.use('/live', liveProxy);
 
 export default app;

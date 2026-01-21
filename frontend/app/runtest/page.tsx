@@ -2,6 +2,7 @@
 
 import { io, Socket } from 'socket.io-client';
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { Mic, MicOff, Video, VideoOff, Phone, Settings, MessageSquare } from 'lucide-react';
 
 export default function SocketTest() {
   const socketRef = useRef<Socket | null>(null);
@@ -21,6 +22,9 @@ export default function SocketTest() {
 
   const [status, setStatus] = useState<string>('Initializing...');
   const [iceState, setIceState] = useState<string>('new');
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  const [showChat, setShowChat] = useState(true);
 
   //this is the audio and video connection thing
   const getMediaStream = useCallback(async () => {
@@ -52,7 +56,7 @@ export default function SocketTest() {
     }
   }, []);
 
-  // CLEANUP FUNCTION - DEFINED EARLY
+  // CLEANUP FUNCTION
   const cleanup = useCallback(() => {
     pcRef.current?.close();
     pcRef.current = null;
@@ -171,7 +175,8 @@ export default function SocketTest() {
 
   // SOCKET SETUP STARTS HERE
   useEffect(() => {
-    const socket = io('http://localhost:4001', {
+    const socket = io(process.env.NEXT_PUBLIC_API_URL, {
+      path: '/live/socket.io',
       withCredentials: true,
     });
 
@@ -384,38 +389,187 @@ export default function SocketTest() {
     getMediaStream();
   }, [getMediaStream]);
 
-  return (
-    <div className="p-20 font-serif">
-      <h3 className="m-2.5 text-2xl text-primary">Video Call Test</h3>
-      <div className="p-2.5 border-2 m-2.5 bg-amber-50">
-        <strong>Status:</strong> {status}
-      </div>
-      <div className="p-2.5 bg-blue-200 border-2 mb-5 text-md m-2.5">
-        <strong>ICE State:</strong> {iceState}
+  // UI CONTROL FUNCTIONS
+  const toggleMute = () => {
+    if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMuted(!audioTrack.enabled);
+      }
+    }
+  };
+
+  const toggleVideo = () => {
+    if (localStreamRef.current) {
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsVideoOff(!videoTrack.enabled);
+      }
+    }
+  };
+
+  const endCall = () => {
+    cleanup();
+    setStatus('Call ended');
+  };
+
+return (
+  <div className="min-h-screen w-full bg-gray-900 flex overflow-hidden">
+    {/* ================= Sidebar (Desktop only) ================= */}
+    <aside className="hidden lg:flex w-20 bg-gray-800 flex-col items-center py-6">
+      <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">
+        M
       </div>
 
-      <div className="flex gap-5 mt-5 flex-wrap ml-2.5">
-        <div>
-          <p className="font-bold mt-5 text-xl">You (Local)</p>
+      <div className="flex-1" />
+
+      <div className="w-11 h-11 bg-red-500 rounded-full flex items-center justify-center">
+        <span className="text-white text-sm">U</span>
+      </div>
+    </aside>
+
+    {/* ================= Main Area ================= */}
+    <main className="flex-1 flex flex-col relative">
+      {/* ================= Header ================= */}
+      <header className="h-14 px-6 bg-gray-800 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+          <span className="text-gray-300 text-sm">REC 00:00:00</span>
+        </div>
+
+        <h1 className="text-white font-medium text-sm lg:text-base">
+          Video Call – {status}
+        </h1>
+
+        <span className="hidden md:inline-block bg-gray-700 px-3 py-1 rounded text-xs text-white">
+          ICE: {iceState}
+        </span>
+      </header>
+
+      {/* ================= Video Stage ================= */}
+      <section className="flex-1 relative bg-black">
+        {/* Remote Video */}
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          className="w-full h-full object-cover scale-x-[-1]"
+        />
+
+        {/* Local Video */}
+        <div className="
+          absolute bottom-10 right-3
+          lg:w-80 h-45
+          sm:w-60 sm:40
+          rounded-xl overflow-hidden
+          border border-gray-700
+          shadow-2xl
+        ">
           <video
-            className="w-125 h-100 border-green-500 border-3 scale-x-[-1] bg-black rounded-lg object-cover"
             ref={localVideoRef}
             autoPlay
             muted
             playsInline
+            className="w-full h-full object-cover scale-x-[-1]"
           />
+          <span className="absolute bottom-2 right-2 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
         </div>
 
-        <div>
-          <p className="font-bold mt-5 text-xl">Remote User</p>
-          <video
-            className="w-125 h-100 border-blue-500 border-3 scale-x-[-1] bg-black rounded-lg object-cover"
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-          />
+        {/* ================= Controls ================= */}
+        <div className="
+          absolute bottom-6 left-1/2 -translate-x-1/2
+          flex items-center gap-4
+          bg-gray-800/80 backdrop-blur
+          px-6 py-3 rounded-full
+        ">
+          <button
+            onClick={toggleMute}
+            className={`w-11 h-11 rounded-full flex items-center justify-center transition ${
+              isMuted ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'
+            }`}
+          >
+            {isMuted ? <MicOff className="text-white" /> : <Mic className="text-white" />}
+          </button>
+
+          <button
+            onClick={toggleVideo}
+            className={`w-11 h-11 rounded-full flex items-center justify-center transition ${
+              isVideoOff ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'
+            }`}
+          >
+            {isVideoOff ? <VideoOff className="text-white" /> : <Video className="text-white" />}
+          </button>
+
+          <button
+            onClick={endCall}
+            className="w-12 h-12 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center"
+          >
+            <Phone className="text-white rotate-135" />
+          </button>
+
+          <button
+            onClick={() => setShowChat(true)}
+            className="w-11 h-11 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center"
+          >
+            <MessageSquare className="text-white" />
+          </button>
+
+          <button className="w-11 h-11 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center">
+            <Settings className="text-white" />
+          </button>
         </div>
-      </div>
-    </div>
-  );
+      </section>
+    </main>
+
+    {/* ================= Chat Panel ================= */}
+    {showChat && (
+      <aside className="
+        fixed inset-0 z-50
+        lg:static lg:inset-auto
+        w-full lg:w-96
+        bg-gray-800 flex flex-col
+      ">
+        <header className="h-14 px-4 bg-gray-700 flex items-center justify-between">
+          <h2 className="text-white font-medium">Messages</h2>
+          <button
+            onClick={() => setShowChat(false)}
+            className="text-gray-300 hover:text-white text-lg"
+          >
+            ✕
+          </button>
+        </header>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Message */}
+          <div className="flex gap-3">
+            <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-xs text-white">
+              C
+            </div>
+            <div>
+              <p className="text-gray-400 text-xs">Carol</p>
+              <div className="bg-gray-700 text-sm text-white p-3 rounded-lg">
+                Hello guys! What’s your opinion?
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer className="p-4 bg-gray-700">
+          <div className="flex gap-2">
+            <input
+              placeholder="Write message..."
+              className="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg outline-none"
+            />
+            <button className="bg-blue-600 hover:bg-blue-700 px-4 rounded-lg text-white">
+              Send
+            </button>
+          </div>
+        </footer>
+      </aside>
+    )}
+  </div>
+);
+
 }
