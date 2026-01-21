@@ -1,19 +1,17 @@
-import { io } from "socket.io-client";
+import { io } from 'socket.io-client';
 
-const AUTH_URL = "http://localhost:4002/auth/login";
-const SOCKET_URL = "http://localhost:4001";
+const AUTH_URL = 'http://localhost:4002/auth/login';
+const SOCKET_URL = 'http://localhost:4001';
 
-const USERS = [
-  { email: "sameerptmc@gmail.com", password: "sameer123" },
-];
+const USERS = [{ email: 'sameerptmc@gmail.com', password: 'sameer123' }];
 
 const CLIENTS_PER_USER = 5;
 const RECONNECT_INTERVAL = 2000;
 
 async function login(email: string, password: string): Promise<string> {
   const res = await fetch(AUTH_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
 
@@ -25,28 +23,28 @@ async function login(email: string, password: string): Promise<string> {
   const rawCookies = (res.headers as any).getSetCookie?.() || [];
 
   if (!rawCookies.length) {
-    throw new Error("No set-cookie returned from login");
+    throw new Error('No set-cookie returned from login');
   }
 
   // Extract accessToken from cookies
   const accessCookie = rawCookies.find((c: string) =>
-    c.startsWith("accessToken=")
+    c.startsWith('accessToken=')
   );
 
   if (!accessCookie) {
-    throw new Error("accessToken cookie not found");
+    throw new Error('accessToken cookie not found');
   }
 
-  const token = accessCookie.split(";")[0].replace("accessToken=", "");
+  const token = accessCookie.split(';')[0].replace('accessToken=', '');
 
-  console.log("Token extracted:", token.slice(0, 40) + "...");
+  console.log('Token extracted:', token.slice(0, 40) + '...');
 
   return token;
 }
 
 function createSocket(id: string, token: string) {
   const socket = io(SOCKET_URL, {
-    transports: ["websocket"],
+    transports: ['websocket'],
     auth: {
       token, // ✅ this matches your backend middleware
     },
@@ -55,15 +53,15 @@ function createSocket(id: string, token: string) {
     reconnectionDelay: 1000,
   });
 
-  socket.on("connect", () => {
+  socket.on('connect', () => {
     console.log(`[${id}] connected → ${socket.id}`);
   });
 
-  socket.on("disconnect", (reason) => {
+  socket.on('disconnect', reason => {
     console.log(`[${id}] disconnected → ${reason}`);
   });
 
-  socket.on("connect_error", (err) => {
+  socket.on('connect_error', err => {
     console.error(`[${id}] connect_error →`, err.message);
   });
 
