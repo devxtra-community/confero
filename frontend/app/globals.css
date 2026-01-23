@@ -6,6 +6,11 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-glass: var(--glass);
+  --color-glassHover: var(--glassHover);
+  --color-buttonBg: var(--buttonBg);
+  --color-havorBg: var(--havorBg);
+  --color-favor: var(--favor);
   --font-sans: var(--font-poetsen-one);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -49,7 +54,12 @@
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
+  --buttonBg: oklch(0.72 0.19 149);
+  --favor: oklch(0.72 0.19 149);
+  --havorBg: oklch(60.747% 0.14777 149.681);
   --foreground: oklch(0.145 0 0);
+  --glass: oklch(1 0 0 / 0.1);
+  --glassHover: oklch(94.765% 0.00213 14.404 / 0.1);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);

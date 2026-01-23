@@ -498,9 +498,8 @@ export default function SocketTest() {
           >
             <button
               onClick={toggleMute}
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition ${
-                isMuted ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'
-              }`}
+              className={`w-11 h-11 rounded-full flex items-center justify-center transition ${isMuted ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'
+                }`}
             >
               {isMuted ? (
                 <MicOff className="text-white" />
@@ -511,9 +510,8 @@ export default function SocketTest() {
 
             <button
               onClick={toggleVideo}
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition ${
-                isVideoOff ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'
-              }`}
+              className={`w-11 h-11 rounded-full flex items-center justify-center transition ${isVideoOff ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'
+                }`}
             >
               {isVideoOff ? (
                 <VideoOff className="text-white" />
