@@ -135,8 +135,12 @@
 }
 
 @keyframes loading-fill {
-  0% { width: 0%; }
-  100% { width: 100%; }
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
 }
 
 @keyframes fade-slide {
@@ -170,4 +174,3 @@
 .animate-loading-progress {
   animation: loading-progress 2.5s ease-in-out infinite;
 }
-
