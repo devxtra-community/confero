@@ -20,7 +20,10 @@ export interface IUser extends Document {
   linkedinId?: string;
 
   profilePicture?: string;
-  skills: string[];
+  skills: {
+    name: string;
+    level: 'beginner' | 'intermediate' | 'advanced';
+  }[];
   interests: string[];
 
   availableForCall: boolean;
@@ -95,10 +98,14 @@ const userSchema = new Schema<IUser>(
     },
 
     skills: {
-      type: [String],
+      type: [
+        {
+          key: { type: String, required: true },
+          label: { type: String, required: true },
+        },
+      ],
       default: [],
     },
-
     interests: {
       type: [String],
       default: [],
@@ -129,7 +136,7 @@ const userSchema = new Schema<IUser>(
 );
 
 userSchema.index({ email: 1 }, { unique: true });
-userSchema.index({ skills: 1 });
+userSchema.index({ 'skills.name': 1 });
 userSchema.index({ availableForCall: 1 });
 
 export const UserModel = mongoose.model<IUser>('User', userSchema);
