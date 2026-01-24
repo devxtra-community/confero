@@ -34,6 +34,7 @@ export default function HeroContentImages() {
               className="w-full h-full object-cover"
             />
           </div>
+    
         </div>
       </div>
     </div>

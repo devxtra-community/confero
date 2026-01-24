@@ -28,6 +28,7 @@ export default function Navbar() {
       >
         <div className="flex items-center justify-between gap-6">
           <div className="flex items-center gap-6 font-sans">
+            
             <h1 className="text-white text-lg sm:text-xl">Confero</h1>
 
             <div className="hidden md:flex items-center justify-around gap-6 text-md cursor-pointer">

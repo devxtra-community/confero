@@ -59,7 +59,7 @@
   --havorBg: oklch(60.747% 0.14777 149.681);
   --foreground: oklch(0.145 0 0);
   --glass: oklch(1 0 0 / 0.1);
-  --glassHover: oklch(94.765% 0.00213 14.404 / 0.1);
+  --glassHover: oklch(87.925% 0.00437 15.982 / 0.1);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -133,3 +133,41 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes loading-fill {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+@keyframes fade-slide {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-loading-fill {
+  animation: loading-fill 3s ease-in-out infinite;
+}
+
+.animate-fade-slide {
+  animation: fade-slide 0.6s ease forwards;
+}
+
+@keyframes loading-progress {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+.animate-loading-progress {
+  animation: loading-progress 2.5s ease-in-out infinite;
+}
+
