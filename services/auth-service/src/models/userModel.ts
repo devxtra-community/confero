@@ -4,6 +4,8 @@ export type UserRole = 'user' | 'admin';
 export type AccountStatus = 'active' | 'suspended' | 'deleted';
 export type AuthProvider = 'local' | 'google';
 
+export type SkillLevel = 'beginner' | 'intermediate' | 'advanced';
+
 export interface IUser extends Document {
   email: string;
   password?: string;
@@ -20,10 +22,13 @@ export interface IUser extends Document {
   linkedinId?: string;
 
   profilePicture?: string;
+
   skills: {
-    name: string;
-    level: 'beginner' | 'intermediate' | 'advanced';
+    key: string;
+    label: string;
+    level: SkillLevel;
   }[];
+
   interests: string[];
 
   availableForCall: boolean;
@@ -39,18 +44,14 @@ const userSchema = new Schema<IUser>(
   {
     email: {
       type: String,
-      required: [true, 'Email is required'],
+      required: true,
       lowercase: true,
       trim: true,
-      match: [
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-        'Please provide a valid email address',
-      ],
+      match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     },
 
     password: {
       type: String,
-      required: [false, 'Password hash is required'],
     },
 
     authProvider: {
@@ -66,9 +67,10 @@ const userSchema = new Schema<IUser>(
 
     fullName: {
       type: String,
-      required: [true, 'First name is required'],
+      required: true,
       trim: true,
     },
+
     role: {
       type: String,
       enum: ['user', 'admin'],
@@ -83,8 +85,8 @@ const userSchema = new Schema<IUser>(
 
     jobTitle: {
       type: String,
-      trim: true,
       default: '',
+      trim: true,
     },
 
     linkedinId: {
@@ -100,12 +102,27 @@ const userSchema = new Schema<IUser>(
     skills: {
       type: [
         {
-          key: { type: String, required: true },
-          label: { type: String, required: true },
+          key: {
+            type: String,
+            required: true,
+            lowercase: true,
+            trim: true,
+          },
+          label: {
+            type: String,
+            required: true,
+            trim: true,
+          },
+          level: {
+            type: String,
+            enum: ['beginner', 'intermediate', 'advanced'],
+            default: 'beginner',
+          },
         },
       ],
       default: [],
     },
+
     interests: {
       type: [String],
       default: [],
@@ -120,6 +137,7 @@ const userSchema = new Schema<IUser>(
       type: Date,
       default: Date.now,
     },
+
     emailVerified: {
       type: Boolean,
       default: false,
@@ -130,13 +148,11 @@ const userSchema = new Schema<IUser>(
       default: null,
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 userSchema.index({ email: 1 }, { unique: true });
-userSchema.index({ 'skills.name': 1 });
+userSchema.index({ 'skills.key': 1 });
 userSchema.index({ availableForCall: 1 });
 
 export const UserModel = mongoose.model<IUser>('User', userSchema);

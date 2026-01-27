@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Video, Sparkles, Zap, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function FindMatchPage() {
   const [isSearching, setIsSearching] = useState(false);
@@ -232,35 +233,37 @@ export default function FindMatchPage() {
                   </span>
                 </div>
 
-                <div className="space-y-4">
-                  <button
-                    className="
-              w-full flex items-center justify-center gap-3
-              px-6 py-4
-              bg-linear-to-r from-primary to-favor
-              text-white rounded-2xl
-              font-semibold text-base md:text-lg
-              transition-transform hover:scale-105
-              cursor-pointer
-            "
-                  >
-                    <Video className="w-5 h-5" />
-                    Start Video Call
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+                <div className="space-y-4 flex flex-col items-center lg:items-start">
+                  <Link href="/session">
+                    <button
+                      className="
+        flex items-center justify-center gap-3
+        px-6 py-4
+        bg-linear-to-r from-primary to-favor
+        text-white rounded-2xl
+        font-semibold text-base md:text-lg
+        transition-transform hover:scale-105
+        cursor-pointer
+      "
+                    >
+                      <Video className="w-8 h-5" />
+                      Start Video Call
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </Link>
 
                   <button
                     onClick={handleStartSearch}
                     className="
-                w-full px-6 py-4
-                bg-glass hover:bg-glassHover
-                border
-                text-foreground
-                rounded-2xl
-                font-semibold text-base md:text-lg
-                transition-transform hover:scale-105
-                cursor-pointer
-              "
+      px-10 py-4
+      bg-glass hover:bg-glassHover
+      border
+      text-foreground
+      rounded-2xl
+      font-semibold text-base md:text-lg
+      transition-transform hover:scale-105
+      cursor-pointer
+    "
                   >
                     Find Another Match
                   </button>

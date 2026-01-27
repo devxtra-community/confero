@@ -77,6 +77,23 @@ export const login = async (req: Request, res: Response) => {
   });
 };
 
+export const resendOtp = async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader?.startsWith('Bearer ')) {
+    throw new AppError('Verification token missing', 401);
+  }
+
+  const verificationToken = authHeader.split(' ')[1];
+
+  await authService.resendOtp(verificationToken);
+
+  res.status(200).json({
+    success: true,
+    message: 'OTP resent successfully',
+  });
+};
+
 export const googleLogin = async (req: Request, res: Response) => {
   const { idToken } = req.body;
 

@@ -4,6 +4,7 @@ import {
   logout,
   refresh,
   register,
+  resendOtp,
   verifyOtp,
 } from '../controllers/authController.js';
 import { googleLogin } from '../controllers/authController.js';
@@ -12,6 +13,7 @@ const authRouter = Router();
 
 authRouter.post('/register', register);
 authRouter.post('/verifyotp', verifyOtp);
+authRouter.post('/resend', resendOtp);
 authRouter.post('/login', login);
 authRouter.post('/google', googleLogin);
 
