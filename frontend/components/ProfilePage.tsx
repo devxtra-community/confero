@@ -74,11 +74,11 @@ export default function ProfilePage({ user }: ProfilePageProps) {
       {/* HEADER */}
       <div className="rounded-2xl bg-linear-to-r from-blue-100 to-orange-50 p-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <img
+          {/* <img
             src={user.profilePicture ?? '/auth/girl.jpg'}
             alt="avatar"
             className="h-16 w-16 rounded-full object-cover"
-          />
+          /> */}
 
           {/* <Image src={user.profilePicture ?? '/auth/girl.jpg'} width={25} height={25} alt='avatar' className="h-16 w-16 rounded-full object-cover" /> */}
           <div>
