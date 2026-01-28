@@ -4,6 +4,7 @@ import { useState } from 'react';
 import SkillEditor from '@/components/SkillEditor';
 import { updateProfile } from '@/services/userService';
 import { toast } from 'sonner';
+import Image from 'next/image';
 
 export interface Skill {
   label: string;
@@ -73,11 +74,13 @@ export default function ProfilePage({ user }: ProfilePageProps) {
       {/* HEADER */}
       <div className="rounded-2xl bg-linear-to-r from-blue-100 to-orange-50 p-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <img
+          {/* <img
             src={user.profilePicture ?? '/auth/girl.jpg'}
             alt="avatar"
             className="h-16 w-16 rounded-full object-cover"
-          />
+          /> */}
+
+          <Image src={user.profilePicture ?? '/auth/girl.jpg'} width={25} height={25} alt='avatar' className="h-16 w-16 rounded-full object-cover" />
           <div>
             <h2 className="text-xl font-semibold">{user.fullName}</h2>
             <p className="text-sm text-gray-600">{user.email}</p>
@@ -220,9 +223,8 @@ function Input({ label, value, editable, onChange }: InputProps) {
         value={value ?? ''}
         disabled={!editable}
         onChange={e => onChange?.(e.target.value)}
-        className={`mt-1 w-full rounded-lg px-3 py-2 text-sm ${
-          editable ? 'border bg-white' : 'bg-gray-100'
-        }`}
+        className={`mt-1 w-full rounded-lg px-3 py-2 text-sm ${editable ? 'border bg-white' : 'bg-gray-100'
+          }`}
       />
     </div>
   );
