@@ -26,7 +26,7 @@ export function LoginRight() {
       });
 
       setTimeout(() => {
-        router.push('/dashboard');
+        router.push('/home');
       }, 1200);
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {

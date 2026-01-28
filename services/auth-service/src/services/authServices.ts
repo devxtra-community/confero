@@ -42,7 +42,7 @@ export const authService = {
         email,
         type: 'email_verification',
       },
-      '5m'
+      '15m'
     );
 
     logger.info('register and return verificationToken');
@@ -65,6 +65,31 @@ export const authService = {
     });
 
     await otpRepository.delete(email);
+  },
+
+  resendOtp: async (verificationToken: string) => {
+    const payload = verifyJwt(verificationToken);
+
+    const email = payload.email.toLowerCase().trim();
+
+    const user = await userRepository.findByEmail(email);
+    if (user?.emailVerified) {
+      throw new AppError('Email already verified', 400);
+    }
+
+    await otpRepository.delete(email);
+
+    const otp = generateOtp().toString();
+
+    await otpRepository.create(email, otp);
+
+    await sendOtpMail(email, otp);
+
+    await userRepository.updateByEmail(email, {
+      emailVerified: true,
+    });
+
+    return;
   },
 
   loginUser: async (email: string, password: string) => {

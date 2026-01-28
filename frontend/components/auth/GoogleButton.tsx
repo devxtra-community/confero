@@ -24,7 +24,7 @@ export default function GoogleButton() {
             });
 
             setTimeout(() => {
-              router.push('/dashboard');
+              router.push('/home');
             }, 1200);
           } catch (error) {
             console.error('Google auth API failed', error);

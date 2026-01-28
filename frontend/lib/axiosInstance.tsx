@@ -1,29 +1,25 @@
-import axios from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 export const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   withCredentials: true,
 });
 
-// this is the accessToken request interceptor....!!
-
-axiosInstance.interceptors.request.use(config => {
-  const accessToken = localStorage.getItem('accessToken');
-
-  if (accessToken) {
-    config.headers.Authorization = `Bearer ${accessToken}`;
+axiosInstance.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    return config;
+  },
+  (error: AxiosError) => {
+    return Promise.reject(error);
   }
-
-  return config;
-});
-
-// this is the main logic about the refreshing the old accesstoken
-// with the new one...!!!
+);
 
 axiosInstance.interceptors.response.use(
   response => response,
-  async error => {
-    const originalRequest = error.config;
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean;
+    };
 
     const status = error.response?.status;
     const url = originalRequest?.url || '';
@@ -37,23 +33,14 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const res = await axiosInstance.post('/auth/refresh');
-
-        const newAccessToken = res.data.accessToken;
-        localStorage.setItem('accessToken', newAccessToken);
-
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        await axiosInstance.post('/auth/refresh');
 
         return axiosInstance(originalRequest);
-      } catch (err: unknown) {
-        if (axios.isAxiosError(err)) {
-          if (err.response?.status === 401) {
-            localStorage.removeItem('accessToken');
-            window.location.href = '/login';
-          }
-        } else {
-          console.error('Unexpected error', err);
+      } catch (refreshError) {
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
         }
+        return Promise.reject(refreshError);
       }
     }
 
