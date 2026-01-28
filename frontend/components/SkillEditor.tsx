@@ -1,73 +1,80 @@
 'use client';
 
-import { useState, useRef } from 'react';
-
 import { SKILL_SUGGESTIONS } from '@/lib/skills';
 import {
   SkillInput,
   SkillLevel,
   updateUserSkills,
 } from '@/services/userService';
+import { useEffect, useState } from 'react';
 
 interface Props {
-  initialSkills: SkillInput[];
+  initialSkills?: SkillInput[];
+  editable?: boolean;
+  onSkillsChange?: (skills: SkillInput[]) => void;
 }
 
-export default function SkillEditor({ initialSkills }: Props) {
-  const [skills, setSkills] = useState<SkillInput[]>(initialSkills);
-  const [input, setInput] = useState('');
-  const [level, setLevel] = useState<SkillLevel>('beginner');
+export default function SkillEditor({
+  initialSkills = [],
+  editable = false,
+}: Props) {
+  const [skills, setSkills] = useState<SkillInput[]>([]);
+  const [draftName, setDraftName] = useState('');
+  const [draftLevel, setDraftLevel] = useState<SkillLevel>('beginner');
   const [loading, setLoading] = useState(false);
 
-  // snapshot to prevent accidental wipe
-  const initialSnapshot = useRef(initialSkills);
+  /* 🔥 keep skills in sync after save / prop change */
+  useEffect(() => {
+    setSkills(
+      Array.isArray(initialSkills)
+        ? initialSkills.filter(s => typeof s?.label === 'string')
+        : []
+    );
+  }, [initialSkills]);
 
-  const suggestions = input
+  const suggestions = draftName
     ? SKILL_SUGGESTIONS.filter(
         s =>
-          s.toLowerCase().includes(input.toLowerCase()) &&
-          !skills.some(k => k.name.toLowerCase() === s.toLowerCase())
+          s.toLowerCase().includes(draftName.toLowerCase()) &&
+          !skills.some(
+            k =>
+              typeof k?.label === 'string' &&
+              k.label.toLowerCase() === s.toLowerCase()
+          )
       )
     : [];
 
-  const addSkill = (name: string) => {
-    const trimmed = name.trim();
+  const addDraftSkill = () => {
+    const trimmed = draftName.trim();
     if (!trimmed) return;
 
-    if (skills.some(s => s.name.toLowerCase() === trimmed.toLowerCase())) {
-      setInput('');
+    const exists = skills.some(
+      s =>
+        typeof s?.label === 'string' &&
+        s.label.toLowerCase() === trimmed.toLowerCase()
+    );
+
+    if (exists) {
+      alert('Skill already added');
       return;
     }
 
-    setSkills(prev => [...prev, { name: trimmed, level }]);
-    setInput(''); // ✅ clear only AFTER add
+    setSkills(prev => [...prev, { label: trimmed, level: draftLevel }]);
+
+    setDraftName('');
+    setDraftLevel('beginner');
   };
 
   const removeSkill = (name: string) => {
-    setSkills(prev => prev.filter(s => s.name !== name));
-  };
-
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addSkill(input);
-    }
+    setSkills(prev => prev.filter(s => s.label !== name));
   };
 
   const saveSkills = async () => {
-    // 🔒 Prevent accidental wipe
-    if (skills.length === 0 && initialSnapshot.current.length > 0) {
-      alert('You cannot remove all skills accidentally');
-      return;
-    }
-
     try {
       setLoading(true);
       await updateUserSkills(skills);
-      initialSnapshot.current = skills; // update snapshot after success
     } catch {
-      setSkills(initialSnapshot.current);
-      alert('Failed to update skills');
+      alert('Failed to save skills');
     } finally {
       setLoading(false);
     }
@@ -75,69 +82,86 @@ export default function SkillEditor({ initialSkills }: Props) {
 
   return (
     <div className="space-y-4 max-w-md">
-      {/* SKILLS */}
-      <div className="flex flex-wrap gap-2">
-        {skills.map(skill => (
-          <div
-            key={skill.name}
-            className="flex items-center gap-2 px-3 py-1 bg-gray-200 rounded-full text-sm"
-          >
-            <span>{skill.name}</span>
-            <span className="text-xs text-gray-600">({skill.level})</span>
-            <button
-              onClick={() => removeSkill(skill.name)}
-              className="text-red-500 font-bold"
-            >
-              ×
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {/* INPUT */}
-      <div className="flex gap-2">
-        <input
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder="Add a skill"
-          className="border rounded px-3 py-2 w-full"
-        />
-
-        <select
-          value={level}
-          onChange={e => setLevel(e.target.value as SkillLevel)}
-          className="border rounded px-2"
-        >
-          <option value="beginner">Beginner</option>
-          <option value="intermediate">Intermediate</option>
-          <option value="advanced">Advanced</option>
-        </select>
-      </div>
-
-      {/* AUTOCOMPLETE */}
-      {suggestions.length > 0 && (
-        <div className="border rounded bg-white shadow">
-          {suggestions.map(skill => (
+      {/* SAVED SKILLS (VIEW + EDIT) */}
+      {skills.length === 0 ? (
+        <p className="text-sm text-gray-500">No skills added yet.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {skills.map(skill => (
             <div
-              key={skill}
-              onClick={() => addSkill(skill)}
-              className="px-3 py-2 cursor-pointer hover:bg-gray-100"
+              key={`${skill.label}-${skill.level}`}
+              className="flex items-center gap-2 px-3 py-1 bg-gray-200 rounded-full text-sm"
             >
-              {skill}
+              <span>{skill.label}</span>
+              <span className="text-xs text-gray-600">({skill.level})</span>
+              {editable && (
+                <button
+                  onClick={() => removeSkill(skill.label)}
+                  className="text-red-500 font-bold"
+                >
+                  ×
+                </button>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      {/* SAVE */}
-      <button
-        onClick={saveSkills}
-        disabled={loading}
-        className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
-      >
-        {loading ? 'Saving...' : 'Save Skills'}
-      </button>
+      {/* EDIT MODE ONLY */}
+      {editable && (
+        <>
+          {/* INPUT */}
+          <div className="flex gap-2">
+            <input
+              value={draftName}
+              onChange={e => setDraftName(e.target.value)}
+              placeholder="Select or type a skill"
+              className="border rounded px-3 py-2 w-full"
+            />
+
+            <select
+              value={draftLevel}
+              onChange={e => setDraftLevel(e.target.value as SkillLevel)}
+              className="border rounded px-2"
+            >
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </select>
+          </div>
+
+          {/* AUTOCOMPLETE */}
+          {suggestions.length > 0 && (
+            <div className="border rounded bg-white shadow">
+              {suggestions.map(skill => (
+                <div
+                  key={skill}
+                  onClick={() => setDraftName(skill)}
+                  className="px-3 py-2 cursor-pointer hover:bg-gray-100"
+                >
+                  {skill}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ACTIONS */}
+          <button
+            onClick={addDraftSkill}
+            className="border px-4 py-2 rounded w-full"
+          >
+            Add Skill
+          </button>
+
+          <button
+            onClick={saveSkills}
+            disabled={loading || skills.length === 0}
+            className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
+          >
+            {loading ? 'Saving...' : 'Save Skills'}
+          </button>
+        </>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { UserModel } from '../models/userModel.js';
+import { userRepository } from '../repositories/userRepository.js';
+import { userService } from '../services/userService.js';
 
 // 1. Put the function at the top of the file
 type RawSkill =
@@ -23,12 +24,9 @@ function normalizeSkills(rawSkills: RawSkill[]) {
     let name: string;
     let level: 'beginner' | 'intermediate' | 'advanced' = 'beginner';
 
-    // ✅ handle string (suggestions)
     if (typeof skill === 'string') {
       name = skill;
-    }
-    // ✅ handle object (typed)
-    else if (typeof skill === 'object' && skill.name) {
+    } else if (typeof skill === 'object' && skill.name) {
       name = skill.name;
       level = skill.level ?? 'beginner';
     } else {
@@ -52,6 +50,7 @@ function normalizeSkills(rawSkills: RawSkill[]) {
 export const updateSkills = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
+    console.log(userId);
     const rawSkills = req.body.skills;
 
     if (!Array.isArray(rawSkills)) {
@@ -60,11 +59,9 @@ export const updateSkills = async (req: Request, res: Response) => {
 
     const normalized = normalizeSkills(rawSkills);
 
-    const updated = await UserModel.findByIdAndUpdate(
-      userId,
-      { skills: normalized },
-      { new: true }
-    );
+    const updated = await userRepository.updateById(userId, {
+      skills: normalized,
+    });
 
     if (!updated) {
       return res.status(400).json({ message: 'Update failed' });
@@ -72,9 +69,30 @@ export const updateSkills = async (req: Request, res: Response) => {
 
     return res.json({
       message: 'Skills updated successfully',
-      skills: updated.skills,
+      updated,
     });
   } catch (err) {
     return res.status(500).json({ message: 'Internal server error', err });
   }
+};
+
+export const currentUser = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'invalid token or expired' });
+    }
+    const user = await userRepository.findById(userId);
+    return res
+      .status(200)
+      .json({ message: 'user details fetched succesffully', user });
+  } catch (err) {
+    return res.status(500).json({ message: 'internal server error', err });
+  }
+};
+
+export const updateProfile = async (req: Request, res: Response) => {
+  const userId = req.user?.id;
+  const updatedUser = await userService.updateUserDetails(userId, req.body);
+  res.status(200).json({ success: true, user: updatedUser });
 };

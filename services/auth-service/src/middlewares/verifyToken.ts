@@ -15,13 +15,11 @@ export const verifyAccessToken = (
   _res: Response,
   next: NextFunction
 ) => {
-  const authHeader = req.headers.authorization;
-  // console.log("hello")
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const token = req.cookies?.accessToken;
+
+  if (!token) {
     throw new AppError('Unauthorized', 401);
   }
-
-  const token = authHeader.split(' ')[1];
 
   try {
     const payload = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
@@ -30,8 +28,6 @@ export const verifyAccessToken = (
       id: payload.sub as string,
       email: payload.email as string,
     };
-
-    // console.log("req.user after middleware:", req.user);
 
     next();
   } catch (err) {

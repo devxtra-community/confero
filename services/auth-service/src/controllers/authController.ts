@@ -7,6 +7,9 @@ import { AppError } from '../middlewares/errorHandller.js';
 /**
  * REGISTER (Email + Password)
  */
+
+const isProduction = process.env.NODE_ENV === 'production';
+
 export const register = async (req: Request, res: Response) => {
   const { email, password, fullName } = req.body;
   const verificationToken = await authService.registerUser(
@@ -59,16 +62,15 @@ export const login = async (req: Request, res: Response) => {
 
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
-    secure: true,
+    secure: isProduction,
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
-    secure: true,
+    secure: isProduction,
     sameSite: 'lax',
-    maxAge: 15 * 60 * 1000, // 15 minutes
   });
 
   res.status(200).json({
@@ -104,16 +106,15 @@ export const googleLogin = async (req: Request, res: Response) => {
 
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
-    secure: true,
+    secure: isProduction,
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
-    secure: true,
+    secure: isProduction,
     sameSite: 'lax',
-    maxAge: 15 * 60 * 1000, // 15 minutes
   });
 
   res.status(200).json({
@@ -129,13 +130,13 @@ export const logout = async (req: Request, res: Response) => {
   res.clearCookie('refreshToken', {
     httpOnly: true,
     sameSite: 'lax',
-    secure: true,
+    secure: isProduction,
   });
 
   res.clearCookie('accessToken', {
     httpOnly: true,
     sameSite: 'lax',
-    secure: true,
+    secure: isProduction,
   });
 
   res.status(200).json({
@@ -153,7 +154,13 @@ export const refresh = async (req: Request, res: Response) => {
 
   const newAccessToken = await authService.refreshAccessToken(refreshToken);
 
+  res.cookie('accessToken', newAccessToken, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'lax',
+  });
+
   res.status(200).json({
-    accessToken: newAccessToken,
+    message: 'refresh succesfully',
   });
 };

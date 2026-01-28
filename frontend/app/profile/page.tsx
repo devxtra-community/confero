@@ -1,17 +1,30 @@
-import SkillEditor from '@/components/SkillEditor';
-import { SkillInput } from '@/services/userService';
+'use client';
 
-export default async function ProfilePage() {
-  // assume fetched from backend
-  const skills: SkillInput[] = [
-    { name: 'React', level: 'advanced' },
-    { name: 'WebRTC', level: 'intermediate' },
-  ];
+import { useEffect, useState } from 'react';
+import ProfilePage from '@/components/ProfilePage';
+import { axiosInstance } from '@/lib/axiosInstance';
+import { UserProfile } from '@/components/ProfilePage';
 
-  return (
-    <div className="p-6">
-      <h1 className="text-xl font-semibold mb-4">Your Skills</h1>
-      <SkillEditor initialSkills={skills} />
-    </div>
-  );
+export default function Profile() {
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await axiosInstance.get('/users/me');
+        setUser(res.data.user);
+      } catch {
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  if (loading) return <div>Loading...</div>;
+  if (!user) return null;
+
+  return <ProfilePage user={user} />;
 }
