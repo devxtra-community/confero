@@ -26,18 +26,18 @@ export const verifyAccessToken = (
   try {
     const payload = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
 
-    console.log("JWT decoded payload:", payload);
+    console.log('JWT decoded payload:', payload);
 
     req.user = {
       id: payload.sub as string,
       email: payload.email as string,
     };
 
-    console.log("req.user after middleware:", req.user);
+    console.log('req.user after middleware:', req.user);
 
     next();
   } catch (err) {
-    console.error("JWT verify failed:", err);
+    console.error('JWT verify failed:', err);
     throw new AppError('Invalid or expired token', 401);
   }
 };
