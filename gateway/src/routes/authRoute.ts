@@ -17,8 +17,9 @@ authRouter.post('/logout', authProxy);
 authRouter.post('/refresh', authProxy);
 authRouter.post('/google', authProxy);
 
-authRouter.patch('/me/skills', userProxy);
 authRouter.get('/me', userProxy);
+authRouter.post('/me/skills', userProxy);
+authRouter.delete('/me/skills/:key', userProxy);
 authRouter.patch('/update-profile', userProxy);
 
 export default authRouter;

@@ -3,7 +3,8 @@ import { axiosInstance } from '@/lib/axiosInstance';
 
 export type SkillLevel = 'beginner' | 'intermediate' | 'advanced';
 
-export interface SkillInput {
+export interface Skill {
+  key: string;
   label: string;
   level: SkillLevel;
 }
@@ -16,13 +17,21 @@ export type UpdateProfilePayload = {
   sex?: string;
 };
 
-export const updateUserSkills = async (skills: SkillInput[]) => {
-  const res = await axiosInstance.patch('/users/me/skills', {
-    skills,
+export async function addSkill(
+  label: string,
+  level: SkillLevel
+): Promise<Skill[]> {
+  const res = await axiosInstance.post('/users/me/skills', {
+    name: label,
+    level,
   });
-  console.log(res);
-  return res.data;
-};
+  return res.data.skills;
+}
+
+export async function removeSkill(key: string): Promise<Skill[]> {
+  const res = await axiosInstance.delete(`/users/me/skills/${key}`);
+  return res.data.skills;
+}
 
 export async function updateProfile(
   payload: UpdateProfilePayload

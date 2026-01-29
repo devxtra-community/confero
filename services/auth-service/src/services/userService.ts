@@ -40,4 +40,39 @@ export const userService = {
 
     return updatedUser;
   },
+
+  addSkill: async (
+    userId: string,
+    name: string,
+    level: 'beginner' | 'intermediate' | 'advanced'
+  ) => {
+    if (!name.trim()) {
+      throw new AppError('Skill name required', 400);
+    }
+
+    const key = name.trim().toLowerCase();
+    const label = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+
+    const updated = await userRepository.addSkill(userId, {
+      key,
+      label,
+      level,
+    });
+
+    if (!updated) {
+      throw new AppError('User not found', 404);
+    }
+
+    return updated.skills;
+  },
+
+  removeSkill: async (userId: string, key: string) => {
+    const updated = await userRepository.removeSkill(userId, key);
+
+    if (!updated) {
+      throw new AppError('User not found', 404);
+    }
+
+    return updated.skills;
+  },
 };
