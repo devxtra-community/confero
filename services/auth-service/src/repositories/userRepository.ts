@@ -30,4 +30,27 @@ export const userRepository = {
   updateProfileById: async (userId: string, data: updateUserProfile) => {
     return UserModel.findByIdAndUpdate(userId, { $set: data }, { new: true });
   },
+
+  addSkill: async (
+    userId: string,
+    skill: { key: string; label: string; level: string }
+  ) => {
+    return UserModel.findByIdAndUpdate(
+      userId,
+      {
+        $addToSet: { skills: skill },
+      },
+      { new: true }
+    );
+  },
+
+  removeSkill: async (userId: string, key: string) => {
+    return UserModel.findByIdAndUpdate(
+      userId,
+      {
+        $pull: { skills: { key } },
+      },
+      { new: true }
+    );
+  },
 };
