@@ -322,7 +322,6 @@ export default function ProfilePage({ user }: ProfilePageProps) {
               <p className="text-sm text-gray-400 text-center py-6">
                 Click &quot;Edit Profile&quot; to add your skills.
               </p>
-
             )}
           </motion.div>
         </div>
@@ -422,10 +421,11 @@ function Input({ label, value, editable, onChange }: InputProps) {
         value={value ?? ''}
         disabled={!editable}
         onChange={e => onChange?.(e.target.value)}
-        className={`w-full rounded-xl px-4 py-3 text-sm transition-all ${editable
+        className={`w-full rounded-xl px-4 py-3 text-sm transition-all ${
+          editable
             ? 'border-2 border-gray-200 bg-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200'
             : 'bg-gray-50 text-foreground border-2 border-transparent'
-          }`}
+        }`}
       />
     </div>
   );
