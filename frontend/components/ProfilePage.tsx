@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useState } from 'react';
+import { useState } from 'react';
 import SkillEditor from '@/components/SkillEditor';
 import { updateProfile } from '@/services/userService';
 import { motion } from 'framer-motion';
@@ -124,7 +124,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                 Edit Profile
               </motion.button>
             ) : (
-              <div className='flex gap-2 mt-4'>
+              <div className="flex gap-2 mt-4">
                 <button
                   onClick={() => {
                     setDraftUser(user);
@@ -421,10 +421,11 @@ function Input({ label, value, editable, onChange }: InputProps) {
         value={value ?? ''}
         disabled={!editable}
         onChange={e => onChange?.(e.target.value)}
-        className={`w-full rounded-xl px-4 py-3 text-sm transition-all ${editable
+        className={`w-full rounded-xl px-4 py-3 text-sm transition-all ${
+          editable
             ? 'border-2 border-gray-200 bg-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200'
             : 'bg-gray-50 text-foreground border-2 border-transparent'
-          }`}
+        }`}
       />
     </div>
   );

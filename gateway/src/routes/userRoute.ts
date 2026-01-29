@@ -8,4 +8,4 @@ userRouter.post('/me/skills', userProxy);
 userRouter.delete('/me/skills/:key', userProxy);
 userRouter.patch('/update-profile', userProxy);
 
-export default userRouter
+export default userRouter;
