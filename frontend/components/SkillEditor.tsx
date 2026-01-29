@@ -13,7 +13,6 @@ interface Props {
   onSkillsChange?: (skills: Skill[]) => void;
 }
 
-/* ------------------ Motion presets ------------------ */
 const chipMotion = {
   hidden: { opacity: 0, scale: 0.9 },
   visible: { opacity: 1, scale: 1 },
@@ -91,7 +90,6 @@ export default function SkillEditor({
 
   return (
     <div className="space-y-3">
-      {/* ===== Skills Chips ===== */}
       {skills.length > 0 && (
         <div className="flex flex-wrap gap-2">
           <AnimatePresence>
@@ -126,12 +124,10 @@ export default function SkillEditor({
         </div>
       )}
 
-      {/* ===== Empty Hint ===== */}
       {skills.length === 0 && (
         <p className="text-sm text-gray-400">No skills added yet</p>
       )}
 
-      {/* ===== Compact Add Skill Row ===== */}
       {editable && (
         <motion.div
           initial={{ opacity: 0, y: 4 }}
@@ -143,8 +139,7 @@ export default function SkillEditor({
             pt-2
           "
         >
-          {/* Skill input */}
-          <div className="relative flex-1">
+          <div className="relative flex">
             <input
               value={draftName}
               onChange={e => {
@@ -167,7 +162,7 @@ export default function SkillEditor({
                   animate="visible"
                   exit="hidden"
                   className="
-                    absolute z-10 mt-1 w-full
+                    absolute -top-10 z-10 mt-1 w-full
                     bg-white border rounded-lg shadow-md
                     max-h-36 overflow-y-auto
                   "
@@ -189,7 +184,6 @@ export default function SkillEditor({
             </AnimatePresence>
           </div>
 
-          {/* Level */}
           <select
             value={draftLevel}
             onChange={e => setDraftLevel(e.target.value as SkillLevel)}
@@ -200,7 +194,6 @@ export default function SkillEditor({
             <option value="advanced">Advanced</option>
           </select>
 
-          {/* Add button */}
           <button
             onClick={handleAdd}
             disabled={loading || !draftName.trim()}

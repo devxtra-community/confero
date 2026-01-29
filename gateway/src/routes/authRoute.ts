@@ -5,7 +5,6 @@ import {
   registerLimiter,
 } from '../middlewares/rateLimit.js';
 import { authProxy } from '../proxies/authProxy.js';
-import { userProxy } from '../proxies/userProxy.js';
 
 const authRouter = Router();
 
@@ -16,10 +15,5 @@ authRouter.post('/resend', otpLimiter, authProxy);
 authRouter.post('/logout', authProxy);
 authRouter.post('/refresh', authProxy);
 authRouter.post('/google', authProxy);
-
-authRouter.get('/me', userProxy);
-authRouter.post('/me/skills', userProxy);
-authRouter.delete('/me/skills/:key', userProxy);
-authRouter.patch('/update-profile', userProxy);
 
 export default authRouter;
