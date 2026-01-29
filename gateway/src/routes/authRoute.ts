@@ -20,5 +20,6 @@ authRouter.post('/google', authProxy);
 authRouter.patch('/me/skills', userProxy);
 authRouter.get('/me', userProxy);
 authRouter.patch('/update-profile', userProxy);
+authRouter.post('/me/avatar', userProxy);
 
 export default authRouter;

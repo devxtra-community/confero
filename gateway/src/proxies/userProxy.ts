@@ -14,10 +14,13 @@ export const userProxy = createProxyMiddleware({
         proxyReq.setHeader('cookie', cookieHeader);
       }
 
-      // forward JSON body if exists
+      // ONLY forward JSON body when content-type is application/json
+      const contentType = req.headers['content-type'] || '';
+
       if (
+        contentType.includes('application/json') &&
         req.body &&
-        ['POST', 'PUT', 'PATCH', 'GET'].includes(proxyReq.method || '')
+        ['POST', 'PUT', 'PATCH'].includes(proxyReq.method || '')
       ) {
         const bodyData = JSON.stringify(req.body);
         proxyReq.setHeader('Content-Type', 'application/json');
