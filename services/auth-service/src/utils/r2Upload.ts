@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import type { Express } from 'express';
 
 const client = new S3Client({
   region: 'auto',

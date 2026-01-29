@@ -16,5 +16,4 @@ authRouter.post('/logout', authProxy);
 authRouter.post('/refresh', authProxy);
 authRouter.post('/google', authProxy);
 
-
 export default authRouter;

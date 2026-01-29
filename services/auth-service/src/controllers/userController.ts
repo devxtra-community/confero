@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { userRepository } from '../repositories/userRepository.js';
 import { userService } from '../services/userService.js';
-import { r2 } from '../config/r2.js';
 import { uploadToR2 } from '../utils/r2Upload.js';
 
 // 1. Put the function at the top of the file
