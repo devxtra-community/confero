@@ -20,7 +20,7 @@ export const verifyAccessToken = (
   if (!token) {
     throw new AppError('Unauthorized', 401);
   }
-  console.log(token)
+  console.log(token);
 
   try {
     const payload = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
