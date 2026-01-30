@@ -24,7 +24,6 @@ import {
   Star,
   BarChart3,
   Plus,
-  Trophy,
 } from 'lucide-react';
 
 export interface Skill {
@@ -234,7 +233,9 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-4 text-xs sm:text-sm text-emerald-100">
                     <div className="flex items-center gap-2">
                       <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                      <span className="truncate max-w-[200px] sm:max-w-none">{draftUser.email}</span>
+                      <span className="truncate max-w-[200px] sm:max-w-none">
+                        {draftUser.email}
+                      </span>
                     </div>
                     {draftUser.linkedinId && (
                       <div className="flex items-center gap-2">
@@ -312,8 +313,8 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                         {completion === 100
                           ? 'Excellent!'
                           : completion > 70
-                          ? 'Almost there'
-                          : 'Keep going'}
+                            ? 'Almost there'
+                            : 'Keep going'}
                       </p>
                     </div>
                   </motion.div>
@@ -409,12 +410,16 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                   <Input
                     label="FULL NAME"
                     value={draftUser.fullName}
-                    icon={<User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />}
+                    icon={
+                      <User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                    }
                   />
                   <Input
                     label="EMAIL ADDRESS"
                     value={draftUser.email}
-                    icon={<Mail className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />}
+                    icon={
+                      <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                    }
                   />
 
                   <Input
@@ -424,7 +429,9 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                     onChange={v =>
                       setDraftUser(prev => ({ ...prev, jobTitle: v }))
                     }
-                    icon={<Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />}
+                    icon={
+                      <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                    }
                   />
 
                   <Input
@@ -434,7 +441,9 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                     onChange={v =>
                       setDraftUser(prev => ({ ...prev, linkedinId: v }))
                     }
-                    icon={<Linkedin className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />}
+                    icon={
+                      <Linkedin className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                    }
                   />
 
                   <Input
@@ -444,7 +453,9 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                     onChange={v =>
                       setDraftUser(prev => ({ ...prev, age: Number(v) }))
                     }
-                    icon={<Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />}
+                    icon={
+                      <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                    }
                   />
 
                   <div>
@@ -598,17 +609,25 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                   <StatRow
                     label="Total Skills"
                     value={savedSkills.length}
-                    icon={<Lightbulb className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />}
+                    icon={
+                      <Lightbulb className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
+                    }
                   />
                   <StatRow
                     label="Connections"
                     value={savedUser.connections?.length ?? 0}
-                    icon={<Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />}
+                    icon={
+                      <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
+                    }
                   />
                   <StatRow
                     label="Advanced Skills"
-                    value={savedSkills.filter(s => s.level === 'advanced').length}
-                    icon={<Star className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />}
+                    value={
+                      savedSkills.filter(s => s.level === 'advanced').length
+                    }
+                    icon={
+                      <Star className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
+                    }
                   />
                 </div>
               </div>
@@ -727,9 +746,13 @@ function StatRow({
     <div className="flex items-center justify-between py-2.5 sm:py-3 border-b border-gray-100 last:border-0">
       <div className="flex items-center gap-2 sm:gap-3">
         {icon && <div className="shrink-0">{icon}</div>}
-        <span className="text-xs sm:text-sm font-semibold text-gray-600">{label}</span>
+        <span className="text-xs sm:text-sm font-semibold text-gray-600">
+          {label}
+        </span>
       </div>
-      <span className="text-xl sm:text-2xl font-bold text-gray-800">{value}</span>
+      <span className="text-xl sm:text-2xl font-bold text-gray-800">
+        {value}
+      </span>
     </div>
   );
 }
@@ -759,7 +782,7 @@ function TipItem({ text, completed }: { text: string; completed?: boolean }) {
   );
 }
 
-function getLevelIcon(level: Skill['level']) {
+function getLevelIcon( ) {
   const iconClass = 'w-3 h-3 sm:w-4 sm:h-4';
   return <Star className={iconClass} />;
 }
