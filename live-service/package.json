@@ -23,6 +23,7 @@
     "morgan": "^1.10.1",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
+    "uuid": "^13.0.0",
     "winston": "^3.19.0"
   },
   "devDependencies": {
@@ -31,6 +32,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
     "@types/node": "^25.0.6",
+    "@types/uuid": "^11.0.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
   }

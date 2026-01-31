@@ -8,6 +8,7 @@ import { fadeUp, slideIn } from '@/lib/motion';
 
 import { toast } from 'sonner';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export interface Skill {
   key: string;
@@ -74,6 +75,9 @@ export default function ProfilePage({ user }: ProfilePageProps) {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 px-4 py-6 sm:p-6">
+      <Link href="/home" className="absolute  top-0 left-10 text-2xl">
+        Go Back
+      </Link>
       <motion.div
         variants={fadeUp}
         initial="hidden"

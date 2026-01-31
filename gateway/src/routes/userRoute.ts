@@ -8,4 +8,6 @@ userRouter.post('/me/skills', userProxy);
 userRouter.delete('/me/skills/:key', userProxy);
 userRouter.patch('/update-profile', userProxy);
 
+userRouter.get('/peer/:userId', userProxy);
+
 export default userRouter;

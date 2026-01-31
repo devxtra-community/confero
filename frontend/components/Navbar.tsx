@@ -31,7 +31,9 @@ export default function Navbar() {
             <h1 className="text-white text-lg sm:text-xl">Confero</h1>
 
             <div className="hidden md:flex items-center justify-around gap-6 text-md cursor-pointer">
-              <a className="text-white/80 hover:text-white">Home</a>
+              <Link href="/home" className="text-white/80 hover:text-white">
+                Home
+              </Link>
               <a className="text-white/80 hover:text-white">Features</a>
               <a className="text-white/80 hover:text-white">FAQ</a>
             </div>

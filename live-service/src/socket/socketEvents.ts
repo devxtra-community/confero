@@ -19,6 +19,12 @@ export const SOCKET_EVENTS = {
   CALL_TIMEOUT: 'call:timeout',
   CALL_END: 'call:end',
 
+  // Matching events
+  MATCH_START: 'match:start',
+  MATCH_FOUND: 'match:found',
+  MATCH_CANCEL: 'match:cancel',
+  MATCH_TIMEOUT: 'match:timeout',
+
   // webrtc signaling events
   WEBRTC_OFFER: 'webrtc:offer',
   WEBRTC_ANSWER: 'webrtc:answer',

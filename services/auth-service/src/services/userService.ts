@@ -75,4 +75,19 @@ export const userService = {
 
     return updated.skills;
   },
+
+  getPublicProfile: async (userId: string) => {
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      throw new AppError('user not found', 404);
+    }
+
+    return {
+      id: user._id,
+      name: user.fullName,
+      skills: user.skills,
+      jobTitle: user.jobTitle,
+      image: user.profilePicture,
+    };
+  },
 };

@@ -4,11 +4,46 @@ import { useState, useEffect } from 'react';
 import { Video, Sparkles, Zap, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { socket } from '@/lib/socket';
+import { axiosInstance } from '@/lib/axiosInstance';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 export default function FindMatchPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [matchFound, setMatchFound] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [peerId, setPeerId] = useState<string | null>(null);
+
   const [currentQuote, setCurrentQuote] = useState(0);
+  const router = useRouter();
+
+  type Skills = {
+    _id: string;
+    key: string;
+    label: string;
+    level: string;
+  };
+
+  type PeerProfile = {
+    id: string;
+    name: string;
+    jobTitle: string;
+    image?: string;
+    skills: Skills[];
+  };
+
+  interface MatchFoundPayload {
+    sessionId: string;
+    peerId: string;
+  }
+
+  interface CallAcceptedPayload {
+    callId: string;
+  }
+
+
+  const [peerProfile, setPeerProfile] = useState<PeerProfile | null>(null);
 
   const quotes = [
     'Connecting minds, one conversation at a time...',
@@ -18,27 +53,93 @@ export default function FindMatchPage() {
   ];
 
   useEffect(() => {
-    if (isSearching) {
-      const quoteInterval = setInterval(() => {
-        setCurrentQuote(prev => (prev + 1) % quotes.length);
-      }, 2500);
+    if (!peerId) return;
 
-      const matchTimer = setTimeout(() => {
-        setMatchFound(true);
-        setIsSearching(false);
-      }, 5000);
+    const peerProfile = async () => {
+      try {
+        const res = await axiosInstance.get(`/users/peer/${peerId}`);
+        setPeerProfile(res.data);
+        console.log(res.data);
+      } catch {
+        toast.warning('failed to fetch user profile details');
+      }
+    };
 
-      return () => {
-        clearInterval(quoteInterval);
-        clearTimeout(matchTimer);
-      };
-    }
+    peerProfile();
+  }, [peerId]);
+
+  useEffect(() => {
+    if (!isSearching) return;
+
+    const quoteInterval = setInterval(() => {
+      setCurrentQuote(prev => (prev + 1) % quotes.length);
+    }, 2500);
+
+    return () => {
+      clearInterval(quoteInterval);
+    };
   }, [isSearching, quotes.length]);
 
   const handleStartSearch = () => {
     setIsSearching(true);
     setMatchFound(false);
+    setSessionId(null);
+    setPeerId(null);
     setCurrentQuote(0);
+
+    socket.emit('match:start', {
+      skills: 'react',
+    });
+  };
+
+  const handleStartCall = () => {
+    if (!sessionId || !peerId) return;
+
+    socket.emit('call:initiate', {
+      callId: sessionId,
+      toUserId: peerId,
+    });
+  };
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const onMatchFound = ({ sessionId, peerId }: MatchFoundPayload) => {
+      setSessionId(sessionId);
+      setPeerId(peerId);
+      setIsSearching(false);
+      setMatchFound(true);
+    };
+
+    socket.on('match:found', onMatchFound);
+
+    return () => {
+      socket.off('match:found', onMatchFound);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (isSearching) {
+        socket.emit('match:cancel', { skill: 'react' });
+      }
+    };
+  }, [isSearching]);
+
+  useEffect(() => {
+    const onCallAccepted = ({ callId }: CallAcceptedPayload) => {
+      router.push(`/session?callId=${callId}&peerId=${peerId}`);
+    };
+    socket.on('call:accepted', onCallAccepted);
+
+    return () => {
+      socket.off('call:accepted', onCallAccepted);
+    };
+  }, [peerId, router]);
+
+  const cancelMatch = () => {
+    socket.emit('match:cancel', { skill: 'react' });
+    setIsSearching(false);
   };
 
   return (
@@ -48,6 +149,12 @@ export default function FindMatchPage() {
 
       {!isSearching && !matchFound && (
         <div className="relative min-h-screen flex items-center justify-center px-4 py-20">
+          <Link
+            href="/profile"
+            className="p-5 absolute top-0 left-100 text-3xl text-primary"
+          >
+            <button className="p-5 bg-amber-200 rounded-2xl">Profile</button>
+          </Link>
           <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-4 py-2 border rounded-full">
@@ -56,7 +163,6 @@ export default function FindMatchPage() {
                   Ready to Connect
                 </span>
               </div>
-
               <h1 className="font-sans text-5xl md:text-7xl font-bold text-foreground leading-tight">
                 Find Your
                 <span className="block text-transparent bg-clip-text bg-linear-to-r from-primary to-favor">
@@ -68,7 +174,8 @@ export default function FindMatchPage() {
 
               <button
                 onClick={handleStartSearch}
-                className="group inline-flex items-center gap-3 px-8 py-4 bg-linear-to-r from-primary to-favor text-white rounded-full font-semibold text-lg cursor-pointer transition-all transform hover:scale-105"
+                disabled={isSearching}
+                className="group inline-flex items-center gap-3 px-8 py-4 bg-linear-to-r from-primary to-favor text-white rounded-full font-semibold text-lg cursor-pointer transition-all transform hover:scale-105 disabled:opacity-50"
               >
                 <span>Start Matching</span>
                 <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
@@ -169,6 +276,12 @@ export default function FindMatchPage() {
                 ))}
               </div>
             </div>
+            <button
+              onClick={cancelMatch}
+              className="mt-6 text-sm text-muted-foreground underline"
+            >
+              Cancel Search
+            </button>
           </div>
         </div>
       )}
@@ -203,54 +316,57 @@ export default function FindMatchPage() {
           "
                 >
                   <Image
-                    src="/auth/young.jpg"
+                    src={peerProfile?.image || '/auth/young.jpg'}
                     fill
                     alt="Match"
-                    className="object-cover"
                   />
                 </div>
               </div>
 
               <div className="space-y-6 md:space-y-8 text-center lg:text-left">
                 <div>
-                  <h3 className="font-sans text-2xl md:text-4xl font-bold text-foreground">
-                    Alex Morgan
-                  </h3>
-                  <p className="text-base md:text-xl text-primary">
-                    Full Stack Developer
-                  </p>
+                  {peerProfile ? (
+                    <>
+                      <h3 className="font-sans text-2xl md:text-4xl font-bold text-foreground">
+                        {peerProfile.name}
+                      </h3>
+                      <p className="text-base md:text-xl text-primary">
+                        {peerProfile.jobTitle}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground">Loading profile...</p>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap justify-center lg:justify-start gap-3">
-                  <span className="px-4 py-1.5 bg-teal-200 text-primary rounded-full text-sm font-medium">
-                    Programming
-                  </span>
-                  <span className="px-4 py-1.5 bg-green-200 text-primary rounded-full text-sm font-medium">
-                    Design
-                  </span>
-                  <span className="px-4 py-1.5 bg-blue-200 text-primary rounded-full text-sm font-medium">
-                    Teaching
-                  </span>
+                  {peerProfile?.skills?.map(skill => (
+                    <span
+                      key={skill._id}
+                      className="px-4 py-1.5 bg-teal-200 text-primary rounded-full text-sm font-medium"
+                    >
+                      {skill.label}
+                    </span>
+                  ))}
                 </div>
 
                 <div className="space-y-4 flex flex-col items-center lg:items-start">
-                  <Link href="/session">
-                    <button
-                      className="
-        flex items-center justify-center gap-3
-        px-6 py-4
-        bg-linear-to-r from-primary to-favor
-        text-white rounded-2xl
-        font-semibold text-base md:text-lg
-        transition-transform hover:scale-105
-        cursor-pointer
-      "
-                    >
-                      <Video className="w-8 h-5" />
-                      Start Video Call
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </Link>
+                  <button
+                    onClick={handleStartCall}
+                    className="
+    flex items-center justify-center gap-3
+    px-6 py-4
+    bg-linear-to-r from-primary to-favor
+    text-white rounded-2xl
+    font-semibold text-base md:text-lg
+    transition-transform hover:scale-105
+    cursor-pointer
+  "
+                  >
+                    <Video className="w-8 h-5" />
+                    Start Video Call
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
 
                   <button
                     onClick={handleStartSearch}

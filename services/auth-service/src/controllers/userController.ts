@@ -2,80 +2,6 @@ import { Request, Response } from 'express';
 import { userRepository } from '../repositories/userRepository.js';
 import { userService } from '../services/userService.js';
 
-// 1. Put the function at the top of the file
-// type RawSkill =
-//   | string
-//   | {
-//       name: string;
-//       level?: 'beginner' | 'intermediate' | 'advanced';
-//     };
-
-// function normalizeSkills(rawSkills: RawSkill[]) {
-//   const map = new Map<
-//     string,
-//     {
-//       key: string;
-//       label: string;
-//       level: 'beginner' | 'intermediate' | 'advanced';
-//     }
-//   >();
-
-//   for (const skill of rawSkills) {
-//     let name: string;
-//     let level: 'beginner' | 'intermediate' | 'advanced' = 'beginner';
-
-//     if (typeof skill === 'string') {
-//       name = skill;
-//     } else if (typeof skill === 'object' && skill.name) {
-//       name = skill.name;
-//       level = skill.level ?? 'beginner';
-//     } else {
-//       continue;
-//     }
-
-//     const trimmed = name.trim();
-//     if (!trimmed) continue;
-
-//     const key = trimmed.toLowerCase();
-//     const label =
-//       trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
-
-//     map.set(key, { key, label, level });
-//   }
-
-//   return Array.from(map.values());
-// }
-
-// // 2. Your controller uses it here
-// export const updateSkills = async (req: Request, res: Response) => {
-//   try {
-//     const userId = req.user?.id;
-//     console.log(userId);
-//     const rawSkills = req.body.skills;
-
-//     if (!Array.isArray(rawSkills)) {
-//       return res.status(400).json({ message: 'skills must be an array' });
-//     }
-
-//     const normalized = normalizeSkills(rawSkills);
-
-//     const updated = await userRepository.updateById(userId, {
-//       skills: normalized,
-//     });
-
-//     if (!updated) {
-//       return res.status(400).json({ message: 'Update failed' });
-//     }
-
-//     return res.json({
-//       message: 'Skills updated successfully',
-//       updated,
-//     });
-//   } catch (err) {
-//     return res.status(500).json({ message: 'Internal server error', err });
-//   }
-// };
-
 export const currentUser = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
@@ -92,21 +18,53 @@ export const currentUser = async (req: Request, res: Response) => {
 };
 
 export const updateProfile = async (req: Request, res: Response) => {
-  const userId = req.user?.id;
-  const updatedUser = await userService.updateUserDetails(userId, req.body);
-  res.status(200).json({ success: true, user: updatedUser });
+  try {
+    const userId = req.user?.id;
+    const updatedUser = await userService.updateUserDetails(userId, req.body);
+    res.status(200).json({ success: true, user: updatedUser });
+  } catch (err) {
+    res.status(500).json({ message: 'failed to update user details..', err });
+  }
 };
 
 export const addSkill = async (req: Request, res: Response) => {
-  const userId = req.user?.id;
-  const { name, level } = req.body;
-  const skills = await userService.addSkill(userId, name, level ?? 'beginner');
-  return res.status(201).json({ success: true, skills });
+  try {
+    const userId = req.user?.id;
+    const { name, level } = req.body;
+    const skills = await userService.addSkill(
+      userId,
+      name,
+      level ?? 'beginner'
+    );
+    return res.status(201).json({ success: true, skills });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to add users skill..', err });
+  }
 };
 
 export const removeSkill = async (req: Request, res: Response) => {
-  const userId = req.user?.id;
-  const { key } = req.params;
-  const skills = await userService.removeSkill(userId, key);
-  return res.status(200).json({ success: true, skills });
+  try {
+    const userId = req.user?.id;
+    const { key } = req.params;
+    const skills = await userService.removeSkill(userId, key);
+    return res.status(200).json({ success: true, skills });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to remove users skills', err });
+  }
+};
+
+export const getPublicProfile = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await userService.getPublicProfile(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch user', err });
+  }
 };
