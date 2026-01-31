@@ -24,6 +24,7 @@ import {
   Star,
   BarChart3,
   Plus,
+  X,
 } from 'lucide-react';
 
 export interface Skill {
@@ -157,38 +158,40 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   const completion = calculateProfileCompletion(savedUser, savedSkills);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50/30 to-emerald-50/40 px-3 py-6 sm:px-4 sm:py-8 lg:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-slate-50 px-4 py-6 md:px-6 md:py-8 lg:px-8 lg:py-12">
+      <div className="max-w-6xl mx-auto">
         {/* Header Section */}
         <motion.div
           variants={fadeUp}
           initial="hidden"
           animate="visible"
-          className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-emerald-600 via-green-600 to-teal-700 p-6 sm:p-8 lg:p-10 shadow-2xl shadow-emerald-500/20"
+          className="relative mb-8 md:mb-12"
         >
-          {/* Decorative Elements */}
-          <div className="absolute top-0 right-0 w-64 h-64 sm:w-96 sm:h-96 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 sm:w-64 sm:h-64 bg-teal-400/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2"></div>
+          {/* Profile Header */}
+          <div className="bg-white border border-slate-200/60 rounded-2xl overflow-hidden shadow-sm">
+            <div className="relative h-32 sm:h-40 md:h-48 bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent"></div>
+            </div>
 
-          <div className="relative z-10">
-            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 lg:gap-8">
-              {/* Profile Info */}
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 flex-1">
-                {/* Avatar with Upload */}
-                <div className="relative group">
+            <div className="relative px-5 sm:px-6 md:px-8 pb-6 md:pb-8">
+              {/* Avatar */}
+              <div className="relative -mt-12 sm:-mt-14 md:-mt-16 mb-4 md:mb-6">
+                <div className="relative inline-block group">
                   <div className="relative">
                     <Image
                       src={draftUser.profilePicture ?? '/auth/girl.jpg'}
-                      width={120}
-                      height={120}
+                      width={128}
+                      height={128}
                       alt="avatar"
-                      className="h-24 w-24 sm:h-28 sm:w-28 lg:h-32 lg:w-32 rounded-xl sm:rounded-2xl object-cover border-4 border-white/20 shadow-xl backdrop-blur-sm"
+                      className="h-24 w-24 sm:h-28 sm:w-28 md:h-32 md:w-32 rounded-full object-cover border-4 border-white shadow-lg ring-1 ring-slate-200/50"
                     />
 
-                    <label className="absolute inset-0 bg-black/60 rounded-xl sm:rounded-2xl cursor-pointer opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+                    <label className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center">
                       <div className="text-center text-white">
-                        <Camera className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1" />
-                        <p className="text-xs font-medium">Change</p>
+                        <Camera className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1" />
+                        <p className="text-[10px] md:text-xs font-medium">
+                          Change
+                        </p>
                       </div>
                       <input
                         type="file"
@@ -202,499 +205,363 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                     </label>
 
                     {uploading && (
-                      <div className="absolute inset-0 bg-black/50 rounded-xl sm:rounded-2xl flex items-center justify-center text-white text-sm font-medium backdrop-blur-sm">
-                        <div className="flex flex-col items-center gap-2">
-                          <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          <span className="text-xs">Uploading...</span>
-                        </div>
+                      <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm rounded-full flex items-center justify-center text-white">
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                       </div>
                     )}
                   </div>
 
-                  {/* Status Badge */}
-                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white px-2.5 py-1 sm:px-3 rounded-full shadow-lg">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-xs font-semibold text-gray-700">
-                        Active
-                      </span>
-                    </div>
-                  </div>
+                  {/* Status Indicator */}
+                  <div className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-500 border-4 border-white rounded-full shadow-sm"></div>
                 </div>
+              </div>
 
-                {/* Name & Details */}
-                <div className="text-white text-center sm:text-left flex-1 w-full">
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight mb-2">
+              {/* User Info & Actions */}
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-2xl md:text-3xl lg:text-4xl font-semibold text-slate-900 mb-1 truncate">
                     {draftUser.fullName}
                   </h1>
-                  <p className="text-emerald-100 text-sm sm:text-base lg:text-lg mb-3 sm:mb-4">
+                  <p className="text-base md:text-lg text-slate-600 mb-3 md:mb-4 truncate">
                     {draftUser.jobTitle || 'Professional'}
                   </p>
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-4 text-xs sm:text-sm text-emerald-100">
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600">
+                    <div className="flex items-center gap-1.5">
+                      <Mail className="w-4 h-4 text-slate-400" />
                       <span className="truncate max-w-[200px] sm:max-w-none">
                         {draftUser.email}
                       </span>
                     </div>
                     {draftUser.linkedinId && (
-                      <div className="flex items-center gap-2">
-                        <Linkedin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        <span>LinkedIn Connected</span>
+                      <div className="flex items-center gap-1.5">
+                        <Linkedin className="w-4 h-4 text-slate-400" />
+                        <span>LinkedIn</span>
+                      </div>
+                    )}
+                    {draftUser.age && (
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4 text-slate-400" />
+                        <span>{draftUser.age} years</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Profile Completion Badge */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="inline-flex items-center gap-2 sm:gap-3 mt-4 sm:mt-5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-3 py-1.5 sm:px-4 sm:py-2"
-                  >
-                    <div className="relative w-10 h-10 sm:w-12 sm:h-12">
-                      <svg className="transform -rotate-90 w-10 h-10 sm:w-12 sm:h-12">
-                        <circle
-                          cx="20"
-                          cy="20"
-                          r="16"
-                          stroke="currentColor"
-                          strokeWidth="3"
-                          fill="none"
-                          className="text-white/20 sm:hidden"
-                        />
-                        <circle
-                          cx="20"
-                          cy="20"
-                          r="16"
-                          stroke="currentColor"
-                          strokeWidth="3"
-                          fill="none"
-                          strokeDasharray={`${2 * Math.PI * 16}`}
-                          strokeDashoffset={`${
-                            2 * Math.PI * 16 * (1 - completion / 100)
-                          }`}
-                          className="text-white transition-all duration-1000 sm:hidden"
-                        />
-                        <circle
-                          cx="24"
-                          cy="24"
-                          r="20"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                          fill="none"
-                          className="text-white/20 hidden sm:block"
-                        />
-                        <circle
-                          cx="24"
-                          cy="24"
-                          r="20"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                          fill="none"
-                          strokeDasharray={`${2 * Math.PI * 20}`}
-                          strokeDashoffset={`${
-                            2 * Math.PI * 20 * (1 - completion / 100)
-                          }`}
-                          className="text-white transition-all duration-1000 hidden sm:block"
-                        />
-                      </svg>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-xs font-bold text-white">
-                          {completion}%
-                        </span>
-                      </div>
+                  {/* Profile Completion */}
+                  <div className="inline-flex items-center gap-2 mt-4 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-full">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                      <span className="text-xs font-medium text-slate-700">
+                        {completion}% Complete
+                      </span>
                     </div>
-                    <div>
-                      <p className="text-xs text-emerald-100">
-                        Profile Complete
-                      </p>
-                      <p className="text-xs sm:text-sm font-semibold text-white">
-                        {completion === 100
-                          ? 'Excellent!'
-                          : completion > 70
-                            ? 'Almost there'
-                            : 'Keep going'}
-                      </p>
-                    </div>
-                  </motion.div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row lg:flex-col gap-2 sm:gap-3 lg:items-end w-full sm:w-auto">
-                <AnimatePresence mode="wait">
-                  {!isEditing ? (
-                    <motion.div
-                      key="view-mode"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto"
-                    >
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={handleLogout}
-                        className="px-4 sm:px-5 py-2 sm:py-2.5 text-sm font-medium text-white/90 hover:text-white border border-white/30 rounded-lg sm:rounded-xl hover:bg-white/10 transition-all backdrop-blur-sm flex items-center justify-center gap-2 w-full sm:w-auto"
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2 md:gap-3 shrink-0">
+                  <AnimatePresence mode="wait">
+                    {!isEditing ? (
+                      <motion.div
+                        key="view-mode"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex items-center gap-2"
                       >
-                        <LogOut className="w-4 h-4" />
-                        Logout
-                      </motion.button>
+                        <button
+                          onClick={handleLogout}
+                          className="p-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                          title="Logout"
+                        >
+                          <LogOut className="w-4 h-4 md:w-5 md:h-5" />
+                        </button>
 
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setIsEditing(true)}
-                        className="flex items-center justify-center gap-2 rounded-lg sm:rounded-xl bg-white text-emerald-700 px-5 sm:px-6 py-2 sm:py-2.5 font-semibold shadow-lg hover:shadow-xl hover:bg-emerald-50 transition-all w-full sm:w-auto"
+                        <button
+                          onClick={() => setIsEditing(true)}
+                          className="flex items-center gap-2 px-4 md:px-5 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                          <span className="hidden sm:inline">Edit Profile</span>
+                          <span className="sm:hidden">Edit</span>
+                        </button>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="edit-mode"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex items-center gap-2"
                       >
-                        <Edit3 className="w-4 h-4" />
-                        Edit Profile
-                      </motion.button>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="edit-mode"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto"
-                    >
-                      <button
-                        onClick={handleCancel}
-                        className="px-5 sm:px-6 py-2 sm:py-2.5 text-sm font-semibold text-white border-2 border-white/30 rounded-lg sm:rounded-xl hover:bg-white/10 transition-all backdrop-blur-sm w-full sm:w-auto"
-                      >
-                        Cancel
-                      </button>
+                        <button
+                          onClick={handleCancel}
+                          className="flex items-center gap-2 px-4 md:px-5 py-2.5 text-slate-700 text-sm font-medium border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                          Cancel
+                        </button>
 
-                      <button
-                        onClick={handleSave}
-                        className="flex items-center justify-center gap-2 px-5 sm:px-6 py-2 sm:py-2.5 text-sm font-semibold bg-white text-emerald-700 rounded-lg sm:rounded-xl hover:bg-emerald-50 shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
-                      >
-                        <Check className="w-4 h-4" />
-                        Save Changes
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                        <button
+                          onClick={handleSave}
+                          className="flex items-center gap-2 px-4 md:px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
+                        >
+                          <Check className="w-4 h-4" />
+                          Save
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </div>
           </div>
         </motion.div>
 
         {/* Main Content */}
-        <div className="mt-6 sm:mt-8 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
           {/* Left Column - Main Info */}
-          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-            {/* Personal Information Card */}
+          <div className="lg:col-span-2 space-y-6 md:space-y-8">
+            {/* Personal Information */}
             <motion.div
               variants={slideIn}
               initial="hidden"
               animate="visible"
               transition={{ delay: 0.1 }}
-              className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100 overflow-hidden"
+              className="bg-white border border-slate-200/60 rounded-2xl p-6 md:p-8 shadow-sm"
             >
-              <div className="bg-gradient-to-r from-emerald-50 to-green-50 p-4 sm:p-6 border-b border-emerald-100">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="p-2 sm:p-2.5 bg-emerald-500 rounded-lg sm:rounded-xl shadow-md">
-                    <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                  </div>
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-800">
-                    Personal Information
-                  </h3>
-                </div>
-              </div>
+              <h2 className="text-lg md:text-xl font-semibold text-slate-900 mb-6">
+                Personal Information
+              </h2>
 
-              <div className="p-4 sm:p-6 lg:p-8">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                  <Input
-                    label="FULL NAME"
-                    value={draftUser.fullName}
-                    icon={
-                      <User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
-                    }
-                  />
-                  <Input
-                    label="EMAIL ADDRESS"
-                    value={draftUser.email}
-                    icon={
-                      <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
-                    }
-                  />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 md:gap-6">
+                <Input
+                  label="Full Name"
+                  value={draftUser.fullName}
+                  icon={<User className="w-4 h-4 text-slate-400" />}
+                />
+                <Input
+                  label="Email"
+                  value={draftUser.email}
+                  icon={<Mail className="w-4 h-4 text-slate-400" />}
+                />
 
-                  <Input
-                    label="JOB TITLE"
-                    value={draftUser.jobTitle}
-                    editable={isEditing}
-                    onChange={v =>
-                      setDraftUser(prev => ({ ...prev, jobTitle: v }))
-                    }
-                    icon={
-                      <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
-                    }
-                  />
+                <Input
+                  label="Job Title"
+                  value={draftUser.jobTitle}
+                  editable={isEditing}
+                  onChange={v =>
+                    setDraftUser(prev => ({ ...prev, jobTitle: v }))
+                  }
+                  icon={<Briefcase className="w-4 h-4 text-slate-400" />}
+                />
 
-                  <Input
-                    label="LINKEDIN ID"
-                    value={draftUser.linkedinId}
-                    editable={isEditing}
-                    onChange={v =>
-                      setDraftUser(prev => ({ ...prev, linkedinId: v }))
-                    }
-                    icon={
-                      <Linkedin className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
-                    }
-                  />
+                <Input
+                  label="LinkedIn"
+                  value={draftUser.linkedinId}
+                  editable={isEditing}
+                  onChange={v =>
+                    setDraftUser(prev => ({ ...prev, linkedinId: v }))
+                  }
+                  icon={<Linkedin className="w-4 h-4 text-slate-400" />}
+                />
 
-                  <Input
-                    label="AGE"
-                    value={draftUser.age}
-                    editable={isEditing}
-                    onChange={v =>
-                      setDraftUser(prev => ({ ...prev, age: Number(v) }))
-                    }
-                    icon={
-                      <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
-                    }
-                  />
+                <Input
+                  label="Age"
+                  value={draftUser.age}
+                  editable={isEditing}
+                  onChange={v =>
+                    setDraftUser(prev => ({ ...prev, age: Number(v) }))
+                  }
+                  icon={<Calendar className="w-4 h-4 text-slate-400" />}
+                />
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-2 tracking-wider uppercase">
-                      SEX
-                    </label>
-                    <div className="relative">
-                      <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
-                      </div>
-                      {isEditing ? (
-                        <select
-                          value={draftUser.sex ?? ''}
-                          onChange={e =>
-                            setDraftUser(prev => ({
-                              ...prev,
-                              sex: e.target.value,
-                            }))
-                          }
-                          className="w-full rounded-lg sm:rounded-xl border-2 border-gray-200 bg-white pl-10 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-3.5 text-sm font-medium text-gray-700 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all appearance-none cursor-pointer hover:border-gray-300"
-                        >
-                          <option value="">Select</option>
-                          <option value="male">Male</option>
-                          <option value="female">Female</option>
-                          <option value="other">Other</option>
-                        </select>
-                      ) : (
-                        <input
-                          value={draftUser.sex ?? 'Not specified'}
-                          disabled
-                          className="w-full rounded-lg sm:rounded-xl bg-gray-50 pl-10 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-3.5 text-sm font-medium text-gray-700 border-2 border-transparent"
-                        />
-                      )}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Gender
+                  </label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <User className="w-4 h-4 text-slate-400" />
                     </div>
+                    {isEditing ? (
+                      <select
+                        value={draftUser.sex ?? ''}
+                        onChange={e =>
+                          setDraftUser(prev => ({
+                            ...prev,
+                            sex: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-lg border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-shadow"
+                      >
+                        <option value="">Select</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                      </select>
+                    ) : (
+                      <input
+                        value={draftUser.sex ?? 'Not specified'}
+                        disabled
+                        className="w-full rounded-lg bg-slate-50 border border-slate-200 pl-10 pr-4 py-2.5 text-sm text-slate-600"
+                      />
+                    )}
                   </div>
                 </div>
               </div>
             </motion.div>
 
-            {/* Skills & Expertise Card */}
+            {/* Skills & Expertise */}
             <motion.div
               variants={slideIn}
               initial="hidden"
               animate="visible"
               transition={{ delay: 0.2 }}
-              className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100 overflow-hidden"
+              className="bg-white border border-slate-200/60 rounded-2xl p-6 md:p-8 shadow-sm"
             >
-              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-4 sm:p-6 border-b border-purple-100">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="p-2 sm:p-2.5 bg-purple-500 rounded-lg sm:rounded-xl shadow-md">
-                      <Lightbulb className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg sm:text-xl font-bold text-gray-800">
-                        Skills & Expertise
-                      </h3>
-                      <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-                        {skills.length} skill{skills.length !== 1 ? 's' : ''}{' '}
-                        added
-                      </p>
-                    </div>
-                  </div>
-                  {/* {!isEditing && skills.length > 0 && (
-                    <div className="text-xs sm:text-sm font-semibold text-purple-600 bg-purple-100 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full">
-                      {skills.filter(s => s.level === 'advanced').length}{' '}
-                      Advanced
-                    </div>
-                  )} */}
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-lg md:text-xl font-semibold text-slate-900">
+                    Skills & Expertise
+                  </h2>
+                  <p className="text-sm text-slate-500 mt-1">
+                    {skills.length} skill{skills.length !== 1 ? 's' : ''}
+                  </p>
                 </div>
               </div>
 
-              <div className="p-4 sm:p-6 lg:p-8">
-                {!isEditing && skills.length > 0 && (
-                  <div className="flex flex-wrap gap-2 sm:gap-3">
-                    {skills.map((skill, index) => (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: index * 0.05 }}
-                        key={`${skill.label}-${skill.level}`}
-                        className="group relative"
+              {!isEditing && skills.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {skills.map((skill, index) => (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.03 }}
+                      key={`${skill.label}-${skill.level}`}
+                    >
+                      <div
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${getSkillStyle(
+                          skill.level
+                        )}`}
                       >
-                        <div
-                          className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold border-2 transition-all ${getSkillStyle(
-                            skill.level
-                          )}`}
-                        >
-                          <span className="flex items-center gap-1.5 sm:gap-2">
-                            {getLevelIcon(skill.level)}
-                            {skill.label}
-                          </span>
-                        </div>
-                        <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden sm:block">
-                          {skill.level.charAt(0).toUpperCase() +
-                            skill.level.slice(1)}
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
+                        {skill.label}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
 
-                {isEditing && (
-                  <SkillEditor
-                    initialSkills={skills}
-                    editable={isEditing}
-                    onSkillsChange={setSkills}
-                  />
-                )}
+              {isEditing && (
+                <SkillEditor
+                  initialSkills={skills}
+                  editable={isEditing}
+                  onSkillsChange={setSkills}
+                />
+              )}
 
-                {!isEditing && skills.length === 0 && (
-                  <div className="text-center py-8 sm:py-12">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                      <Plus className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
-                    </div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">
-                      No skills added yet
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      Click &quot;Edit Profile&quot; to add your skills
-                    </p>
+              {!isEditing && skills.length === 0 && (
+                <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-lg">
+                  <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Plus className="w-6 h-6 text-slate-400" />
                   </div>
-                )}
-              </div>
+                  <p className="text-sm font-medium text-slate-600 mb-1">
+                    No skills added
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Edit your profile to add skills
+                  </p>
+                </div>
+              )}
             </motion.div>
           </div>
 
-          {/* Right Column - Stats & Tips */}
-          <div className="space-y-4 sm:space-y-6">
-            {/* Quick Stats Card */}
+          {/* Right Column - Stats & Insights */}
+          <div className="space-y-6 md:space-y-8">
+            {/* Quick Stats */}
             <motion.div
               variants={slideIn}
               initial="hidden"
               animate="visible"
               transition={{ delay: 0.3 }}
-              className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100 overflow-hidden"
+              className="bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm"
             >
-              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 sm:p-6 border-b border-blue-100">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="p-2 sm:p-2.5 bg-blue-500 rounded-lg sm:rounded-xl shadow-md">
-                    <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                  </div>
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-800">
-                    Quick Stats
-                  </h3>
-                </div>
-              </div>
+              <h3 className="text-base font-semibold text-slate-900 mb-5">
+                Overview
+              </h3>
 
-              <div className="p-4 sm:p-6">
-                <div className="space-y-3 sm:space-y-4">
-                  <StatRow
-                    label="Total Skills"
-                    value={savedSkills.length}
-                    icon={
-                      <Lightbulb className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
-                    }
-                  />
-                  <StatRow
-                    label="Connections"
-                    value={savedUser.connections?.length ?? 0}
-                    icon={
-                      <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
-                    }
-                  />
-                  <StatRow
-                    label="Advanced Skills"
-                    value={
-                      savedSkills.filter(s => s.level === 'advanced').length
-                    }
-                    icon={
-                      <Star className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
-                    }
-                  />
-                </div>
+              <div className="space-y-4">
+                <StatRow
+                  label="Skills"
+                  value={savedSkills.length}
+                  icon={<Lightbulb className="w-4 h-4 text-emerald-600" />}
+                />
+                <StatRow
+                  label="Connections"
+                  value={savedUser.connections?.length ?? 0}
+                  icon={<Users className="w-4 h-4 text-blue-600" />}
+                />
+                <StatRow
+                  label="Advanced"
+                  value={
+                    savedSkills.filter(s => s.level === 'advanced').length
+                  }
+                  icon={<Star className="w-4 h-4 text-amber-500" />}
+                />
               </div>
             </motion.div>
 
-            {/* Profile Tips Card */}
+            {/* Profile Insights */}
             <motion.div
               variants={slideIn}
               initial="hidden"
               animate="visible"
               transition={{ delay: 0.4 }}
-              className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl sm:rounded-2xl border-2 border-amber-200/50 overflow-hidden shadow-lg"
+              className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/60 rounded-2xl p-6"
             >
-              <div className="p-4 sm:p-6">
-                <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5">
-                  <div className="text-2xl sm:text-3xl">💡</div>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-bold text-gray-800">
-                      Profile Tips
-                    </h3>
-                    <p className="text-xs text-gray-600">
-                      Improve your visibility
-                    </p>
-                  </div>
-                </div>
+              <h3 className="text-base font-semibold text-slate-900 mb-4">
+                Profile Tips
+              </h3>
 
-                <ul className="space-y-3 sm:space-y-4">
-                  <TipItem
-                    text="Add more skills to increase visibility"
-                    completed={savedSkills.length >= 3}
-                  />
-                  <TipItem
-                    text="Connect your LinkedIn for credibility"
-                    completed={!!savedUser.linkedinId}
-                  />
-                  <TipItem
-                    text="Upload a professional photo"
-                    completed={!!savedUser.profilePicture}
-                  />
-                  <TipItem
-                    text="Complete all personal information"
-                    completed={completion === 100}
-                  />
-                </ul>
-              </div>
+              <ul className="space-y-3">
+                <TipItem
+                  text="Add at least 3 skills"
+                  completed={savedSkills.length >= 3}
+                />
+                <TipItem
+                  text="Connect LinkedIn"
+                  completed={!!savedUser.linkedinId}
+                />
+                <TipItem
+                  text="Upload a photo"
+                  completed={!!savedUser.profilePicture}
+                />
+                <TipItem
+                  text="Complete profile info"
+                  completed={completion === 100}
+                />
+              </ul>
             </motion.div>
 
-            {/* Achievement Badge (if profile is complete) */}
-            {/* {completion === 100 && (
+            {/* Achievement */}
+            {completion === 100 && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.5 }}
-                className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl sm:rounded-2xl p-5 sm:p-6 text-white shadow-xl"
+                className="bg-slate-900 text-white rounded-2xl p-6 text-center"
               >
-                <div className="text-center">
-                  <Trophy className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 text-yellow-300" />
-                  <h3 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2">
-                    Profile Complete!
-                  </h3>
-                  <p className="text-xs sm:text-sm text-green-100">
-                    Your profile is now ready to match with other
-                    professionals
-                  </p>
+                <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Check className="w-6 h-6" />
                 </div>
+                <h3 className="text-base font-semibold mb-1">
+                  Profile Complete!
+                </h3>
+                <p className="text-sm text-slate-300">
+                  Your profile is ready
+                </p>
               </motion.div>
-            )} */}
+            )}
           </div>
         </div>
       </div>
@@ -707,12 +574,12 @@ export default function ProfilePage({ user }: ProfilePageProps) {
 function Input({ label, value, editable, onChange, icon }: InputProps) {
   return (
     <div>
-      <label className="block text-xs font-bold text-gray-500 mb-2 tracking-wider uppercase">
+      <label className="block text-sm font-medium text-slate-700 mb-2">
         {label}
       </label>
       <div className="relative">
         {icon && (
-          <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
             {icon}
           </div>
         )}
@@ -720,12 +587,12 @@ function Input({ label, value, editable, onChange, icon }: InputProps) {
           value={value ?? ''}
           disabled={!editable}
           onChange={e => onChange?.(e.target.value)}
-          className={`w-full rounded-lg sm:rounded-xl ${
-            icon ? 'pl-10 sm:pl-12 pr-3 sm:pr-4' : 'px-3 sm:px-4'
-          } py-3 sm:py-3.5 text-sm font-medium transition-all ${
+          className={`w-full rounded-lg ${
+            icon ? 'pl-10 pr-4' : 'px-4'
+          } py-2.5 text-sm transition-all ${
             editable
-              ? 'border-2 border-gray-200 bg-white text-gray-700 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 hover:border-gray-300'
-              : 'bg-gray-50 text-gray-700 border-2 border-transparent cursor-not-allowed'
+              ? 'border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent'
+              : 'bg-slate-50 text-slate-600 border border-slate-200 cursor-not-allowed'
           }`}
         />
       </div>
@@ -743,37 +610,33 @@ function StatRow({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between py-2.5 sm:py-3 border-b border-gray-100 last:border-0">
-      <div className="flex items-center gap-2 sm:gap-3">
+    <div className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0">
+      <div className="flex items-center gap-2.5">
         {icon && <div className="shrink-0">{icon}</div>}
-        <span className="text-xs sm:text-sm font-semibold text-gray-600">
-          {label}
-        </span>
+        <span className="text-sm font-medium text-slate-700">{label}</span>
       </div>
-      <span className="text-xl sm:text-2xl font-bold text-gray-800">
-        {value}
-      </span>
+      <span className="text-lg font-semibold text-slate-900">{value}</span>
     </div>
   );
 }
 
 function TipItem({ text, completed }: { text: string; completed?: boolean }) {
   return (
-    <li className="flex items-start gap-2 sm:gap-3">
+    <li className="flex items-center gap-3">
       <div
-        className={`mt-0.5 sm:mt-1 shrink-0 ${
-          completed ? 'text-green-600' : 'text-amber-500'
+        className={`w-5 h-5 shrink-0 rounded-full border-2 flex items-center justify-center ${
+          completed
+            ? 'bg-emerald-600 border-emerald-600'
+            : 'border-slate-300'
         }`}
       >
-        {completed ? (
-          <Check className="w-4 h-4 sm:w-5 sm:h-5" />
-        ) : (
-          <div className="w-2 h-2 rounded-full bg-amber-400 mt-1 sm:mt-1.5"></div>
-        )}
+        {completed && <Check className="w-3 h-3 text-white" />}
       </div>
       <span
-        className={`text-xs sm:text-sm font-medium ${
-          completed ? 'text-green-700 line-through' : 'text-gray-700'
+        className={`text-sm ${
+          completed
+            ? 'text-slate-500 line-through'
+            : 'text-slate-700 font-medium'
         }`}
       >
         {text}
@@ -782,21 +645,16 @@ function TipItem({ text, completed }: { text: string; completed?: boolean }) {
   );
 }
 
-function getLevelIcon( ) {
-  const iconClass = 'w-3 h-3 sm:w-4 sm:h-4';
-  return <Star className={iconClass} />;
-}
-
 function getSkillStyle(level: Skill['level']) {
   switch (level) {
     case 'beginner':
-      return 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300';
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100';
     case 'intermediate':
-      return 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300';
+      return 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100';
     case 'advanced':
-      return 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 hover:border-orange-300';
+      return 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100';
     default:
-      return 'bg-gray-50 text-gray-700 border-gray-200';
+      return 'bg-slate-50 text-slate-700 border-slate-200';
   }
 }
 
