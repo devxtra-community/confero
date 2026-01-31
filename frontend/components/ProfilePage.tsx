@@ -22,7 +22,6 @@ import {
   Lightbulb,
   Users,
   Star,
-  BarChart3,
   Plus,
   X,
 } from 'lucide-react';
@@ -503,9 +502,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                 />
                 <StatRow
                   label="Advanced"
-                  value={
-                    savedSkills.filter(s => s.level === 'advanced').length
-                  }
+                  value={savedSkills.filter(s => s.level === 'advanced').length}
                   icon={<Star className="w-4 h-4 text-amber-500" />}
                 />
               </div>
@@ -557,9 +554,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                 <h3 className="text-base font-semibold mb-1">
                   Profile Complete!
                 </h3>
-                <p className="text-sm text-slate-300">
-                  Your profile is ready
-                </p>
+                <p className="text-sm text-slate-300">Your profile is ready</p>
               </motion.div>
             )}
           </div>
@@ -625,9 +620,7 @@ function TipItem({ text, completed }: { text: string; completed?: boolean }) {
     <li className="flex items-center gap-3">
       <div
         className={`w-5 h-5 shrink-0 rounded-full border-2 flex items-center justify-center ${
-          completed
-            ? 'bg-emerald-600 border-emerald-600'
-            : 'border-slate-300'
+          completed ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300'
         }`}
       >
         {completed && <Check className="w-3 h-3 text-white" />}
