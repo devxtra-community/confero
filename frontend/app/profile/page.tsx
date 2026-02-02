@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import ProfilePage from '@/components/ProfilePage';
 import { axiosInstance } from '@/lib/axiosInstance';
 import { UserProfile } from '@/components/ProfilePage';
+import Loading from '@/components/CenterLoader';
 
 export default function Profile() {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -14,7 +15,8 @@ export default function Profile() {
       try {
         const res = await axiosInstance.get('/users/me');
         setUser(res.data.user);
-      } catch {
+      } catch (e) {
+        console.error(e);
       } finally {
         setLoading(false);
       }
@@ -23,8 +25,12 @@ export default function Profile() {
     fetchUser();
   }, []);
 
-  if (loading) return <div>Loading...</div>;
-  if (!user) return null;
+  if (loading) return <Loading />;
+  if (!user) {
+    return (
+      <div className="p-6 text-sm text-red-600">Failed to load profile</div>
+    );
+  }
 
   return <ProfilePage user={user} />;
 }
