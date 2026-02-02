@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react';
 import { Video, Sparkles, Zap, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import Loading from '@/components/CenterLoader';
 
 export default function FindMatchPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [matchFound, setMatchFound] = useState(false);
   const [currentQuote, setCurrentQuote] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const quotes = [
     'Connecting minds, one conversation at a time...',
@@ -16,6 +18,13 @@ export default function FindMatchPage() {
     'Share knowledge, grow together...',
     'Your next great connection awaits...',
   ];
+  useEffect(() => {
+    const init = async () => {
+      await Promise.resolve();
+      setLoading(false);
+    };
+    init();
+  }, []);
 
   useEffect(() => {
     if (isSearching) {
@@ -41,6 +50,7 @@ export default function FindMatchPage() {
     setCurrentQuote(0);
   };
 
+  if (loading) return <Loading />;
   return (
     <div className="min-h-screen overflow-x-hidden bg-linear-to-br from-slate-50 via-white to-teal-50">
       <div className="absolute top-20 right-0 sm:right-10 w-56 sm:w-72 h-56 sm:h-72 bg-primary/10 rounded-full blur-3xl" />
