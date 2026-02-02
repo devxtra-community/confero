@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { Video, Sparkles, Zap, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
@@ -15,7 +14,9 @@ export default function FindMatchPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [peerId, setPeerId] = useState<string | null>(null);
 
+  const [peerProfile, setPeerProfile] = useState<PeerProfile | null>(null);
   const [currentQuote, setCurrentQuote] = useState(0);
+
   const router = useRouter();
 
   type Skills = {
@@ -38,12 +39,13 @@ export default function FindMatchPage() {
     peerId: string;
   }
 
+  interface skill {
+    key: string
+  }
+
   interface CallAcceptedPayload {
     callId: string;
   }
-
-
-  const [peerProfile, setPeerProfile] = useState<PeerProfile | null>(null);
 
   const quotes = [
     'Connecting minds, one conversation at a time...',
@@ -53,19 +55,24 @@ export default function FindMatchPage() {
   ];
 
   useEffect(() => {
+    if (!socket.connected) {
+      socket.connect();
+    }
+  }, []);
+
+  useEffect(() => {
     if (!peerId) return;
 
-    const peerProfile = async () => {
+    const fetchPeerProfile = async () => {
       try {
         const res = await axiosInstance.get(`/users/peer/${peerId}`);
         setPeerProfile(res.data);
-        console.log(res.data);
       } catch {
-        toast.warning('failed to fetch user profile details');
+        toast.warning('Failed to fetch user profile details');
       }
     };
 
-    peerProfile();
+    fetchPeerProfile();
   }, [peerId]);
 
   useEffect(() => {
@@ -80,25 +87,33 @@ export default function FindMatchPage() {
     };
   }, [isSearching, quotes.length]);
 
-  const handleStartSearch = () => {
+  const handleStartSearch = async () => {
+    if (isSearching) return;
+
     setIsSearching(true);
     setMatchFound(false);
     setSessionId(null);
     setPeerId(null);
     setCurrentQuote(0);
 
-    socket.emit('match:start', {
-      skills: 'react',
-    });
-  };
+    try {
+      const res = await axiosInstance.get('/users/me');
 
-  const handleStartCall = () => {
-    if (!sessionId || !peerId) return;
+      const skills = res.data.user.skills.map((s: skill) => s.key);
 
-    socket.emit('call:initiate', {
-      callId: sessionId,
-      toUserId: peerId,
-    });
+      if (!skills.length) {
+        toast.warning('Please add skills to your profile');
+        setIsSearching(false);
+        return;
+      }
+
+      console.log('Starting match with skills:', skills);
+
+      socket.emit('match:start', { skills });
+    } catch {
+      toast.error('Unable to start matching');
+      setIsSearching(false);
+    }
   };
 
   useEffect(() => {
@@ -118,13 +133,30 @@ export default function FindMatchPage() {
     };
   }, []);
 
+  const cancelMatch = () => {
+    socket.emit('match:cancel');
+    setIsSearching(false);
+  };
+
   useEffect(() => {
     return () => {
       if (isSearching) {
-        socket.emit('match:cancel', { skill: 'react' });
+        socket.emit('match:cancel');
       }
     };
   }, [isSearching]);
+
+  useEffect(() => {
+    const onIncomingCall = ({ callId }: { callId: string }) => {
+      socket.emit('call:accept', { callId });
+    };
+
+    socket.on('call:incoming', onIncomingCall);
+
+    return () => {
+      socket.off('call:incoming', onIncomingCall);
+    };
+  }, [router]);
 
   useEffect(() => {
     const onCallAccepted = ({ callId }: CallAcceptedPayload) => {
@@ -137,9 +169,14 @@ export default function FindMatchPage() {
     };
   }, [peerId, router]);
 
-  const cancelMatch = () => {
-    socket.emit('match:cancel', { skill: 'react' });
-    setIsSearching(false);
+  const handleStartCall = () => {
+    if (!sessionId || !peerId) return;
+
+    socket.emit('call:initiate', {
+      callId: sessionId,
+      toUserId: peerId,
+    });
+    console.log(sessionId, peerId);
   };
 
   return (

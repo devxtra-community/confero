@@ -34,6 +34,8 @@ export default function SocketTest() {
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [showChat, setShowChat] = useState(true);
 
+  const isCallActiveRef = useRef(false);
+
   //this is the audio and video connection thing
   const getMediaStream = useCallback(async () => {
     if (localStreamRef.current) return localStreamRef.current;
@@ -66,12 +68,11 @@ export default function SocketTest() {
 
   // CLEANUP FUNCTION
   const cleanup = useCallback(() => {
+    isCallActiveRef.current = false;
+
     pcRef.current?.close();
     pcRef.current = null;
     tracksAddedRef.current = false;
-
-    localStreamRef.current?.getTracks().forEach(track => track.stop());
-    localStreamRef.current = null;
 
     remoteStreamRef.current = null;
   }, []);
@@ -81,24 +82,29 @@ export default function SocketTest() {
     const pc = new RTCPeerConnection({
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
+        {
+          urls: 'turn:your-turn-server.com:3478',
+          username: 'user',
+          credential: 'pass',
+        },
       ],
     });
 
     pc.onicecandidate = event => {
-      if (event.candidate && callIdRef.current && peerUserIdRef.current) {
-        console.log(
-          'Sending ICE candidate:',
-          event.candidate.candidate.substring(0, 50)
-        );
-        socketRef.current?.emit('webrtc:ice', {
-          callId: callIdRef.current,
-          to: peerUserIdRef.current,
-          candidate: event.candidate.toJSON(),
-        });
-      } else if (!event.candidate) {
-        console.log('ICE gathering complete');
+      if (
+        !isCallActiveRef.current ||
+        !event.candidate ||
+        !callIdRef.current ||
+        !peerUserIdRef.current
+      ) {
+        return;
       }
+
+      socketRef.current?.emit('webrtc:ice', {
+        callId: callIdRef.current,
+        to: peerUserIdRef.current,
+        candidate: event.candidate.toJSON(),
+      });
     };
 
     pc.onconnectionstatechange = () => {
@@ -189,9 +195,8 @@ export default function SocketTest() {
     });
 
     socketRef.current = socket;
-    if (typeof window !== 'undefined') {
-      window.socket = socket;
-    }
+
+    window.socket = socket;
 
     socket.on('connect', () => {
       console.log('Socket connected:', socket.id);
@@ -210,6 +215,9 @@ export default function SocketTest() {
       callIdRef.current = callId;
       peerUserIdRef.current = from;
 
+      isCallActiveRef.current = true;
+
+      getOrCreatePC();
       // Auto-accept
       socket.emit('call:accept', { callId });
       setStatus('Call accepted, waiting for offer...');
@@ -269,6 +277,7 @@ export default function SocketTest() {
 
     //CALLER (initiates call)
     socket.on('call:accepted', async ({ callId, to }) => {
+      isCallActiveRef.current = true;
       console.log('Call accepted by:', to);
       setStatus('Call accepted, creating offer...');
 
@@ -351,7 +360,7 @@ export default function SocketTest() {
 
     socket.on('webrtc:ice', async ({ candidate }) => {
       console.log('Received ICE candidate');
-
+      if (!isCallActiveRef.current) return;
       const pc = pcRef.current;
       if (!pc) {
         console.log('No PC yet, queuing ICE candidate');
@@ -419,6 +428,9 @@ export default function SocketTest() {
   };
 
   const endCall = () => {
+    localStreamRef.current?.getTracks().forEach(t => t.stop());
+    localStreamRef.current = null;
+
     cleanup();
     setStatus('Call ended');
   };

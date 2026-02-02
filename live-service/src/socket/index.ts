@@ -18,7 +18,16 @@ export const initSocket = (httpserver: ReturnType<typeof createServer>) => {
   io.use(socketMiddleware);
 
   io.on('connection', socket => {
-    logger.info('SOCKET CONNECTED:', socket.id);
+    const userId = socket.data.user?.userId;
+
+    if (!userId) {
+      logger.error('Socket connected without userId', socket.id);
+      socket.disconnect();
+      return;
+    }
+
+    socket.join(userId);
+    console.log(userId);
     socketController(socket);
     callHandlers(socket, io);
     matchingHandlers(socket, io);

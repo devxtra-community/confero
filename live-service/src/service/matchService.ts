@@ -1,21 +1,40 @@
 import { v4 as uuid } from 'uuid';
-import { MatchSession } from '../matching/matchingTypes';
 import { matchingRepository } from '../repository/matchRepository';
 import { presenceRepository } from '../repository/presenceRepository';
+import { MatchSession } from '../matching/matchingTypes';
 
 export const matchingService = {
-  async startMatch(userId: string, skill: string) {
+  async startMatch(userId: string, skills: string[]) {
     const isOnline = await presenceRepository.isOnline(userId);
     if (!isOnline) return null;
 
     const state = await matchingRepository.getState(userId);
-    if (state === 'SEARCHING') return null;
+    if (state === 'MATCHED') return null;
 
-    console.log('ur amazing broooo', isOnline);
+    const normalizedSkills = skills
+      .map(s => s.trim().toLowerCase())
+      .filter(Boolean);
+
     await matchingRepository.setState(userId, 'SEARCHING');
-    const peerId = await matchingRepository.popQueue(skill);
-    console.log(peerId);
-    if (peerId && peerId !== userId) {
+
+    for (const skill of normalizedSkills) {
+      const peerId = await matchingRepository.popQueueBySkill(skill);
+
+      if (!peerId) continue;
+
+      if (peerId === userId) {
+        await matchingRepository.pushQueueOnce(skill, userId);
+        continue;
+      }
+
+      const peerState = await matchingRepository.getState(peerId);
+      const peerOnline = await presenceRepository.isOnline(peerId);
+
+      if (peerState !== 'SEARCHING' || !peerOnline) {
+        await matchingRepository.pushQueueOnce(skill, peerId);
+        continue;
+      }
+
       const session: MatchSession = {
         sessionId: uuid(),
         userA: userId,
@@ -23,19 +42,33 @@ export const matchingService = {
         skill,
         createdAt: Date.now(),
       };
+
       await matchingRepository.createSession(session);
       await matchingRepository.setState(userId, 'MATCHED');
       await matchingRepository.setState(peerId, 'MATCHED');
+      await matchingRepository.removeUserFromAllQueues(userId);
+      await matchingRepository.removeUserFromAllQueues(peerId);
 
       return session;
     }
 
-    await matchingRepository.pushQueue(skill, userId);
+    for (const skill of normalizedSkills) {
+      await matchingRepository.pushQueueOnce(skill, userId);
+    }
+
     return null;
   },
 
-  async cancelMatching(userId: string, skill: string) {
-    await matchingRepository.removeFromQueue(userId, skill);
+  async cancelMatching(userId: string) {
+    const state = await matchingRepository.getState(userId);
+
+    if (state !== 'SEARCHING') {
+      await matchingRepository.setState(userId, 'IDLE');
+      return;
+    }
+
+    await matchingRepository.removeUserFromAllQueues(userId);
+
     await matchingRepository.setState(userId, 'IDLE');
   },
 };

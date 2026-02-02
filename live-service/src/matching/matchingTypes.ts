@@ -1,4 +1,8 @@
-export type MatchState = 'IDLE' | 'SEARCHING' | 'MATCHED' | 'IN_CALL';
+export const MATCH_STATE = {
+  IDLE: 'IDLE',
+  SEARCHING: 'SEARCHING',
+  MATCHED: 'MATCHED',
+} as const;
 
 export interface MatchSession {
   sessionId: string;
