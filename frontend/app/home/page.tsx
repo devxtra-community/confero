@@ -40,7 +40,7 @@ export default function FindMatchPage() {
   }
 
   interface skill {
-    key: string
+    key: string;
   }
 
   interface CallAcceptedPayload {
