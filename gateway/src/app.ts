@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import authRouter from './routes/authRoute.js';
 import { liveProxy } from './proxies/liveProxty.js';
 import helmet from 'helmet';
-import { userProxy } from './proxies/userProxy.js';
 import userRouter from './routes/userRoute.js';
 dotenv.config();
 

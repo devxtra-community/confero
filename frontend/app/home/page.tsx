@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { Video, Sparkles, Zap, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { socket } from '@/lib/socket';
 import { axiosInstance } from '@/lib/axiosInstance';
 import { toast } from 'sonner';
@@ -176,7 +175,8 @@ export default function FindMatchPage() {
       callId: sessionId,
       toUserId: peerId,
     });
-    console.log(sessionId, peerId);
+
+    router.push(`/session?callId=${sessionId}&peerId=${peerId}&role=caller`);
   };
 
   return (
@@ -186,12 +186,12 @@ export default function FindMatchPage() {
 
       {!isSearching && !matchFound && (
         <div className="relative min-h-screen flex items-center justify-center px-4 py-20">
-          <Link
+          {/* <Link
             href="/profile"
             className="p-5 absolute top-0 left-100 text-3xl text-primary"
           >
             <button className="p-5 bg-amber-200 rounded-2xl">Profile</button>
-          </Link>
+          </Link> */}
           <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-4 py-2 border rounded-full">
@@ -272,7 +272,7 @@ export default function FindMatchPage() {
                 Finding your match
               </h2>
               <p className="text-sm sm:text-base text-muted-foreground italic">
-                “{quotes[currentQuote]}”
+                {quotes[currentQuote]}
               </p>
             </div>
 
@@ -282,7 +282,7 @@ export default function FindMatchPage() {
               </div>
 
               <p className="text-xs text-muted-foreground">
-                Matching based on interests, availability & skills
+                Matching based on interests, availability &amp; skills
               </p>
             </div>
 
@@ -330,7 +330,7 @@ export default function FindMatchPage() {
               <div className="inline-flex items-center gap-3 px-5 py-2 bg-linear-to-r from-primary to-favor text-white rounded-full">
                 <Zap className="w-5 h-5" />
                 <span className="font-semibold text-sm md:text-lg">
-                  Match Found!
+                  Match Found
                 </span>
               </div>
 
@@ -339,7 +339,7 @@ export default function FindMatchPage() {
               </h2>
 
               <p className="text-base md:text-xl text-primary italic">
-                “Every conversation is a new opportunity”
+                {'Every conversation is a new opportunity'}
               </p>
             </div>
 
@@ -347,15 +347,16 @@ export default function FindMatchPage() {
               <div className="relative flex justify-center">
                 <div
                   className="
-            relative w-full max-w-sm md:max-w-md lg:max-w-lg
-            aspect-3/2
-            rounded-3xl overflow-hidden
-          "
+    relative w-full max-w-sm md:max-w-md lg:max-w-lg
+    aspect-3/2
+    rounded-3xl overflow-hidden
+  "
                 >
                   <Image
                     src={peerProfile?.image || '/auth/young.jpg'}
                     fill
                     alt="Match"
+                    className="object-cover"
                   />
                 </div>
               </div>

@@ -1,11 +1,3 @@
-// import type { NextConfig } from 'next';
-
-// const nextConfig: NextConfig = {
-//   /* config options here */
-// };
-
-// export default nextConfig;
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -13,6 +5,11 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.r2.dev',
         pathname: '/**',
       },
     ],
