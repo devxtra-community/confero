@@ -23,10 +23,10 @@ export const presenceRepository = {
 
     if (remaining === 0) {
       await redis.del(key);
-      return true; // user fully offline
+      return true;
     }
 
-    return false; // still online in other tabs
+    return false;
   },
 
   async isOnline(userId: string) {

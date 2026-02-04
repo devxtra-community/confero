@@ -9,4 +9,7 @@ userRouter.post('/me/skills', userProxy);
 userRouter.delete('/me/skills/:key', userProxy);
 userRouter.patch('/update-profile', userProxy);
 
+// ⭐ ADD THIS LINE
+userRouter.get('/verify-session', userProxy);
+
 export default userRouter;

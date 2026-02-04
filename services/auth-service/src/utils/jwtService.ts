@@ -18,11 +18,16 @@ export const verifyJwt = <T = JwtPayload>(token: string): T => {
   }
 };
 
-export const generateAccessToken = (userId: string, email: string): string => {
+export const generateAccessToken = (
+  userId: string,
+  email: string,
+  role: 'user' | 'admin'
+): string => {
   return signJwt(
     {
       sub: userId,
       email,
+      role,
       type: 'access',
     },
     '15m'

@@ -1,16 +1,19 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { AppError } from './errorHandller.js';
 import { env } from '../config/env.js';
+import { userRepository } from '../repositories/userRepository.js';
+import { Request } from 'express';
 
 export interface AuthRequest extends Request {
   user?: {
     id: string;
     email: string;
+    role: 'user' | 'admin';
   };
 }
 
-export const verifyAccessToken = (
+export const verifyAccessToken = async (
   req: AuthRequest,
   _res: Response,
   next: NextFunction
@@ -20,19 +23,26 @@ export const verifyAccessToken = (
   if (!token) {
     throw new AppError('Unauthorized', 401);
   }
-  console.log(token);
 
   try {
     const payload = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
 
+    const userId = payload.sub as string;
+
+    const user = await userRepository.findById(userId);
+
+    if (!user) {
+      throw new AppError('User not found', 401);
+    }
+
     req.user = {
-      id: payload.sub as string,
-      email: payload.email as string,
+      id: user._id.toString(),
+      email: user.email,
+      role: user.role,
     };
 
     next();
-  } catch (err) {
-    console.error('JWT verify failed:', err);
+  } catch {
     throw new AppError('Invalid or expired token', 401);
   }
 };

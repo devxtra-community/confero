@@ -23,11 +23,17 @@ export default function GoogleButton() {
               idToken,
             });
 
-            setTimeout(() => {
-              router.push('/home');
-            }, 1200);
+            const meRes = await axiosInstance.get('/users/me');
+            const user = meRes.data.user;
+
+            if (user.role === 'admin') {
+              router.replace('/admin');
+            } else {
+              router.replace('/home');
+            }
           } catch (error) {
             console.error('Google auth API failed', error);
+            router.replace('/login');
           }
         }}
         onError={() => {

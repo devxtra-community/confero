@@ -4,10 +4,6 @@ import { googleAuthService } from '../services/googleAuth.service.js';
 import { logger } from '../config/logger.js';
 import { AppError } from '../middlewares/errorHandller.js';
 
-/**
- * REGISTER (Email + Password)
- */
-
 const isProduction = process.env.NODE_ENV === 'production';
 
 export const register = async (req: Request, res: Response) => {
@@ -53,7 +49,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
-  const { accessToken, refreshToken } = await authService.loginUser(
+  const { accessToken, refreshToken, role } = await authService.loginUser(
     email,
     password
   );
@@ -62,20 +58,26 @@ export const login = async (req: Request, res: Response) => {
 
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
-    secure: isProduction,
+    secure: false,
     sameSite: 'lax',
+    domain: 'localhost',
+    path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
-    secure: isProduction,
+    secure: false,
     sameSite: 'lax',
+    domain: 'localhost',
+    path: '/',
+    maxAge: 24 * 60 * 60 * 1000,
   });
 
   res.status(200).json({
     message: ' Login Successfully Completed',
     success: true,
+    role,
   });
 };
 
@@ -106,15 +108,20 @@ export const googleLogin = async (req: Request, res: Response) => {
 
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
-    secure: isProduction,
+    secure: false,
     sameSite: 'lax',
+    domain: 'localhost',
+    path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
-    secure: isProduction,
+    secure: false,
     sameSite: 'lax',
+    domain: 'localhost',
+    path: '/',
+    maxAge: 24 * 60 * 60 * 1000,
   });
 
   res.status(200).json({

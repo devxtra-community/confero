@@ -3,7 +3,6 @@ import { userRepository } from '../repositories/userRepository.js';
 import { userService } from '../services/userService.js';
 import { uploadToR2 } from '../utils/r2Upload.js';
 
-// 1. Put the function at the top of the file
 // type RawSkill =
 //   | string
 //   | {
@@ -47,7 +46,6 @@ import { uploadToR2 } from '../utils/r2Upload.js';
 //   return Array.from(map.values());
 // }
 
-// // 2. Your controller uses it here
 // export const updateSkills = async (req: Request, res: Response) => {
 //   try {
 //     const userId = req.user?.id;

@@ -26,7 +26,6 @@ async function login(email: string, password: string): Promise<string> {
     throw new Error('No set-cookie returned from login');
   }
 
-  // Extract accessToken from cookies
   const accessCookie = rawCookies.find((c: string) =>
     c.startsWith('accessToken=')
   );
@@ -46,7 +45,7 @@ function createSocket(id: string, token: string) {
   const socket = io(SOCKET_URL, {
     transports: ['websocket'],
     auth: {
-      token, // ✅ this matches your backend middleware
+      token,
     },
     reconnection: true,
     reconnectionAttempts: Infinity,

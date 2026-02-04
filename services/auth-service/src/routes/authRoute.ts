@@ -18,7 +18,7 @@ authRouter.post('/login', login);
 authRouter.post('/google', googleLogin);
 
 authRouter.post('/logout', logout);
-// access Token refreshEnd Point
+
 authRouter.post('/refresh', refresh);
 
 export default authRouter;

@@ -31,11 +31,6 @@ export const googleAuthService = {
 
     let user = await userRepository.findByEmail(email);
 
-    // --- CASE 1: Existing LOCAL user tries Google login
-    // if (user && user.authProvider === 'local') {
-    //   throw new AppError('Email already registered with password login', 409);
-    // }
-    // --- CASE 2: New Google user
     if (!user) {
       user = await userRepository.create({
         email,
@@ -48,16 +43,14 @@ export const googleAuthService = {
       } as any);
     }
 
-    // --- UPDATE LAST LOGIN TIME
     user.lastLoginAt = new Date();
     await user.save();
 
-    // --- SESSION HANDLING (reuse existing logic)
     await authSessionRepository.revokeAllForUser(user._id);
 
     const userId = user._id.toString();
 
-    const accessToken = generateAccessToken(userId, user.email);
+    const accessToken = generateAccessToken(userId, user.email, user.role);
     const refreshToken = generateRefreshToken();
     const refreshTokenHash = hashRefreshToken(refreshToken);
 

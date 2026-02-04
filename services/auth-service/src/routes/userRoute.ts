@@ -21,4 +21,16 @@ router.post(
   upload.single('avatar'),
   uploadAvatar
 );
+
+router.get('/verify-session', verifyAccessToken, (req: any, res) => {
+  res.json({
+    success: true,
+    user: {
+      id: req.user.id,
+      email: req.user.email,
+      role: req.user.role,
+    },
+  });
+});
+
 export default router;

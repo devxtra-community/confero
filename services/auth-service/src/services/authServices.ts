@@ -99,10 +99,6 @@ export const authService = {
 
     const user = await userRepository.findByEmail(email);
 
-    if (!user) {
-      throw new AppError('User is not exists', 401);
-    }
-
     if (!user || !user.password) {
       throw new AppError('Invalid credentials', 401);
     }
@@ -111,16 +107,20 @@ export const authService = {
       throw new AppError('Email not verified', 403);
     }
 
+    if (user.accountStatus !== 'active') {
+      throw new AppError('Account is not active', 403);
+    }
+
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
-      throw new AppError('Password is not verified', 401);
+      throw new AppError('Invalid credentials', 401);
     }
 
     const userId = user._id.toString();
 
-    const accessToken = generateAccessToken(userId, user.email);
-    const refreshToken = generateRefreshToken();
+    const accessToken = generateAccessToken(userId, user.email, user.role);
 
+    const refreshToken = generateRefreshToken();
     const refreshTokenHash = hashRefreshToken(refreshToken);
 
     await authSessionRepository.create({
@@ -129,9 +129,12 @@ export const authService = {
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
+    await userRepository.updateLastLogin(userId);
+
     return {
       accessToken,
       refreshToken,
+      role: user.role,
     };
   },
   logoutUser: async (refreshToken?: string) => {
@@ -162,6 +165,6 @@ export const authService = {
       throw new AppError('User not found', 404);
     }
 
-    return generateAccessToken(user._id.toString(), user.email);
+    return generateAccessToken(user._id.toString(), user.email, user.role);
   },
 };

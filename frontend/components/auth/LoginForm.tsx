@@ -20,14 +20,23 @@ export function LoginRight() {
     setLoading(true);
 
     try {
+      // 1. login
       await axiosInstance.post('/auth/login', {
         email,
         password,
       });
 
-      setTimeout(() => {
-        router.push('/home');
-      }, 1200);
+      // 2. get current user
+      const meRes = await axiosInstance.get('/users/me');
+
+      const user = meRes.data.user;
+
+      // 3. role based redirect
+      if (user.role === 'admin') {
+        router.replace('/admin');
+      } else {
+        router.replace('/profile');
+      }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         toast.error(err.response?.data?.message ?? 'Login failed');

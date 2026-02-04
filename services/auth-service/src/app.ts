@@ -5,9 +5,10 @@ import authRouter from './routes/authRoute.js';
 import { errorHandler } from './middlewares/globalError.js';
 import cookieParser from 'cookie-parser';
 import userRouter from './routes/userRoute.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 const app = express();
-// checking cd is working correct
+
 app.use(morganMiddleware);
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -21,5 +22,7 @@ app.get('/debug-cookies', (req, res) => {
 app.use('/auth', authRouter);
 app.use('/users', userRouter);
 app.use(errorHandler);
+
+app.use('/admin', adminRoutes);
 
 export default app;
