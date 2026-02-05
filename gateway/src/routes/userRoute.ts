@@ -9,7 +9,6 @@ userRouter.post('/me/skills', userProxy);
 userRouter.delete('/me/skills/:key', userProxy);
 userRouter.patch('/update-profile', userProxy);
 
-
 userRouter.get('/verify-session', userProxy);
 
 userRouter.get('/peer/:userId', userProxy);
