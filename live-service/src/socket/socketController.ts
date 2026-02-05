@@ -5,6 +5,7 @@ import { AuthenticatedUser } from '../types/tokenType';
 import { registerCallHandlers } from './callHandlers';
 import { callService } from '../service/callService';
 import { logger } from '../config/logger';
+import { matchingRepository } from '../repository/matchRepository';
 
 export const callHandlers = (socket: Socket, io: Server) => {
   const userId = socket.data.user.userId;
@@ -14,13 +15,12 @@ export const callHandlers = (socket: Socket, io: Server) => {
   registerCallHandlers(socket, io);
 
   socket.on('disconnect', () => {
-    const userId = socket.data.user.userId;
-
     for (const [callId, call] of callService.getAll()) {
       if (call.from === userId || call.to === userId) {
-        io.to(call.from)
-          .to(call.to)
-          .emit(SOCKET_EVENTS.CALL_END, { callId, reason: 'DISCONNECTED' });
+        io.to(call.from).to(call.to).emit(SOCKET_EVENTS.CALL_END, {
+          callId,
+          reason: 'DISCONNECTED',
+        });
 
         callService.update(callId, 'ENDED');
         callService.remove(callId);
@@ -29,38 +29,36 @@ export const callHandlers = (socket: Socket, io: Server) => {
   });
 };
 
-const HEARTBEAT_INTERVAL = 30_000; // 30 seconds
+const HEARTBEAT_INTERVAL = 30_000;
 
-export const socketController = (socket: Socket, io: Server) => {
+export const socketController = async (socket: Socket) => {
   logger.info('socket controller running');
 
   const user = socket.data.user as AuthenticatedUser;
 
-  // 1. Mark online when connected
   PresenceService.markOnline(user.userId, socket.id);
 
+  await matchingRepository.setState(user.userId, 'IDLE');
+
   socket.emit(SOCKET_EVENTS.AUTH_SUCCESS, {
-    userId: socket.data.user.userId,
-    email: socket.data.user.email,
+    userId: user.userId,
+    email: user.email,
   });
 
-  // 2. Start heartbeat to refresh TTL
   const heartbeat = setInterval(() => {
     PresenceService.refresh(user.userId);
   }, HEARTBEAT_INTERVAL);
 
-  socket.on(SOCKET_EVENTS.DISCONNECT, () => {
+  socket.on('disconnect', async () => {
     clearInterval(heartbeat);
 
-    void (async () => {
-      const fullyOffline = await PresenceService.markOffline(
-        user.userId,
-        socket.id
-      );
+    const fullyOffline = await PresenceService.markOffline(
+      user.userId,
+      socket.id
+    );
 
-      if (fullyOffline) {
-        io.emit(SOCKET_EVENTS.USER_OFFLINE, { userId: user.email });
-      }
-    })();
+    if (fullyOffline) {
+      logger.info(`User fully offline: ${user.userId}`);
+    }
   });
 };

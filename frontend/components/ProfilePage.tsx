@@ -157,7 +157,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   const completion = calculateProfileCompletion(savedUser, savedSkills);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-slate-50 px-4 py-6 md:px-6 md:py-8 lg:px-8 lg:py-12">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-emerald-50/20 to-slate-50 px-4 py-6 md:px-6 md:py-8 lg:px-8 lg:py-12">
       <div className="max-w-6xl mx-auto">
         {/* Header Section */}
         <motion.div
@@ -168,8 +168,8 @@ export default function ProfilePage({ user }: ProfilePageProps) {
         >
           {/* Profile Header */}
           <div className="bg-white border border-slate-200/60 rounded-2xl overflow-hidden shadow-sm">
-            <div className="relative h-32 sm:h-40 md:h-48 bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent"></div>
+            <div className="relative h-32 sm:h-40 md:h-48 bg-linear-to-br from-emerald-500 via-emerald-600 to-teal-600">
+              <div className="absolute inset-0 bg-[radial-linear(circle_at_top_right,_var(--tw-linear-stops))] from-white/10 via-transparent to-transparent"></div>
             </div>
 
             <div className="relative px-5 sm:px-6 md:px-8 pb-6 md:pb-8">
@@ -514,7 +514,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
               initial="hidden"
               animate="visible"
               transition={{ delay: 0.4 }}
-              className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/60 rounded-2xl p-6"
+              className="bg-linear-to-br from-emerald-50 to-teal-50 border border-emerald-200/60 rounded-2xl p-6"
             >
               <h3 className="text-base font-semibold text-slate-900 mb-4">
                 Profile Tips

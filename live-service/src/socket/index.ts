@@ -5,6 +5,7 @@ import { createServer } from 'http';
 import { callHandlers, socketController } from './socketController';
 import { logger } from '../config/logger';
 import { env } from '../config/env';
+import { matchingHandlers } from '../matching/matchingHandlers';
 
 export const initSocket = (httpserver: ReturnType<typeof createServer>) => {
   const io = new Server(httpserver, {
@@ -17,9 +18,20 @@ export const initSocket = (httpserver: ReturnType<typeof createServer>) => {
   io.use(socketMiddleware);
 
   io.on('connection', socket => {
-    logger.info(' Socket connected:', socket.id);
-    socketController(socket, io);
+    const userId = socket.data.user?.userId;
+
+    if (!userId) {
+      logger.error('Socket connected without userId', socket.id);
+      socket.disconnect();
+      return;
+    }
+
+    socket.join(userId);
+    console.log(userId);
+    socketController(socket);
     callHandlers(socket, io);
+    matchingHandlers(socket, io);
   });
+
   return io;
 };

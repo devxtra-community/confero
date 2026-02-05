@@ -1,16 +1,52 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { Video, Sparkles, Zap, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
+import { socket } from '@/lib/socket';
+import { axiosInstance } from '@/lib/axiosInstance';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 import Loading from '@/components/CenterLoader';
 
 export default function FindMatchPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [matchFound, setMatchFound] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [peerId, setPeerId] = useState<string | null>(null);
+
+  const [peerProfile, setPeerProfile] = useState<PeerProfile | null>(null);
   const [currentQuote, setCurrentQuote] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  const router = useRouter();
+
+  type Skills = {
+    _id: string;
+    key: string;
+    label: string;
+    level: string;
+  };
+
+  type PeerProfile = {
+    id: string;
+    name: string;
+    jobTitle: string;
+    image?: string;
+    skills: Skills[];
+  };
+
+  interface MatchFoundPayload {
+    sessionId: string;
+    peerId: string;
+  }
+
+  interface skill {
+    key: string;
+  }
+
+  interface CallAcceptedPayload {
+    callId: string;
+  }
 
   const quotes = [
     'Connecting minds, one conversation at a time...',
@@ -18,6 +54,133 @@ export default function FindMatchPage() {
     'Share knowledge, grow together...',
     'Your next great connection awaits...',
   ];
+
+  useEffect(() => {
+    if (!socket.connected) {
+      socket.connect();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!peerId) return;
+
+    const fetchPeerProfile = async () => {
+      try {
+        const res = await axiosInstance.get(`/users/peer/${peerId}`);
+        setPeerProfile(res.data);
+      } catch {
+        toast.warning('Failed to fetch user profile details');
+      }
+    };
+
+    fetchPeerProfile();
+  }, [peerId]);
+
+  useEffect(() => {
+    if (!isSearching) return;
+
+    const quoteInterval = setInterval(() => {
+      setCurrentQuote(prev => (prev + 1) % quotes.length);
+    }, 2500);
+
+    return () => {
+      clearInterval(quoteInterval);
+    };
+  }, [isSearching, quotes.length]);
+
+  const handleStartSearch = async () => {
+    if (isSearching) return;
+
+    setIsSearching(true);
+    setMatchFound(false);
+    setSessionId(null);
+    setPeerId(null);
+    setCurrentQuote(0);
+
+    try {
+      const res = await axiosInstance.get('/users/me');
+
+      const skills = res.data.user.skills.map((s: skill) => s.key);
+
+      if (!skills.length) {
+        toast.warning('Please add skills to your profile');
+        setIsSearching(false);
+        return;
+      }
+
+      console.log('Starting match with skills:', skills);
+
+      socket.emit('match:start', { skills });
+    } catch {
+      toast.error('Unable to start matching');
+      setIsSearching(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const onMatchFound = ({ sessionId, peerId }: MatchFoundPayload) => {
+      setSessionId(sessionId);
+      setPeerId(peerId);
+      setIsSearching(false);
+      setMatchFound(true);
+    };
+
+    socket.on('match:found', onMatchFound);
+
+    return () => {
+      socket.off('match:found', onMatchFound);
+    };
+  }, []);
+
+  const cancelMatch = () => {
+    socket.emit('match:cancel');
+    setIsSearching(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (isSearching) {
+        socket.emit('match:cancel');
+      }
+    };
+  }, [isSearching]);
+
+  useEffect(() => {
+    const onIncomingCall = ({ callId }: { callId: string }) => {
+      socket.emit('call:accept', { callId });
+    };
+
+    socket.on('call:incoming', onIncomingCall);
+
+    return () => {
+      socket.off('call:incoming', onIncomingCall);
+    };
+  }, [router]);
+
+  useEffect(() => {
+    const onCallAccepted = ({ callId }: CallAcceptedPayload) => {
+      router.push(`/session?callId=${callId}&peerId=${peerId}`);
+    };
+    socket.on('call:accepted', onCallAccepted);
+
+    return () => {
+      socket.off('call:accepted', onCallAccepted);
+    };
+  }, [peerId, router]);
+
+  const handleStartCall = () => {
+    if (!sessionId || !peerId) return;
+
+    socket.emit('call:initiate', {
+      callId: sessionId,
+      toUserId: peerId,
+    });
+
+    router.push(`/session?callId=${sessionId}&peerId=${peerId}&role=caller`);
+  };
+
   useEffect(() => {
     const init = async () => {
       await Promise.resolve();
@@ -25,30 +188,6 @@ export default function FindMatchPage() {
     };
     init();
   }, []);
-
-  useEffect(() => {
-    if (isSearching) {
-      const quoteInterval = setInterval(() => {
-        setCurrentQuote(prev => (prev + 1) % quotes.length);
-      }, 2500);
-
-      const matchTimer = setTimeout(() => {
-        setMatchFound(true);
-        setIsSearching(false);
-      }, 5000);
-
-      return () => {
-        clearInterval(quoteInterval);
-        clearTimeout(matchTimer);
-      };
-    }
-  }, [isSearching, quotes.length]);
-
-  const handleStartSearch = () => {
-    setIsSearching(true);
-    setMatchFound(false);
-    setCurrentQuote(0);
-  };
 
   if (loading) return <Loading />;
   return (
@@ -58,6 +197,12 @@ export default function FindMatchPage() {
 
       {!isSearching && !matchFound && (
         <div className="relative min-h-screen flex items-center justify-center px-4 py-20">
+          {/* <Link
+            href="/profile"
+            className="p-5 absolute top-0 left-100 text-3xl text-primary"
+          >
+            <button className="p-5 bg-amber-200 rounded-2xl">Profile</button>
+          </Link> */}
           <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-4 py-2 border rounded-full">
@@ -66,7 +211,6 @@ export default function FindMatchPage() {
                   Ready to Connect
                 </span>
               </div>
-
               <h1 className="font-sans text-5xl md:text-7xl font-bold text-foreground leading-tight">
                 Find Your
                 <span className="block text-transparent bg-clip-text bg-linear-to-r from-primary to-favor">
@@ -78,7 +222,8 @@ export default function FindMatchPage() {
 
               <button
                 onClick={handleStartSearch}
-                className="group inline-flex items-center gap-3 px-8 py-4 bg-linear-to-r from-primary to-favor text-white rounded-full font-semibold text-lg cursor-pointer transition-all transform hover:scale-105"
+                disabled={isSearching}
+                className="group inline-flex items-center gap-3 px-8 py-4 bg-linear-to-r from-primary to-favor text-white rounded-full font-semibold text-lg cursor-pointer transition-all transform hover:scale-105 disabled:opacity-50"
               >
                 <span>Start Matching</span>
                 <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
@@ -138,7 +283,7 @@ export default function FindMatchPage() {
                 Finding your match
               </h2>
               <p className="text-sm sm:text-base text-muted-foreground italic">
-                “{quotes[currentQuote]}”
+                {quotes[currentQuote]}
               </p>
             </div>
 
@@ -148,7 +293,7 @@ export default function FindMatchPage() {
               </div>
 
               <p className="text-xs text-muted-foreground">
-                Matching based on interests, availability & skills
+                Matching based on interests, availability &amp; skills
               </p>
             </div>
 
@@ -179,6 +324,12 @@ export default function FindMatchPage() {
                 ))}
               </div>
             </div>
+            <button
+              onClick={cancelMatch}
+              className="mt-6 text-sm text-muted-foreground underline"
+            >
+              Cancel Search
+            </button>
           </div>
         </div>
       )}
@@ -190,7 +341,7 @@ export default function FindMatchPage() {
               <div className="inline-flex items-center gap-3 px-5 py-2 bg-linear-to-r from-primary to-favor text-white rounded-full">
                 <Zap className="w-5 h-5" />
                 <span className="font-semibold text-sm md:text-lg">
-                  Match Found!
+                  Match Found
                 </span>
               </div>
 
@@ -199,7 +350,7 @@ export default function FindMatchPage() {
               </h2>
 
               <p className="text-base md:text-xl text-primary italic">
-                “Every conversation is a new opportunity”
+                {'Every conversation is a new opportunity'}
               </p>
             </div>
 
@@ -207,13 +358,13 @@ export default function FindMatchPage() {
               <div className="relative flex justify-center">
                 <div
                   className="
-            relative w-full max-w-sm md:max-w-md lg:max-w-lg
-            aspect-3/2
-            rounded-3xl overflow-hidden
-          "
+    relative w-full max-w-sm md:max-w-md lg:max-w-lg
+    aspect-3/2
+    rounded-3xl overflow-hidden
+  "
                 >
                   <Image
-                    src="/auth/young.jpg"
+                    src={peerProfile?.image || '/auth/young.jpg'}
                     fill
                     alt="Match"
                     className="object-cover"
@@ -223,44 +374,48 @@ export default function FindMatchPage() {
 
               <div className="space-y-6 md:space-y-8 text-center lg:text-left">
                 <div>
-                  <h3 className="font-sans text-2xl md:text-4xl font-bold text-foreground">
-                    Alex Morgan
-                  </h3>
-                  <p className="text-base md:text-xl text-primary">
-                    Full Stack Developer
-                  </p>
+                  {peerProfile ? (
+                    <>
+                      <h3 className="font-sans text-2xl md:text-4xl font-bold text-foreground">
+                        {peerProfile.name}
+                      </h3>
+                      <p className="text-base md:text-xl text-primary">
+                        {peerProfile.jobTitle}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground">Loading profile...</p>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap justify-center lg:justify-start gap-3">
-                  <span className="px-4 py-1.5 bg-teal-200 text-primary rounded-full text-sm font-medium">
-                    Programming
-                  </span>
-                  <span className="px-4 py-1.5 bg-green-200 text-primary rounded-full text-sm font-medium">
-                    Design
-                  </span>
-                  <span className="px-4 py-1.5 bg-blue-200 text-primary rounded-full text-sm font-medium">
-                    Teaching
-                  </span>
+                  {peerProfile?.skills?.map(skill => (
+                    <span
+                      key={skill._id}
+                      className="px-4 py-1.5 bg-teal-200 text-primary rounded-full text-sm font-medium"
+                    >
+                      {skill.label}
+                    </span>
+                  ))}
                 </div>
 
                 <div className="space-y-4 flex flex-col items-center lg:items-start">
-                  <Link href="/session">
-                    <button
-                      className="
-        flex items-center justify-center gap-3
-        px-6 py-4
-        bg-linear-to-r from-primary to-favor
-        text-white rounded-2xl
-        font-semibold text-base md:text-lg
-        transition-transform hover:scale-105
-        cursor-pointer
-      "
-                    >
-                      <Video className="w-8 h-5" />
-                      Start Video Call
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </Link>
+                  <button
+                    onClick={handleStartCall}
+                    className="
+    flex items-center justify-center gap-3
+    px-6 py-4
+    bg-linear-to-r from-primary to-favor
+    text-white rounded-2xl
+    font-semibold text-base md:text-lg
+    transition-transform hover:scale-105
+    cursor-pointer
+  "
+                  >
+                    <Video className="w-8 h-5" />
+                    Start Video Call
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
 
                   <button
                     onClick={handleStartSearch}

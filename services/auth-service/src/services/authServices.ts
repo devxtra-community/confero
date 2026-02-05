@@ -100,7 +100,7 @@ export const authService = {
     const user = await userRepository.findByEmail(email);
 
     if (!user || !user.password) {
-      throw new AppError('Invalid credentials', 401);
+      throw new AppError('User not found', 401);
     }
 
     if (!user.emailVerified) {
@@ -113,7 +113,7 @@ export const authService = {
 
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
-      throw new AppError('Invalid credentials', 401);
+      throw new AppError('Incorrect Password', 401);
     }
 
     const userId = user._id.toString();

@@ -38,6 +38,7 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
     });
   });
 
+  // FIX: Include 'from' field so receiver knows who sent the offer
   socket.on(SOCKET_EVENTS.WEBRTC_OFFER, ({ callId, offer, to }) => {
     const call = callService.get(callId);
     if (!call) return;
@@ -45,9 +46,15 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
     const userId = socket.data.user.userId;
     if (userId !== call.from && userId !== call.to) return;
 
-    io.to(to).emit(SOCKET_EVENTS.WEBRTC_OFFER, { callId, offer });
+    // FIXED: Added 'from: userId' so receiver knows who sent it
+    io.to(to).emit(SOCKET_EVENTS.WEBRTC_OFFER, {
+      callId,
+      offer,
+      from: userId, // ← ADD THIS
+    });
   });
 
+  // FIX: Include 'from' field so receiver knows who sent the answer
   socket.on(SOCKET_EVENTS.WEBRTC_ANSWER, ({ callId, answer, to }) => {
     const call = callService.get(callId);
     if (!call) return;
@@ -55,7 +62,12 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
     const userId = socket.data.user.userId;
     if (userId !== call.from && userId !== call.to) return;
 
-    io.to(to).emit(SOCKET_EVENTS.WEBRTC_ANSWER, { callId, answer });
+    // FIXED: Added 'from: userId' so receiver knows who sent it
+    io.to(to).emit(SOCKET_EVENTS.WEBRTC_ANSWER, {
+      callId,
+      answer,
+      from: userId, // ← ADD THIS
+    });
   });
 
   socket.on(SOCKET_EVENTS.WEBRTC_ICE, ({ callId, candidate, to }) => {
@@ -65,6 +77,7 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
     const userId = socket.data.user.userId;
     if (userId !== call.from && userId !== call.to) return;
 
+    // ICE candidate forwarding is fine as-is
     io.to(to).emit(SOCKET_EVENTS.WEBRTC_ICE, { callId, candidate });
   });
 
