@@ -417,7 +417,7 @@ export default function FindMatchPage() {
       font-semibold text-base md:text-lg
       transition-transform hover:scale-105
       cursor-pointer
-    "
+    " 
                   >
                     Find Another Match
                   </button>
