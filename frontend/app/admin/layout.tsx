@@ -1,9 +1,5 @@
-import { ProtectedRoute } from '@/components/ProtectedRoute';
+import AdminLayout from '@/components/admin/AdminLayout';
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return <ProtectedRoute requiredRole="admin">{children}</ProtectedRoute>;
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return <AdminLayout>{children}</AdminLayout>;
 }

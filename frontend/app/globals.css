@@ -10,6 +10,7 @@
   --color-glassHover: var(--glassHover);
   --color-buttonBg: var(--buttonBg);
   --color-havorBg: var(--havorBg);
+  --color-hoverMain: var(--hoverMain);
   --color-favor: var(--favor);
   --font-sans: var(--font-poetsen-one);
   --font-mono: var(--font-geist-mono);
@@ -57,6 +58,7 @@
   --buttonBg: oklch(0.72 0.19 149);
   --favor: oklch(0.72 0.19 149);
   --havorBg: oklch(60.747% 0.14777 149.681);
+  --hoverMain: oklch(48.971% 0.13624 147.687);
   --foreground: oklch(0.145 0 0);
   --glass: oklch(1 0 0 / 0.1);
   --glassHover: oklch(87.925% 0.00437 15.982 / 0.1);

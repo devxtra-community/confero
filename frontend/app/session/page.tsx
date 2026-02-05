@@ -34,7 +34,6 @@ export default function SocketTest() {
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [showChat, setShowChat] = useState(true);
 
-  //this is the audio and video connection thing
   const getMediaStream = useCallback(async () => {
     if (localStreamRef.current) return localStreamRef.current;
 
@@ -64,7 +63,6 @@ export default function SocketTest() {
     }
   }, []);
 
-  // CLEANUP FUNCTION
   const cleanup = useCallback(() => {
     pcRef.current?.close();
     pcRef.current = null;
@@ -76,7 +74,6 @@ export default function SocketTest() {
     remoteStreamRef.current = null;
   }, []);
 
-  // PEER CONNECTION CODE IS HERE
   const createPeerConnection = useCallback(() => {
     const pc = new RTCPeerConnection({
       iceServers: [
@@ -141,7 +138,6 @@ export default function SocketTest() {
 
       remoteStreamRef.current.addTrack(event.track);
 
-      // Play video safely
       if (remoteVideoRef.current && remoteVideoRef.current.paused) {
         remoteVideoRef.current.play().catch(err => {
           if (err.name !== 'AbortError') {
@@ -181,7 +177,6 @@ export default function SocketTest() {
     [getMediaStream]
   );
 
-  // SOCKET SETUP STARTS HERE
   useEffect(() => {
     const socket = io(process.env.NEXT_PUBLIC_API_URL, {
       path: '/live/socket.io',
@@ -202,7 +197,6 @@ export default function SocketTest() {
       console.log('EVENT:', event, JSON.stringify(data).substring(0, 100));
     });
 
-    // RECEIVER OF THE INCOMING CALL
     socket.on('call:incoming', async ({ callId, from }) => {
       console.log('Incoming call from:', from);
       setStatus('Incoming call...');
@@ -210,7 +204,6 @@ export default function SocketTest() {
       callIdRef.current = callId;
       peerUserIdRef.current = from;
 
-      // Auto-accept
       socket.emit('call:accept', { callId });
       setStatus('Call accepted, waiting for offer...');
     });
@@ -227,7 +220,6 @@ export default function SocketTest() {
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
         console.log('Remote description set (offer)');
 
-        // Process pending ICE candidates AFTER setting remote description
         console.log(
           `Processing ${pendingIceCandidatesRef.current.length} pending ICE candidates`
         );
@@ -267,7 +259,6 @@ export default function SocketTest() {
       }
     });
 
-    //CALLER (initiates call)
     socket.on('call:accepted', async ({ callId, to }) => {
       console.log('Call accepted by:', to);
       setStatus('Call accepted, creating offer...');

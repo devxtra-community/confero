@@ -33,18 +33,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # ---- LINT EVERYTHING ----
       - name: Lint all packages
         run: pnpm -r lint
 
-      # ---- BUILD BACKEND SERVICES ----
       - name: Build auth-service
         run: pnpm --filter auth-service build
 
       - name: Build live-service
         run: pnpm --filter live-service build
 
-      # ---- AUTH SERVICE ARTIFACT ----
       - name: Prepare auth-service artifact
         run: |
           rm -rf auth-service-prod
@@ -58,7 +55,6 @@ jobs:
           name: auth-service-prod
           path: auth-service-prod
 
-      # ---- LIVE SERVICE ARTIFACT ----
       - name: Prepare live-service artifact
         run: |
           rm -rf live-service-prod
