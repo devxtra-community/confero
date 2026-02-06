@@ -96,3 +96,50 @@ export const uploadAvatar = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Upload failed' });
   }
 };
+
+export const uploadBanner = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file received' });
+    }
+
+    const result = await uploadToR2(req.file, userId);
+
+    const updatedUser = await userService.uploadBanner(userId, result.url);
+
+    return res.status(200).json({
+      message: 'Banner image uploaded',
+      url: result.url,
+      user: updatedUser,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Upload failed' });
+  }
+};
+
+export const deleteAvatar = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const updatedUser = await userService.deleteAvatar(userId);
+
+    return res.status(200).json({
+      message: 'Profile picture removed',
+      user: updatedUser,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Delete failed' });
+  }
+};

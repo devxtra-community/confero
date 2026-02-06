@@ -25,6 +25,7 @@ export interface IUser extends Document {
   linkedinId?: string;
 
   profilePicture?: string;
+  bannerPicture?: string;
 
   skills: {
     key: string;
@@ -107,6 +108,10 @@ const userSchema = new Schema<IUser>(
     },
 
     profilePicture: {
+      type: String,
+      default: '',
+    },
+    bannerPicture: {
       type: String,
       default: '',
     },

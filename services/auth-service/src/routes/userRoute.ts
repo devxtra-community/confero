@@ -7,6 +7,8 @@ import {
   removeSkill,
   updateProfile,
   uploadAvatar,
+  uploadBanner,
+  deleteAvatar,
 } from '../controllers/userController.js';
 import { verifyAccessToken } from '../middlewares/verifyToken.js';
 
@@ -24,6 +26,15 @@ router.post(
   upload.single('avatar'),
   uploadAvatar
 );
+
+router.post(
+  '/me/banner',
+  verifyAccessToken,
+  upload.single('banner'),
+  uploadBanner
+);
+
+router.delete('/me/avatar', verifyAccessToken, deleteAvatar);
 
 router.get('/verify-session', verifyAccessToken, (req: any, res) => {
   res.json({

@@ -13,4 +13,6 @@ userRouter.get('/verify-session', userProxy);
 
 userRouter.get('/peer/:userId', userProxy);
 
+userRouter.post('/me/banner', userProxy);
+
 export default userRouter;

@@ -4,7 +4,7 @@ import { requireRole } from '../middlewares/requireRole.js';
 import {
   adminDashboard,
   adminProfile,
-} from '../controllers/adminiController.js';
+} from '../controllers/adminController.js';
 
 const router = Router();
 

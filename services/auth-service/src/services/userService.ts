@@ -8,6 +8,7 @@ export interface updateUserProfile {
   age?: number;
   sex?: string;
   profilePicture?: string;
+  bannerPicture?: string;
 }
 
 export const userService = {
@@ -43,6 +44,19 @@ export const userService = {
 
     const updatedUser = await userRepository.updateProfileById(userId, {
       profilePicture: avatarUrl,
+    });
+
+    if (!updatedUser) throw new AppError('User not found', 404);
+
+    return updatedUser;
+  },
+
+  uploadBanner: async (userId: string, bannerUrl: string) => {
+    if (!userId) throw new AppError('Unauthorized', 401);
+    if (!bannerUrl) throw new AppError('Banner URL is required', 400);
+
+    const updatedUser = await userRepository.updateProfileById(userId, {
+      bannerPicture: bannerUrl,
     });
 
     if (!updatedUser) throw new AppError('User not found', 404);
@@ -92,5 +106,16 @@ export const userService = {
       jobTitle: user.jobTitle,
       image: user.profilePicture,
     };
+  },
+  deleteAvatar: async (userId: string) => {
+    if (!userId) throw new AppError('Unauthorized', 401);
+
+    const updatedUser = await userRepository.updateProfileById(userId, {
+      profilePicture: '',
+    });
+
+    if (!updatedUser) throw new AppError('User not found', 404);
+
+    return updatedUser;
   },
 };
