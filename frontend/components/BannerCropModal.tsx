@@ -18,16 +18,11 @@ export default function BannerCropModal({
 }: Props) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(
-    null
-  );
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
-  const onCropComplete = useCallback(
-    (_: Area, cropped: Area) => {
-      setCroppedAreaPixels(cropped);
-    },
-    []
-  );
+  const onCropComplete = useCallback((_: Area, cropped: Area) => {
+    setCroppedAreaPixels(cropped);
+  }, []);
 
   if (!open) return null;
 
@@ -80,10 +75,7 @@ export default function BannerCropModal({
   );
 }
 
-async function getCroppedImg(
-  imageSrc: string,
-  pixelCrop: Area
-): Promise<Blob> {
+async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<Blob> {
   const image = await createImage(imageSrc);
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d')!;
