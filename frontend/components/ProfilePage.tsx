@@ -592,11 +592,13 @@ function Input({ label, value, editable, onChange, icon }: InputProps) {
           value={value ?? ''}
           disabled={!editable}
           onChange={e => onChange?.(e.target.value)}
-          className={`w-full rounded-lg ${icon ? 'pl-10 pr-4' : 'px-4'
-            } py-2.5 text-sm transition-all ${editable
+          className={`w-full rounded-lg ${
+            icon ? 'pl-10 pr-4' : 'px-4'
+          } py-2.5 text-sm transition-all ${
+            editable
               ? 'border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent'
               : 'bg-slate-50 text-slate-600 border border-slate-200 cursor-not-allowed'
-            }`}
+          }`}
         />
       </div>
     </div>
@@ -627,16 +629,18 @@ function TipItem({ text, completed }: { text: string; completed?: boolean }) {
   return (
     <li className="flex items-center gap-3">
       <div
-        className={`w-5 h-5 shrink-0 rounded-full border-2 flex items-center justify-center ${completed ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300'
-          }`}
+        className={`w-5 h-5 shrink-0 rounded-full border-2 flex items-center justify-center ${
+          completed ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300'
+        }`}
       >
         {completed && <Check className="w-3 h-3 text-white" />}
       </div>
       <span
-        className={`text-sm ${completed
+        className={`text-sm ${
+          completed
             ? 'text-slate-500 line-through'
             : 'text-slate-700 font-medium'
-          }`}
+        }`}
       >
         {text}
       </span>

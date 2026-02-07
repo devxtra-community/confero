@@ -91,9 +91,9 @@ export default function ProfileHover() {
 }
 
 interface user {
-  href: string,
-  icon?: React.ReactNode,
-  label: string
+  href: string;
+  icon?: React.ReactNode;
+  label: string;
 }
 
 function MenuLink({ href, icon, label }: user) {
