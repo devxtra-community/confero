@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRouter from './routes/authRoute.js';
-import { liveProxy } from './proxies/liveProxty.js';
+import { liveProxy } from './proxies/liveProxy.js';
 import helmet from 'helmet';
 import userRouter from './routes/userRoute.js';
 dotenv.config();

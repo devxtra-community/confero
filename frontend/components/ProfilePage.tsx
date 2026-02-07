@@ -26,6 +26,7 @@ import {
   X,
 } from 'lucide-react';
 import BannerCropModal from '@/components/BannerCropModal';
+import AvatarEditModal from '@/components/AvatarEditModal';
 
 export interface Skill {
   key: string;
@@ -77,6 +78,8 @@ export default function ProfilePage({ user }: ProfilePageProps) {
 
   const [bannerCropOpen, setBannerCropOpen] = useState(false);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [avatarEditOpen, setAvatarEditOpen] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -224,7 +227,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
 
             <div className="relative px-5 sm:px-6 md:px-8 pb-6 md:pb-8">
               {/* avatar */}
-              <div className="relative -mt-12 sm:-mt-14 md:-mt-16 mb-4 md:mb-6">
+              <div className="relative -mt-14 sm:-mt-16 md:-mt-20 lg:-mt-24 mb-4 md:mb-6">
                 <div className="relative inline-block group">
                   <div className="relative">
                     <Image
@@ -237,7 +240,9 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                       width={128}
                       height={128}
                       alt="avatar"
-                      className="h-24 w-24 sm:h-28 sm:w-28 md:h-32 md:w-32 rounded-full object-cover border-4 border-white shadow-lg ring-1 ring-slate-200/50"
+                      className="h-28 w-28 sm:h-32 sm:w-32 md:h-40 md:w-40 lg:h-44 lg:w-44
+           rounded-full object-cover border-4 border-white shadow-lg
+           ring-1 ring-slate-200/50"
                     />
 
                     {isEditing && (
@@ -255,7 +260,10 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                           onChange={e => {
                             const file = e.target.files?.[0];
                             if (!file) return;
-                            handleAvatarChange(file);
+
+                            const url = URL.createObjectURL(file);
+                            setAvatarPreview(url);
+                            setAvatarEditOpen(true);
                           }}
                         />
                       </label>
@@ -542,6 +550,52 @@ export default function ProfilePage({ user }: ProfilePageProps) {
 
             const file = new File([blob], 'banner.jpg', { type: 'image/jpeg' });
             await handleBannerChange(file);
+          }}
+        />
+      )}
+      {avatarPreview && (
+        <AvatarEditModal
+          open={avatarEditOpen}
+          image={avatarPreview}
+          onClose={() => {
+            setAvatarEditOpen(false);
+            setAvatarPreview(null);
+          }}
+          onDelete={() => {
+            setAvatarEditOpen(false);
+            setAvatarPreview(null);
+
+            setDraftUser(p => ({ ...p, profilePicture: '' }));
+            setSavedUser(p => ({ ...p, profilePicture: '' }));
+
+            // optional: call backend delete later
+          }}
+          onChangePhoto={() => {
+            setAvatarEditOpen(false);
+            setAvatarPreview(null);
+
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = e => {
+              const f = (e.target as HTMLInputElement).files?.[0];
+              if (!f) return;
+
+              const url = URL.createObjectURL(f);
+              setAvatarPreview(url);
+              setAvatarEditOpen(true);
+            };
+            input.click();
+          }}
+          onSave={async blob => {
+            setAvatarEditOpen(false);
+            setAvatarPreview(null);
+
+            const file = new File([blob], 'avatar.png', {
+              type: 'image/png',
+            });
+
+            await handleAvatarChange(file);
           }}
         />
       )}

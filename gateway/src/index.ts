@@ -1,7 +1,7 @@
 import http from 'http';
 import app from './app.js';
 import type { Socket as NetSocket } from 'net';
-import { liveProxy } from './proxies/liveProxty.js';
+import { liveProxy } from './proxies/liveProxy.js';
 
 const server = http.createServer(app);
 
