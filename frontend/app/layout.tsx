@@ -8,11 +8,13 @@ const poetsenOne = Poetsen_One({
   subsets: ['latin'],
   weight: '400',
   variable: '--font-poetsen-one',
+  preload: false,
 });
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
+  preload: false,
 });
 
 export const metadata: Metadata = {
