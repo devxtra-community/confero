@@ -83,6 +83,11 @@ export default function ProfilePage({ user }: ProfilePageProps) {
 
   const router = useRouter();
 
+  function safeImage(src: string | null | undefined, fallback: string) {
+    if (typeof src !== 'string') return fallback;
+    if (src.length === 0) return fallback;
+    return src;
+  }
   /* ---------------- avatar upload only ---------------- */
 
   const handleAvatarChange = async (file: File) => {
@@ -178,7 +183,10 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   };
 
   const completion = calculateProfileCompletion(savedUser, savedSkills);
-
+  const avatarSrc = safeImage(
+    draftUser.profilePicture,
+    '/profile/default-avatar.png'
+  );
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-emerald-50/20 to-slate-50 px-4 py-6 md:px-6 md:py-8 lg:px-8 lg:py-12">
       <div className="max-w-6xl mx-auto">
@@ -192,11 +200,14 @@ export default function ProfilePage({ user }: ProfilePageProps) {
             {/* banner */}
             <div className="relative w-full overflow-hidden group aspect-[4/1] rounded-t-2xl">
               <Image
-                src={draftUser.bannerPicture || '/profile/default-banner.jpg'}
+                src={safeImage(
+                  draftUser.bannerPicture,
+                  '/profile/default-banner.jpg'
+                )}
                 alt="Profile banner"
                 fill
                 className="object-cover"
-                priority
+                loading="eager"
               />
 
               {isEditing && (
@@ -231,12 +242,8 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                 <div className="relative inline-block group">
                   <div className="relative">
                     <Image
-                      src={
-                        draftUser.profilePicture &&
-                        draftUser.profilePicture.trim() !== ''
-                          ? draftUser.profilePicture
-                          : '/profile/default-avatar.png'
-                      }
+                      src={avatarSrc}
+                      unoptimized
                       width={128}
                       height={128}
                       alt="avatar"
@@ -561,14 +568,20 @@ export default function ProfilePage({ user }: ProfilePageProps) {
             setAvatarEditOpen(false);
             setAvatarPreview(null);
           }}
-          onDelete={() => {
-            setAvatarEditOpen(false);
-            setAvatarPreview(null);
+          onDelete={async () => {
+            try {
+              setAvatarEditOpen(false);
+              setAvatarPreview(null);
 
-            setDraftUser(p => ({ ...p, profilePicture: '' }));
-            setSavedUser(p => ({ ...p, profilePicture: '' }));
+              await axiosInstance.delete('/users/me/avatar');
 
-            // optional: call backend delete later
+              setDraftUser(p => ({ ...p, profilePicture: undefined }));
+              setSavedUser(p => ({ ...p, profilePicture: undefined }));
+
+              toast.success('Avatar removed');
+            } catch {
+              toast.error('Failed to remove avatar');
+            }
           }}
           onChangePhoto={() => {
             setAvatarEditOpen(false);

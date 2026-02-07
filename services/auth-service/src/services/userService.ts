@@ -1,5 +1,6 @@
 import { AppError } from '../middlewares/errorHandller.js';
 import { userRepository } from '../repositories/userRepository.js';
+import { deleteFromR2, getR2KeyFromUrl } from '../utils/r2Upload.js';
 
 export interface updateUserProfile {
   username?: string;
@@ -110,8 +111,24 @@ export const userService = {
   deleteAvatar: async (userId: string) => {
     if (!userId) throw new AppError('Unauthorized', 401);
 
+    const user = await userRepository.findById(userId);
+
+    if (!user) throw new AppError('User not found', 404);
+
+    // nothing to delete
+    if (!user.profilePicture) {
+      return user;
+    }
+
+    // 1. extract object key from stored url
+    const key = getR2KeyFromUrl(user.profilePicture);
+
+    // 2. delete from R2
+    await deleteFromR2(key);
+
+    // 3. set DB column to NULL
     const updatedUser = await userRepository.updateProfileById(userId, {
-      profilePicture: '',
+      profilePicture: null,
     });
 
     if (!updatedUser) throw new AppError('User not found', 404);

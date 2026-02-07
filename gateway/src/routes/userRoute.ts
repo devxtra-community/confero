@@ -14,5 +14,6 @@ userRouter.get('/verify-session', userProxy);
 userRouter.get('/peer/:userId', userProxy);
 
 userRouter.post('/me/banner', userProxy);
+userRouter.delete('/me/avatar', userProxy);
 
 export default userRouter;
