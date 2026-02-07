@@ -7,6 +7,7 @@ export type AuthProvider = 'local' | 'google';
 export type SkillLevel = 'beginner' | 'intermediate' | 'advanced';
 
 export interface IUser extends Document {
+  id: string;
   email: string;
   password?: string;
 
@@ -33,6 +34,9 @@ export interface IUser extends Document {
   }[];
 
   interests: string[];
+
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
 
   availableForCall: boolean;
   lastActiveAt: Date;
@@ -138,6 +142,13 @@ const userSchema = new Schema<IUser>(
     interests: {
       type: [String],
       default: [],
+    },
+    resetPasswordToken: {
+      type: String,
+      default: false,
+    },
+    resetPasswordExpires: {
+      type: Date,
     },
 
     availableForCall: {

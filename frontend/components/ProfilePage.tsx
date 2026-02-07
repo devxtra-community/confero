@@ -24,7 +24,9 @@ import {
   Star,
   Plus,
   X,
+  ChevronLeft,
 } from 'lucide-react';
+import Link from 'next/link';
 
 export interface Skill {
   key: string;
@@ -158,6 +160,14 @@ export default function ProfilePage({ user }: ProfilePageProps) {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-emerald-50/20 to-slate-50 px-4 py-6 md:px-6 md:py-8 lg:px-8 lg:py-12">
+      <Link
+        href="/home"
+        className="absolute top-7 left-10 flex  font-semibold text-primary"
+      >
+        {' '}
+        <ChevronLeft size={23} className="mt-0.5" />
+        Go Back
+      </Link>
       <div className="max-w-6xl mx-auto">
         {/* Header Section */}
         <motion.div
@@ -169,7 +179,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
           {/* Profile Header */}
           <div className="bg-white border border-slate-200/60 rounded-2xl overflow-hidden shadow-sm">
             <div className="relative h-32 sm:h-40 md:h-48 bg-linear-to-br from-emerald-500 via-emerald-600 to-teal-600">
-              <div className="absolute inset-0 bg-[radial-linear(circle_at_top_right,_var(--tw-linear-stops))] from-white/10 via-transparent to-transparent"></div>
+              <div className="absolute inset-0 bg-[radial-linear(circle_at_top_right,var(--tw-linear-stops))] from-white/10 via-transparent to-transparent"></div>
             </div>
 
             <div className="relative px-5 sm:px-6 md:px-8 pb-6 md:pb-8">
@@ -228,7 +238,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600">
                     <div className="flex items-center gap-1.5">
                       <Mail className="w-4 h-4 text-slate-400" />
-                      <span className="truncate max-w-[200px] sm:max-w-none">
+                      <span className="truncate max-w-50 sm:max-w-none">
                         {draftUser.email}
                       </span>
                     </div>
@@ -582,13 +592,11 @@ function Input({ label, value, editable, onChange, icon }: InputProps) {
           value={value ?? ''}
           disabled={!editable}
           onChange={e => onChange?.(e.target.value)}
-          className={`w-full rounded-lg ${
-            icon ? 'pl-10 pr-4' : 'px-4'
-          } py-2.5 text-sm transition-all ${
-            editable
+          className={`w-full rounded-lg ${icon ? 'pl-10 pr-4' : 'px-4'
+            } py-2.5 text-sm transition-all ${editable
               ? 'border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent'
               : 'bg-slate-50 text-slate-600 border border-slate-200 cursor-not-allowed'
-          }`}
+            }`}
         />
       </div>
     </div>
@@ -619,18 +627,16 @@ function TipItem({ text, completed }: { text: string; completed?: boolean }) {
   return (
     <li className="flex items-center gap-3">
       <div
-        className={`w-5 h-5 shrink-0 rounded-full border-2 flex items-center justify-center ${
-          completed ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300'
-        }`}
+        className={`w-5 h-5 shrink-0 rounded-full border-2 flex items-center justify-center ${completed ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300'
+          }`}
       >
         {completed && <Check className="w-3 h-3 text-white" />}
       </div>
       <span
-        className={`text-sm ${
-          completed
+        className={`text-sm ${completed
             ? 'text-slate-500 line-through'
             : 'text-slate-700 font-medium'
-        }`}
+          }`}
       >
         {text}
       </span>

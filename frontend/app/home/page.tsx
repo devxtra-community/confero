@@ -7,6 +7,7 @@ import { axiosInstance } from '@/lib/axiosInstance';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import Loading from '@/components/CenterLoader';
+import ProfileHover from '@/components/ProfileIcon';
 
 export default function FindMatchPage() {
   const [isSearching, setIsSearching] = useState(false);
@@ -192,17 +193,14 @@ export default function FindMatchPage() {
   if (loading) return <Loading />;
   return (
     <div className="min-h-screen overflow-x-hidden bg-linear-to-br from-slate-50 via-white to-teal-50">
-      <div className="absolute top-20 right-0 sm:right-10 w-56 sm:w-72 h-56 sm:h-72 bg-primary/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-40 left-0 sm:left-10 w-64 sm:w-96 h-64 sm:h-96 bg-favor/10 rounded-full blur-3xl" />
+      <ProfileHover />
+
+      {/* 2. BACKGROUND DECORATIONS */}
+      <div className="absolute top-20 right-0 sm:right-10 w-56 sm:w-72 h-56 sm:h-72 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-40 left-0 sm:left-10 w-64 sm:w-96 h-64 sm:h-96 bg-favor/10 rounded-full blur-3xl pointer-events-none" />
 
       {!isSearching && !matchFound && (
         <div className="relative min-h-screen flex items-center justify-center px-4 py-20">
-          {/* <Link
-            href="/profile"
-            className="p-5 absolute top-0 left-100 text-3xl text-primary"
-          >
-            <button className="p-5 bg-amber-200 rounded-2xl">Profile</button>
-          </Link> */}
           <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-4 py-2 border rounded-full">

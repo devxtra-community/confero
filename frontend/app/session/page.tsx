@@ -11,6 +11,7 @@ import {
   Settings,
   MessageSquare,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface VideoCallProps {
   callId: string;
@@ -49,6 +50,8 @@ export default function VideoCall({
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
 
   const isCallActiveRef = useRef(false);
+
+  const router = useRouter()
 
   useEffect(() => {
     if (isCallStarted) {
@@ -138,7 +141,7 @@ export default function VideoCall({
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStreamRef.current;
         setHasRemoteVideo(true);
-        remoteVideoRef.current.play().catch(() => {});
+        remoteVideoRef.current.play().catch(() => { });
       }
     };
 
@@ -264,7 +267,7 @@ export default function VideoCall({
     socket.on('webrtc:ice', async ({ candidate }) => {
       const pc = pcRef.current;
       if (pc && pc.remoteDescription && pc.remoteDescription.type) {
-        pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
+        pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => { });
       } else {
         pendingIceCandidatesRef.current.push(candidate);
       }
@@ -304,7 +307,11 @@ export default function VideoCall({
       callId: callIdRef.current,
       reason: 'USER_ENDED',
     });
+
     cleanup();
+    setTimeout(() => {
+      router.push('/home')
+    }, 1100)
   };
 
   return (

@@ -171,3 +171,17 @@ export const refresh = async (req: Request, res: Response) => {
     message: 'refresh succesfully',
   });
 };
+
+export const forgotPassword = async (req: Request, res: Response) => {
+  await authService.forgotPassword(req.body.email);
+
+  res.json({
+    message: 'Check your email and reset the password through link',
+  });
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  const { token, newPassword } = req.body;
+  await authService.resetPassword(token, newPassword);
+  res.json({ message: 'Password updated successfully' });
+};
