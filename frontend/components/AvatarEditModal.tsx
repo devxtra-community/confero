@@ -25,12 +25,9 @@ export default function AvatarEditModal({
 
   const croppedAreaRef = useRef<Area | null>(null);
 
-  const onCropComplete = useCallback(
-    (_: Area, croppedAreaPixels: Area) => {
-      croppedAreaRef.current = croppedAreaPixels;
-    },
-    []
-  );
+  const onCropComplete = useCallback((_: Area, croppedAreaPixels: Area) => {
+    croppedAreaRef.current = croppedAreaPixels;
+  }, []);
 
   if (!open) return null;
 
