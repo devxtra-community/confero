@@ -60,7 +60,6 @@ export default function ErrorPage() {
               This meeting room doesn&apos;t exist or may have ended.
             </p>
           </motion.div>
-          
 
           <motion.div
             initial={{ opacity: 0 }}
