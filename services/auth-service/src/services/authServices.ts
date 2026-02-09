@@ -110,9 +110,9 @@ export const authService = {
       throw new AppError('Email not verified', 403);
     }
 
-    if (user.accountStatus !== 'active') {
-      throw new AppError('Account is not active', 403);
-    }
+    // if (user.accountStatus !== 'active') {
+    //   throw new AppError('Account is not active', 403);
+    // }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
@@ -155,6 +155,7 @@ export const authService = {
 
     const session =
       await authSessionRepository.findValidByTokenHash(refreshTokenHash);
+    console.log(session);
     if (!session) {
       throw new AppError('Invalid refresh token', 401);
     }

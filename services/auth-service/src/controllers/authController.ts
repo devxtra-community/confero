@@ -154,7 +154,6 @@ export const logout = async (req: Request, res: Response) => {
 
 export const refresh = async (req: Request, res: Response) => {
   const refreshToken = req.cookies.refreshToken;
-
   if (!refreshToken) {
     throw new AppError('Invalid refresh Token', 401);
   }

@@ -12,5 +12,6 @@ userRouter.patch('/update-profile', userProxy);
 userRouter.get('/verify-session', userProxy);
 
 userRouter.get('/peer/:userId', userProxy);
+userRouter.post('/report-user', userProxy);
 
 export default userRouter;

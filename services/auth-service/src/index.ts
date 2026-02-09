@@ -3,9 +3,13 @@ import dotenv from 'dotenv';
 import { connection } from './config/db.js';
 import { logger } from './config/logger.js';
 import app from './app.js';
+import './config/redis.js';
+import { loadBansIntoRedis } from './utils/loadBansIntoRedis.js';
+
 dotenv.config();
 
 app.listen(process.env.PORT, async () => {
   await connection();
   logger.info(`Backend running on http://localhost:${process.env.PORT}`);
+  await loadBansIntoRedis();
 });

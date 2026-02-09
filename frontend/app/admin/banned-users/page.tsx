@@ -160,13 +160,12 @@ export default function BannedUsersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-gray-50">
       <div className="p-4 sm:p-6 lg:p-8">
-        {/* Header */}
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-red-800 to-orange-800 bg-clip-text text-transparent mb-2">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-linear-to-r from-gray-900 via-red-800 to-orange-800 bg-clip-text text-transparent mb-2">
                 User Management
               </h1>
               <p className="text-sm sm:text-base text-gray-600 flex items-center gap-2">
@@ -175,9 +174,8 @@ export default function BannedUsersPage() {
               </p>
             </div>
 
-            {/* Search and Actions */}
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <div className="relative flex-1 sm:min-w-[280px]">
+              <div className="relative flex-1 sm:min-w-70">
                 <Search
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                   size={18}
@@ -196,7 +194,7 @@ export default function BannedUsersPage() {
                   <Filter size={16} />
                   <span className="hidden sm:inline">Filter</span>
                 </button>
-                <button className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-600 text-white rounded-xl text-sm font-medium hover:from-teal-600 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg">
+                <button className="flex items-center gap-2 px-4 py-2.5 bg-linear-to-r from-teal-500 to-emerald-600 text-white rounded-xl text-sm font-medium hover:from-teal-600 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg">
                   <Download size={16} />
                   <span className="hidden sm:inline">Export</span>
                 </button>
@@ -205,13 +203,11 @@ export default function BannedUsersPage() {
           </div>
         </div>
 
-        {/* Table Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          {/* Table */}
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-gradient-to-r from-gray-700 to-gray-800 text-white">
+                <tr className="bg-linear-to-r from-gray-700 to-gray-800 text-white">
                   <th className="px-4 py-4 text-left">
                     <input
                       type="checkbox"
@@ -259,7 +255,7 @@ export default function BannedUsersPage() {
                 {filteredUsers.map(user => (
                   <tr
                     key={user.id}
-                    className="hover:bg-gradient-to-r hover:from-teal-50/30 hover:to-emerald-50/30 transition-all duration-200 group"
+                    className="hover:bg-linear-to-r hover:from-teal-50/30 hover:to-emerald-50/30 transition-all duration-200 group"
                   >
                     <td className="px-4 py-4">
                       <input
@@ -272,7 +268,7 @@ export default function BannedUsersPage() {
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
                         <div
-                          className={`w-9 h-9 rounded-full bg-gradient-to-br ${getAvatarColor(user.id)} flex items-center justify-center text-white text-sm font-semibold shadow-sm group-hover:scale-110 transition-transform`}
+                          className={`w-9 h-9 rounded-full bg-linear-to-br ${getAvatarColor(user.id)} flex items-center justify-center text-white text-sm font-semibold shadow-sm group-hover:scale-110 transition-transform`}
                         >
                           {getInitials(user.fullName)}
                         </div>
@@ -321,10 +317,8 @@ export default function BannedUsersPage() {
             </table>
           </div>
 
-          {/* Table Footer - Pagination */}
           <div className="border-t border-gray-100 px-4 sm:px-6 py-4 bg-gray-50/50">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              {/* Rows per page */}
               <div className="flex items-center gap-3 text-sm">
                 <span className="text-gray-600">Rows per page</span>
                 <select
@@ -340,7 +334,6 @@ export default function BannedUsersPage() {
                 <span className="text-gray-500">of {totalRows} rows</span>
               </div>
 
-              {/* Pagination controls */}
               <div className="flex items-center gap-1 sm:gap-2">
                 <button
                   onClick={() => setCurrentPage(1)}
@@ -373,7 +366,7 @@ export default function BannedUsersPage() {
                     onClick={() => setCurrentPage(page)}
                     className={`w-9 h-9 rounded-lg font-medium text-sm transition-all ${
                       currentPage === page
-                        ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md'
+                        ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
                         : 'text-gray-600 hover:bg-gray-100'
                     }`}
                   >
@@ -387,7 +380,7 @@ export default function BannedUsersPage() {
                   onClick={() => setCurrentPage(10)}
                   className={`w-9 h-9 rounded-lg font-medium text-sm transition-all ${
                     currentPage === 10
-                      ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md'
+                      ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
@@ -425,11 +418,10 @@ export default function BannedUsersPage() {
           </div>
         </div>
 
-        {/* Empty state */}
         {filteredUsers.length === 0 && (
           <div className="mt-8 bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
             <div className="max-w-md mx-auto space-y-4">
-              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+              <div className="w-20 h-20 mx-auto bg-linear-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
                 <UserX className="text-gray-400" size={32} />
               </div>
               <div>

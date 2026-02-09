@@ -5,6 +5,7 @@ import {
   currentUser,
   getPublicProfile,
   removeSkill,
+  reportUser,
   updateProfile,
   uploadAvatar,
 } from '../controllers/userController.js';
@@ -35,5 +36,7 @@ router.get('/verify-session', verifyAccessToken, (req: any, res) => {
     },
   });
 });
+
+router.post('/report-user', verifyAccessToken, reportUser);
 
 export default router;

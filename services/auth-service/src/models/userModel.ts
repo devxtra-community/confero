@@ -1,7 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export type UserRole = 'user' | 'admin';
-export type AccountStatus = 'active' | 'suspended' | 'deleted';
 export type AuthProvider = 'local' | 'google';
 
 export type SkillLevel = 'beginner' | 'intermediate' | 'advanced';
@@ -20,7 +19,6 @@ export interface IUser extends Document {
   sex: string;
 
   role: UserRole;
-  accountStatus: AccountStatus;
 
   jobTitle?: string;
   linkedinId?: string;
@@ -91,12 +89,6 @@ const userSchema = new Schema<IUser>(
       type: String,
       enum: ['user', 'admin'],
       default: 'user',
-    },
-
-    accountStatus: {
-      type: String,
-      enum: ['active', 'suspended', 'deleted'],
-      default: 'active',
     },
 
     jobTitle: {
