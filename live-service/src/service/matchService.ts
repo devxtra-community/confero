@@ -8,8 +8,6 @@ export const matchingService = {
     const isOnline = await presenceRepository.isOnline(userId);
     if (!isOnline) return null;
 
-    console.log(isOnline);
-
     const state = await matchingRepository.getState(userId);
     if (state === 'MATCHED') return null;
 
@@ -18,10 +16,9 @@ export const matchingService = {
       .filter(Boolean);
 
     await matchingRepository.setState(userId, 'SEARCHING');
-
     for (const skill of normalizedSkills) {
       const peerId = await matchingRepository.popQueueBySkill(skill);
-
+      console.log(peerId);
       if (!peerId) continue;
 
       if (peerId === userId) {
