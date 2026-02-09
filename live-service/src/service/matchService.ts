@@ -8,6 +8,8 @@ export const matchingService = {
     const isOnline = await presenceRepository.isOnline(userId);
     if (!isOnline) return null;
 
+    console.log(isOnline)
+
     const state = await matchingRepository.getState(userId);
     if (state === 'MATCHED') return null;
 

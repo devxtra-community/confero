@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 import { userRepository } from '../repositories/userRepository.js';
 import { userService } from '../services/userService.js';
-import { uploadToR2 } from '../utils/r2Upload.js';
-import { deleteFromR2 } from '../utils/r2Upload.js';
+import {
+  uploadToR2,
+} from '../utils/r2Upload.js';
 
 export const currentUser = async (req: Request, res: Response) => {
   try {
@@ -84,6 +85,7 @@ export const uploadAvatar = async (req: Request, res: Response) => {
     }
 
     const result = await uploadToR2(req.file, userId);
+
     const updatedUser = await userService.uploadAvatar(userId, result.url);
 
     return res.status(200).json({
@@ -131,25 +133,6 @@ export const deleteAvatar = async (req: Request, res: Response) => {
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
-
-    const user = await userRepository.findById(userId);
-
-    if (!user || !user.profilePicture) {
-      const updatedUser = await userService.deleteAvatar(userId);
-
-      return res.status(200).json({
-        message: 'Profile picture removed',
-        user: updatedUser,
-      });
-    }
-
-    const url = user.profilePicture;
-
-    // extract object key from public URL
-    const key = url.split('/').slice(-2).join('/');
-    // example: avatars/123-170000000.png
-
-    await deleteFromR2(key);
 
     const updatedUser = await userService.deleteAvatar(userId);
 
