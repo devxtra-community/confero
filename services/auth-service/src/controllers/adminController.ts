@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { userBanRepository } from '../repositories/userBanRepository.js';
 import { redis } from '../config/redis.js';
 import { banService } from '../services/banService.js';
+import { reportService } from '../services/reportService.js';
 
 export const adminDashboard = async (_req: Request, res: Response) => {
   res.status(200).json({
@@ -44,5 +45,18 @@ export const unbanUser = async (req: Request, res: Response) => {
   res.json({
     success: true,
     message: 'User unbanned successfully',
+  });
+};
+
+export const getReportedUsers = async (req: Request, res: Response) => {
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 6;
+
+  const result = await reportService.getReportedUsers(page, limit);
+
+  res.json({
+    success: true,
+    data: result.reports,
+    pagination: result.pagination,
   });
 };

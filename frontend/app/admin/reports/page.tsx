@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Search,
   AlertTriangle,
@@ -10,6 +10,9 @@ import {
   Eye,
   Mail,
 } from 'lucide-react';
+import { axiosInstance } from '@/lib/axiosInstance';
+import { toast } from 'sonner';
+import axios from 'axios';
 
 interface Reporter {
   id: string;
@@ -26,62 +29,30 @@ interface ReportedUser {
   witnesses: Reporter[];
 }
 
+interface BackendReport {
+  _id: string;
+  reason: string;
+  createdAt: string;
+
+  reportedUserId?: {
+    _id: string;
+    fullName: string;
+  };
+
+  reportedBy?: {
+    _id: string;
+    fullName: string;
+  };
+}
+
 export default function ReportedUsersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Sample data
-  const reportedUsers: ReportedUser[] = [
-    {
-      id: '1',
-      username: 'Adoddle',
-      reportedBy: { id: 'r1', name: 'Sarah Johnson' },
-      reason:
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
-      reportedAt: '05 APRIL 2023',
-      witnesses: [
-        { id: 'w1', name: 'John Doe' },
-        { id: 'w2', name: 'Jane Smith' },
-      ],
-    },
-    {
-      id: '2',
-      username: 'Adoddle',
-      reportedBy: { id: 'r2', name: 'Mike Peters' },
-      reason:
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
-      reportedAt: '05 APRIL 2023',
-      witnesses: [{ id: 'w3', name: 'Alice Brown' }],
-    },
-    {
-      id: '3',
-      username: 'Adoddle',
-      reportedBy: { id: 'r3', name: 'Emily Davis' },
-      reason:
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
-      reportedAt: '05 APRIL 2023',
-      witnesses: [
-        { id: 'w4', name: 'Robert Wilson' },
-        { id: 'w5', name: 'Lisa Anderson' },
-      ],
-    },
-    {
-      id: '4',
-      username: 'Adoddle',
-      reportedBy: { id: 'r4', name: 'David Miller' },
-      reason:
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
-      reportedAt: '05 APRIL 2023',
-      witnesses: [
-        { id: 'w6', name: 'Tom Harris' },
-        { id: 'w7', name: 'Rachel Green' },
-      ],
-    },
-  ];
+  const [reports, setReports] = useState<ReportedUser[]>([]);
 
   const totalPages = 3;
 
-  const filteredUsers = reportedUsers.filter(
+  const filteredUsers = reports.filter(
     user =>
       user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.reportedBy.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -109,14 +80,48 @@ export default function ReportedUsersPage() {
     return colors[index];
   };
 
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const res = await axiosInstance.get(
+          `/admin/reported-users?page=${currentPage}&limit=5`
+        );
+
+        const formatted = res.data.data.map((r: BackendReport) => ({
+          id: r._id,
+          username: r.reportedUserId?.fullName || 'Unknown',
+          reportedBy: {
+            id: r.reportedBy?._id || '',
+            name: r.reportedBy?.fullName || 'Unknown',
+          },
+          reason: r.reason,
+          reportedAt: new Date(r.createdAt).toLocaleDateString(),
+          witnesses: [],
+        }));
+
+        setReports(formatted);
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          toast.error(
+            error.response?.data?.message ?? 'Failed to fetch reports'
+          );
+        } else {
+          toast.error('Unexpected error');
+        }
+      }
+    };
+
+    fetchReports();
+  }, [currentPage]);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-gray-50">
       <div className="p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-red-800 to-orange-800 bg-clip-text text-transparent mb-2">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-linear-to-r from-gray-900 via-red-800 to-orange-800 bg-clip-text text-transparent mb-2">
                 Reported Users
               </h1>
               <p className="text-sm sm:text-base text-gray-600 flex items-center gap-2">
@@ -153,14 +158,14 @@ export default function ReportedUsersPage() {
                 animationFillMode: 'backwards',
               }}
             >
-              {/* Decorative gradient on hover */}
-              <div className="absolute inset-0 bg-gradient-to-br from-red-50/50 via-transparent to-orange-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              {/* Decorative linear on hover */}
+              <div className="absolute inset-0 bg-linear-to-br from-red-50/50 via-transparent to-orange-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
               <div className="relative space-y-4">
                 {/* Header with username and menu */}
                 <div className="flex items-start justify-between pb-4 border-b border-gray-100">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-400 to-orange-500 flex items-center justify-center text-white font-bold shadow-md">
+                    <div className="w-10 h-10 rounded-full bg-linear-to-br from-red-400 to-orange-500 flex items-center justify-center text-white font-bold shadow-md">
                       {getInitials(report.username)}
                     </div>
                     <div>
@@ -183,7 +188,7 @@ export default function ReportedUsersPage() {
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
                     <div
-                      className={`w-9 h-9 rounded-full bg-gradient-to-br ${getAvatarColor(report.reportedBy.id)} flex items-center justify-center text-white text-sm font-semibold shadow-sm`}
+                      className={`w-9 h-9 rounded-full bg-linear-to-br ${getAvatarColor(report.reportedBy.id)} flex items-center justify-center text-white text-sm font-semibold shadow-sm`}
                     >
                       {getInitials(report.reportedBy.name)}
                     </div>
@@ -211,7 +216,7 @@ export default function ReportedUsersPage() {
                       {report.witnesses.map((witness, idx) => (
                         <div
                           key={witness.id}
-                          className={`w-8 h-8 rounded-full bg-gradient-to-br ${getAvatarColor(witness.id)} flex items-center justify-center text-white text-xs font-semibold border-2 border-white shadow-sm hover:scale-110 transition-transform cursor-pointer`}
+                          className={`w-8 h-8 rounded-full bg-linear-to-br ${getAvatarColor(witness.id)} flex items-center justify-center text-white text-xs font-semibold border-2 border-white shadow-sm hover:scale-110 transition-transform cursor-pointer`}
                           style={{ zIndex: report.witnesses.length - idx }}
                           title={witness.name}
                         >
@@ -228,7 +233,7 @@ export default function ReportedUsersPage() {
 
                 {/* Action buttons */}
                 <div className="flex gap-2 pt-2">
-                  <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-500 to-orange-600 text-white rounded-xl text-sm font-medium hover:from-red-600 hover:to-orange-700 transition-all duration-200 shadow-md hover:shadow-lg">
+                  <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-linear-to-r from-red-500 to-orange-600 text-white rounded-xl text-sm font-medium hover:from-red-600 hover:to-orange-700 transition-all duration-200 shadow-md hover:shadow-lg">
                     <Ban size={16} />
                     <span>Ban User</span>
                   </button>
@@ -250,7 +255,7 @@ export default function ReportedUsersPage() {
         {filteredUsers.length === 0 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
             <div className="max-w-md mx-auto space-y-4">
-              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+              <div className="w-20 h-20 mx-auto bg-linear-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
                 <AlertTriangle className="text-gray-400" size={32} />
               </div>
               <div>
@@ -288,7 +293,7 @@ export default function ReportedUsersPage() {
                 onClick={() => setCurrentPage(page)}
                 className={`w-10 h-10 rounded-lg font-medium text-sm transition-all ${
                   currentPage === page
-                    ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md'
+                    ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >

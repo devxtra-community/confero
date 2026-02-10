@@ -32,4 +32,26 @@ export const userReportRepository = {
       { new: true }
     );
   },
+
+  getPendingReportsPaginated: async (page: number, limit: number) => {
+    const skip = (page - 1) * limit;
+
+    const [reports, total] = await Promise.all([
+      UserReportModel.find({ status: 'pending' })
+        .populate('reportedUserId')
+        .populate('reportedBy')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+
+      UserReportModel.countDocuments({
+        status: 'pending',
+      }),
+    ]);
+
+    return {
+      reports,
+      total,
+    };
+  },
 };

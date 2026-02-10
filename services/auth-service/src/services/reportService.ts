@@ -49,4 +49,19 @@ export const reportService = {
       );
     }
   },
+
+  getReportedUsers: async (page: number, limit: number) => {
+    const { reports, total } =
+      await userReportRepository.getPendingReportsPaginated(page, limit);
+
+    return {
+      reports,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  },
 };

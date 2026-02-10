@@ -5,6 +5,7 @@ import {
   adminDashboard,
   adminProfile,
   banUser,
+  getReportedUsers,
   unbanUser,
 } from '../controllers/adminController.js';
 
@@ -28,5 +29,12 @@ router.get('/verify-session', verifyAccessToken, (req: any, res) => {
 router.post('/ban', verifyAccessToken, requireAdminRole, banUser);
 
 router.patch('/unban', verifyAccessToken, requireAdminRole, unbanUser);
+
+router.get(
+  '/reported-users',
+  verifyAccessToken,
+  requireAdminRole,
+  getReportedUsers
+);
 
 export default router;

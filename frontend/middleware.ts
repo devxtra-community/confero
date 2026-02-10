@@ -4,7 +4,7 @@ export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const accessToken = req.cookies.get('accessToken');
 
-  const protectedRoutes = ['/profile', '/home', '/reset-password', '/session'];
+  const protectedRoutes = ['/profile', '/home', '/session'];
   if (
     protectedRoutes.some(route => pathname.startsWith(route)) &&
     !accessToken
@@ -28,7 +28,6 @@ export const config = {
     '/profile/:path*',
     '/home/:path*',
     '/admin/:path*',
-    '/reset-password/:path*',
     '/session/:path*',
   ],
 };
