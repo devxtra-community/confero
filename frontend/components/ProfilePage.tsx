@@ -213,7 +213,6 @@ export default function ProfilePage({ user }: ProfilePageProps) {
       });
 
       // IMPORTANT: only use backend user
-      const serverUser = res.user;
       const newSavedUser = {
         ...draftUser,
         ...res,

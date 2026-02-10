@@ -7,7 +7,6 @@ import {
   removeSkill,
   updateProfile,
   deleteAvatar,
-
   getAvatarUploadUrl,
   completeAvatarUpload,
   getBannerUploadUrl,
@@ -29,33 +28,17 @@ router.get('/peer/:userId', verifyAccessToken, getPublicProfile);
 
 /* ---------------- avatar (signed upload) ---------------- */
 
-router.post(
-  '/me/avatar/upload-url',
-  verifyAccessToken,
-  getAvatarUploadUrl
-);
+router.post('/me/avatar/upload-url', verifyAccessToken, getAvatarUploadUrl);
 
-router.post(
-  '/me/avatar/complete',
-  verifyAccessToken,
-  completeAvatarUpload
-);
+router.post('/me/avatar/complete', verifyAccessToken, completeAvatarUpload);
 
 router.delete('/me/avatar', verifyAccessToken, deleteAvatar);
 
 /* ---------------- banner (signed upload) ---------------- */
 
-router.post(
-  '/me/banner/upload-url',
-  verifyAccessToken,
-  getBannerUploadUrl
-);
+router.post('/me/banner/upload-url', verifyAccessToken, getBannerUploadUrl);
 
-router.post(
-  '/me/banner/complete',
-  verifyAccessToken,
-  completeBannerUpload
-);
+router.post('/me/banner/complete', verifyAccessToken, completeBannerUpload);
 
 /* ---------------- session check ---------------- */
 
