@@ -208,6 +208,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                 fill
                 className="object-cover"
                 loading="eager"
+                unoptimized
               />
 
               {isEditing && (

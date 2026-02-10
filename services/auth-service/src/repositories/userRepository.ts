@@ -7,6 +7,8 @@ export interface CreateUserInput {
   authProvider?: 'local' | 'google';
   googleId?: string;
   emailVerified?: boolean;
+  bannerPicture?: string;
+  profilePicture?: string;
 }
 
 export type UpdateUserProfileInput = Partial<
