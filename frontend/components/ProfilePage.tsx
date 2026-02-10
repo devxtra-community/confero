@@ -94,20 +94,47 @@ export default function ProfilePage({ user }: ProfilePageProps) {
     try {
       setAvatarUploading(true);
 
-      const formData = new FormData();
-      formData.append('avatar', file);
+      // 1. get signed upload url
+      const { data } = await axiosInstance.post('/users/me/avatar/upload-url', {
+        contentType: file.type,
+      });
+      // console.log(data);
 
-      const res = await axiosInstance.post('/users/me/avatar', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const { uploadUrl, key } = data;
+
+      // 2. upload directly to R2
+      const uploadRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.type,
+        },
+        body: file,
       });
 
-      const data = res.data;
+      if (!uploadRes.ok) {
+        throw new Error('Direct upload failed');
+      }
 
-      setDraftUser(p => ({ ...p, profilePicture: data.url }));
-      setSavedUser(p => ({ ...p, profilePicture: data.url }));
+      // 3. finalize upload
+      const finalize = await axiosInstance.post('/users/me/avatar/complete', {
+        key,
+      });
+
+      const updatedUser = finalize.data.user;
+
+      setDraftUser(p => ({
+        ...p,
+        profilePicture: updatedUser.profilePicture,
+      }));
+
+      setSavedUser(p => ({
+        ...p,
+        profilePicture: updatedUser.profilePicture,
+      }));
 
       toast.success('Profile picture updated');
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast.error('Upload failed');
     } finally {
       setAvatarUploading(false);
@@ -120,20 +147,46 @@ export default function ProfilePage({ user }: ProfilePageProps) {
     try {
       setBannerUploading(true);
 
-      const formData = new FormData();
-      formData.append('banner', file);
-
-      const res = await axiosInstance.post('/users/me/banner', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      // 1. get signed upload url
+      const { data } = await axiosInstance.post('/users/me/banner/upload-url', {
+        contentType: file.type,
       });
 
-      const data = res.data;
+      const { uploadUrl, key } = data;
 
-      setDraftUser(p => ({ ...p, bannerPicture: data.url }));
-      setSavedUser(p => ({ ...p, bannerPicture: data.url }));
+      // 2. upload directly to R2
+      const uploadRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.type,
+        },
+        body: file,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error('Direct upload failed');
+      }
+
+      // 3. finalize upload
+      const finalize = await axiosInstance.post('/users/me/banner/complete', {
+        key,
+      });
+
+      const updatedUser = finalize.data.user;
+
+      setDraftUser(p => ({
+        ...p,
+        bannerPicture: updatedUser.bannerPicture,
+      }));
+
+      setSavedUser(p => ({
+        ...p,
+        bannerPicture: updatedUser.bannerPicture,
+      }));
 
       toast.success('Banner updated');
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast.error('Banner upload failed');
     } finally {
       setBannerUploading(false);
@@ -152,18 +205,22 @@ export default function ProfilePage({ user }: ProfilePageProps) {
 
   const handleSave = async () => {
     try {
-      const updatedUser = await updateProfile({
+      const res = await updateProfile({
         jobTitle: draftUser.jobTitle,
         linkedinId: draftUser.linkedinId,
         age: draftUser.age,
         sex: draftUser.sex,
       });
 
+      // IMPORTANT: only use backend user
+      const serverUser = res.user;
       const newSavedUser = {
         ...draftUser,
-        ...updatedUser,
+        ...res,
         skills,
       };
+
+      // console.log(newSavedUser);
 
       setDraftUser(newSavedUser);
       setSavedUser(newSavedUser);

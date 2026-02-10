@@ -1,6 +1,13 @@
 import { AppError } from '../middlewares/errorHandller.js';
 import { userRepository } from '../repositories/userRepository.js';
-import { deleteFromR2, getR2KeyFromUrl } from '../utils/r2Upload.js';
+
+import {
+  buildAvatarKey,
+  buildBannerKey,
+  deleteFromR2,
+  getPublicUrlForKey,
+  getSignedUploadUrl,
+} from '../utils/r2Upload.js';
 
 export interface updateUserProfile {
   username?: string;
@@ -13,6 +20,10 @@ export interface updateUserProfile {
 }
 
 export const userService = {
+  /* ------------------------------------------------------------------ */
+  /* ------------------------ existing logic -------------------------- */
+  /* ------------------------------------------------------------------ */
+
   updateUserDetails: async (userId: string, payload: updateUserProfile) => {
     if (!userId) throw new AppError('Unauthorized', 401);
 
@@ -39,6 +50,10 @@ export const userService = {
     return updatedUser;
   },
 
+  /**
+   * OLD FLOW (kept so nothing breaks if something still calls it)
+   * You should stop using this from controllers.
+   */
   uploadAvatar: async (userId: string, avatarUrl: string) => {
     if (!userId) throw new AppError('Unauthorized', 401);
     if (!avatarUrl) throw new AppError('Avatar URL is required', 400);
@@ -52,6 +67,9 @@ export const userService = {
     return updatedUser;
   },
 
+  /**
+   * OLD FLOW (kept)
+   */
   uploadBanner: async (userId: string, bannerUrl: string) => {
     if (!userId) throw new AppError('Unauthorized', 401);
     if (!bannerUrl) throw new AppError('Banner URL is required', 400);
@@ -105,9 +123,108 @@ export const userService = {
       name: user.fullName,
       skills: user.skills,
       jobTitle: user.jobTitle,
-      image: user.profilePicture,
+      image: user.profilePicture
+        ? getPublicUrlForKey(user.profilePicture)
+        : null,
     };
   },
+
+  /* ------------------------------------------------------------------ */
+  /* ------------------ NEW SIGNED UPLOAD FLOW ------------------------ */
+  /* ------------------------------------------------------------------ */
+
+  createAvatarUploadUrl: async (
+    userId: string,
+    contentType: string,
+    ext: string
+  ) => {
+    if (!userId) throw new AppError('Unauthorized', 401);
+
+    const key = buildAvatarKey(userId, ext);
+
+    const uploadUrl = await getSignedUploadUrl({
+      key,
+      contentType,
+    });
+
+    return {
+      key,
+      uploadUrl,
+    };
+  },
+
+  finalizeAvatarUpload: async (userId: string, key: string) => {
+    if (!userId) throw new AppError('Unauthorized', 401);
+
+    const user = await userRepository.findById(userId);
+    if (!user) throw new AppError('User not found', 404);
+
+    if (user.profilePicture && user.profilePicture !== key) {
+      await deleteFromR2(user.profilePicture);
+    }
+
+    const updated = await userRepository.updateProfileById(userId, {
+      profilePicture: key,
+    });
+
+    if (!updated) throw new AppError('User not found', 404);
+
+    const obj = updated.toObject();
+
+    return {
+      ...obj,
+      profilePicture: getPublicUrlForKey(key),
+    };
+  },
+
+  createBannerUploadUrl: async (
+    userId: string,
+    contentType: string,
+    ext: string
+  ) => {
+    if (!userId) throw new AppError('Unauthorized', 401);
+
+    const key = buildBannerKey(userId, ext);
+
+    const uploadUrl = await getSignedUploadUrl({
+      key,
+      contentType,
+    });
+
+    return {
+      key,
+      uploadUrl,
+    };
+  },
+
+  finalizeBannerUpload: async (userId: string, key: string) => {
+    if (!userId) throw new AppError('Unauthorized', 401);
+
+    const user = await userRepository.findById(userId);
+    if (!user) throw new AppError('User not found', 404);
+
+    if (user.bannerPicture && user.bannerPicture !== key) {
+      await deleteFromR2(user.bannerPicture);
+    }
+
+    const updated = await userRepository.updateProfileById(userId, {
+      bannerPicture: key,
+    });
+
+    if (!updated) throw new AppError('User not found', 404);
+
+    const obj = updated.toObject();
+
+    return {
+      ...obj,
+      bannerPicture: getPublicUrlForKey(key),
+    };
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* ------------------ delete avatar (updated) ----------------------- */
+  /* ------------------------------------------------------------------ */
+
   deleteAvatar: async (userId: string) => {
     if (!userId) throw new AppError('Unauthorized', 401);
 
@@ -115,18 +232,12 @@ export const userService = {
 
     if (!user) throw new AppError('User not found', 404);
 
-    // nothing to delete
     if (!user.profilePicture) {
       return user;
     }
 
-    // 1. extract object key from stored url
-    const key = getR2KeyFromUrl(user.profilePicture);
+    await deleteFromR2(user.profilePicture);
 
-    // 2. delete from R2
-    await deleteFromR2(key);
-
-    // 3. set DB column to NULL
     const updatedUser = await userRepository.updateProfileById(userId, {
       profilePicture: null,
     });
