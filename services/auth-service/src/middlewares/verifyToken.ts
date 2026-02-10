@@ -39,7 +39,7 @@ export const verifyAccessToken = async (
       email: payload.email,
       role: payload.role,
     };
-    console.log(req.user)
+    console.log(req.user);
 
     next();
   } catch {
