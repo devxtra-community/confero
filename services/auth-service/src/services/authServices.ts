@@ -155,7 +155,6 @@ export const authService = {
 
     const session =
       await authSessionRepository.findValidByTokenHash(refreshTokenHash);
-    console.log(session);
     if (!session) {
       throw new AppError('Invalid refresh token', 401);
     }

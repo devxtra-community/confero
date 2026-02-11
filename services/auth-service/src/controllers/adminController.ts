@@ -29,10 +29,21 @@ export const banUser = async (req: Request, res: Response) => {
   });
 };
 
-export const getBannedUsers = async (_req: Request, res: Response) => {
-  const bans = await userBanRepository.getActiveBans();
+export const getBannedUsers = async (req: Request, res: Response) => {
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const { data, total } = await userBanRepository.getActiveBans({
+    page,
+    limit,
+  });
 
-  res.json(bans);
+  res.json({
+    success: true,
+    data,
+    total,
+    page,
+    limit,
+  });
 };
 
 export const unbanUser = async (req: Request, res: Response) => {

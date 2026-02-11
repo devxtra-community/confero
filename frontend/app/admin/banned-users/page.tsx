@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Search,
   ChevronLeft,
@@ -14,6 +14,8 @@ import {
   Calendar,
   Mail,
 } from 'lucide-react';
+import { axiosInstance } from '@/lib/axiosInstance';
+import { toast } from 'sonner';
 
 interface BannedUser {
   id: string;
@@ -21,104 +23,170 @@ interface BannedUser {
   email: string;
   bannedOn: string;
   expires: string;
-  avatar?: string;
+  reason: string
+}
+
+interface BackendBan {
+  _id: string;
+
+  userId?: {
+    _id: string;
+    fullName: string;
+    email: string;
+  };
+
+  bannedAt: string;
+  expiresAt?: string | null;
 }
 
 export default function BannedUsersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(6);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
-  // Sample data
-  const bannedUsers: BannedUser[] = [
-    {
-      id: '1',
-      fullName: 'John Smith',
-      email: 'john.smith@gmail.com',
-      bannedOn: 'March 12, 2023',
-      expires: 'March 12, 2024',
-    },
-    {
-      id: '2',
-      fullName: 'Olivia Bennett',
-      email: 'ollyben@gmail.com',
-      bannedOn: 'June 27, 2022',
-      expires: 'September 27, 2022',
-    },
-    {
-      id: '3',
-      fullName: 'Daniel Warren',
-      email: 'dwarren3@gmail.com',
-      bannedOn: 'January 8, 2024',
-      expires: 'March 18, 2024',
-    },
-    {
-      id: '4',
-      fullName: 'Chloe Hayes',
-      email: 'chloehhye@gmail.com',
-      bannedOn: 'October 5, 2021',
-      expires: 'October 28, 2021',
-    },
-    {
-      id: '5',
-      fullName: 'Marcus Reed',
-      email: 'reeds777@gmail.com',
-      bannedOn: 'February 19, 2023',
-      expires: 'February 28, 2023',
-    },
-    {
-      id: '6',
-      fullName: 'Isabelle Clark',
-      email: 'belleclark@gmail.com',
-      bannedOn: 'August 30, 2022',
-      expires: 'November 30, 2022',
-    },
-    {
-      id: '7',
-      fullName: 'Lucas Mitchell',
-      email: 'lucamitch@gmail.com',
-      bannedOn: 'April 23, 2024',
-      expires: 'April 23, 2024',
-    },
-    {
-      id: '8',
-      fullName: 'Mark Wilburg',
-      email: 'markwil32@gmail.com',
-      bannedOn: 'November 14, 2020',
-      expires: 'February 14, 2021',
-    },
-    {
-      id: '9',
-      fullName: 'Nicholas Agenn',
-      email: 'nicolass009@gmail.com',
-      bannedOn: 'July 6, 2023',
-      expires: 'December 6, 2023',
-    },
-    {
-      id: '10',
-      fullName: 'Mia Nadinn',
-      email: 'mianaddiin@gmail.com',
-      bannedOn: 'December 31, 2021',
-      expires: 'January 31, 2022',
-    },
-    {
-      id: '11',
-      fullName: 'Noemi Villan',
-      email: 'noemivill99@gmail.com',
-      bannedOn: 'August 10, 2024',
-      expires: 'August 19, 2024',
-    },
-  ];
+  const [bannedUsers, setBannedUsers] = useState<BannedUser[]>([]);
+  const [totalRows, setTotalRows] = useState(0);
 
-  const totalRows = 140;
+  useEffect(() => {
+
+    const fetchBannedUsers = async () => {
+
+      try {
+
+        const res = await axiosInstance.get("/admin/banned-users", {
+          params: {
+            page: currentPage,
+            limit: rowsPerPage,
+          }
+        });
+
+
+        const formatted = res.data.data.map((ban: BackendBan) => ({
+
+          id: ban.userId?._id ?? ban._id,
+          fullName: ban.userId?.fullName || "Unknown",
+          email: ban.userId?.email || "Unknown",
+          bannedOn: new Date(ban.bannedAt).toLocaleString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+
+          expires: ban.expiresAt
+            ? new Date(ban.expiresAt).toLocaleString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit"
+            })
+            : "Permanent",
+
+
+        }));
+
+
+        setBannedUsers(formatted);
+        setTotalRows(res.data.total);
+
+      } catch (error) {
+        toast.error("Failed to fetch banned users");
+      }
+
+    };
+
+    fetchBannedUsers();
+
+  }, [currentPage, rowsPerPage]);
+
+
+  // Sample data
+  // const bannedUsers: BannedUser[] = [
+  //   {
+  //     id: '1',
+  //     fullName: 'John Smith',
+  //     email: 'john.smith@gmail.com',
+  //     bannedOn: 'March 12, 2023',
+  //     expires: 'March 12, 2024',
+  //   },
+  //   {
+  //     id: '2',
+  //     fullName: 'Olivia Bennett',
+  //     email: 'ollyben@gmail.com',
+  //     bannedOn: 'June 27, 2022',
+  //     expires: 'September 27, 2022',
+  //   },
+  //   {
+  //     id: '3',
+  //     fullName: 'Daniel Warren',
+  //     email: 'dwarren3@gmail.com',
+  //     bannedOn: 'January 8, 2024',
+  //     expires: 'March 18, 2024',
+  //   },
+  //   {
+  //     id: '4',
+  //     fullName: 'Chloe Hayes',
+  //     email: 'chloehhye@gmail.com',
+  //     bannedOn: 'October 5, 2021',
+  //     expires: 'October 28, 2021',
+  //   },
+  //   {
+  //     id: '5',
+  //     fullName: 'Marcus Reed',
+  //     email: 'reeds777@gmail.com',
+  //     bannedOn: 'February 19, 2023',
+  //     expires: 'February 28, 2023',
+  //   },
+  //   {
+  //     id: '6',
+  //     fullName: 'Isabelle Clark',
+  //     email: 'belleclark@gmail.com',
+  //     bannedOn: 'August 30, 2022',
+  //     expires: 'November 30, 2022',
+  //   },
+  //   {
+  //     id: '7',
+  //     fullName: 'Lucas Mitchell',
+  //     email: 'lucamitch@gmail.com',
+  //     bannedOn: 'April 23, 2024',
+  //     expires: 'April 23, 2024',
+  //   },
+  //   {
+  //     id: '8',
+  //     fullName: 'Mark Wilburg',
+  //     email: 'markwil32@gmail.com',
+  //     bannedOn: 'November 14, 2020',
+  //     expires: 'February 14, 2021',
+  //   },
+  //   {
+  //     id: '9',
+  //     fullName: 'Nicholas Agenn',
+  //     email: 'nicolass009@gmail.com',
+  //     bannedOn: 'July 6, 2023',
+  //     expires: 'December 6, 2023',
+  //   },
+  //   {
+  //     id: '10',
+  //     fullName: 'Mia Nadinn',
+  //     email: 'mianaddiin@gmail.com',
+  //     bannedOn: 'December 31, 2021',
+  //     expires: 'January 31, 2022',
+  //   },
+  //   {
+  //     id: '11',
+  //     fullName: 'Noemi Villan',
+  //     email: 'noemivill99@gmail.com',
+  //     bannedOn: 'August 10, 2024',
+  //     expires: 'August 19, 2024',
+  //   },
+  // ];
+
   const totalPages = Math.ceil(totalRows / rowsPerPage);
 
-  const filteredUsers = bannedUsers.filter(
-    user =>
-      user.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredUsers = bannedUsers
 
   const getInitials = (name: string) => {
     return name
@@ -139,8 +207,12 @@ export default function BannedUsersPage() {
       'from-red-400 to-red-600',
       'from-indigo-400 to-indigo-600',
     ];
-    const index = parseInt(id) % colors.length;
-    return colors[index];
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+      hash = id.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    return colors[Math.abs(hash) % colors.length];
   };
 
   const toggleUserSelection = (userId: string) => {
@@ -273,7 +345,7 @@ export default function BannedUsersPage() {
                           {getInitials(user.fullName)}
                         </div>
                         <span className="font-medium text-gray-900 text-sm">
-                          {user.fullName}
+                          {user.reason}
                         </span>
                       </div>
                     </td>
@@ -338,11 +410,10 @@ export default function BannedUsersPage() {
                 <button
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage === 1}
-                  className={`p-2 rounded-lg transition-all ${
-                    currentPage === 1
-                      ? 'text-gray-300 cursor-not-allowed'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                  className={`p-2 rounded-lg transition-all ${currentPage === 1
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-600 hover:bg-gray-100'
+                    }`}
                 >
                   <ChevronLeft size={18} />
                   <ChevronLeft size={18} className="-ml-3" />
@@ -351,11 +422,10 @@ export default function BannedUsersPage() {
                 <button
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className={`p-2 rounded-lg transition-all ${
-                    currentPage === 1
-                      ? 'text-gray-300 cursor-not-allowed'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                  className={`p-2 rounded-lg transition-all ${currentPage === 1
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-600 hover:bg-gray-100'
+                    }`}
                 >
                   <ChevronLeft size={18} />
                 </button>
@@ -364,11 +434,10 @@ export default function BannedUsersPage() {
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`w-9 h-9 rounded-lg font-medium text-sm transition-all ${
-                      currentPage === page
-                        ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                    className={`w-9 h-9 rounded-lg font-medium text-sm transition-all ${currentPage === page
+                      ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
+                      : 'text-gray-600 hover:bg-gray-100'
+                      }`}
                   >
                     {page}
                   </button>
@@ -378,11 +447,10 @@ export default function BannedUsersPage() {
 
                 <button
                   onClick={() => setCurrentPage(10)}
-                  className={`w-9 h-9 rounded-lg font-medium text-sm transition-all ${
-                    currentPage === 10
-                      ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                  className={`w-9 h-9 rounded-lg font-medium text-sm transition-all ${currentPage === 10
+                    ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
+                    : 'text-gray-600 hover:bg-gray-100'
+                    }`}
                 >
                   10
                 </button>
@@ -392,11 +460,10 @@ export default function BannedUsersPage() {
                     setCurrentPage(Math.min(totalPages, currentPage + 1))
                   }
                   disabled={currentPage === totalPages}
-                  className={`p-2 rounded-lg transition-all ${
-                    currentPage === totalPages
-                      ? 'text-gray-300 cursor-not-allowed'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                  className={`p-2 rounded-lg transition-all ${currentPage === totalPages
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-600 hover:bg-gray-100'
+                    }`}
                 >
                   <ChevronRight size={18} />
                 </button>
@@ -404,11 +471,10 @@ export default function BannedUsersPage() {
                 <button
                   onClick={() => setCurrentPage(totalPages)}
                   disabled={currentPage === totalPages}
-                  className={`p-2 rounded-lg transition-all ${
-                    currentPage === totalPages
-                      ? 'text-gray-300 cursor-not-allowed'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                  className={`p-2 rounded-lg transition-all ${currentPage === totalPages
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-600 hover:bg-gray-100'
+                    }`}
                 >
                   <ChevronRight size={18} />
                   <ChevronRight size={18} className="-ml-3" />

@@ -44,7 +44,6 @@ export const reportService = {
       await banService.banUser(
         reportedUserId,
         'AUTO BAN threshold reached',
-        undefined,
         expiresAt
       );
     }

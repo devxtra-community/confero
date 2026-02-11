@@ -3,10 +3,12 @@ import { redis } from '../config/redis.js';
 import { userBanRepository } from '../repositories/userBanRepository.js';
 
 export const loadBansIntoRedis = async () => {
-  const bans = await userBanRepository.getActiveBans();
+  const bans = await userBanRepository.getAllBans();
 
   for (const ban of bans) {
-    await redis.sadd('banned_users', ban.userId.toString());
+    if (ban.userId) {
+      await redis.sadd('banned_users', ban.userId.toString());
+    }
   }
 
   logger.info('All banned users added into redis...');

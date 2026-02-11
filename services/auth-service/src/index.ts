@@ -2,9 +2,9 @@ import 'express-async-errors';
 import dotenv from 'dotenv';
 import { connection } from './config/db.js';
 import { logger } from './config/logger.js';
+import { loadBansIntoRedis } from './utils/loadBansIntoRedis.js';
 import app from './app.js';
 import './config/redis.js';
-import { loadBansIntoRedis } from './utils/loadBansIntoRedis.js';
 
 dotenv.config();
 

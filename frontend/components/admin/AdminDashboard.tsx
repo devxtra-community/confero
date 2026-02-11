@@ -17,6 +17,7 @@ interface CallDurationData {
   pending: number;
 }
 
+
 export default function DashboardPage() {
   const callDurationData: CallDurationData = {
     completed: 32,

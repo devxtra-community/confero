@@ -109,7 +109,6 @@ export default function FindMatchPage() {
         return;
       }
 
-      console.log('Starting match with skills:', skills);
 
       socket.emit('match:start', { skills });
     } catch {

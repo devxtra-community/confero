@@ -33,6 +33,10 @@ export const userReportRepository = {
     );
   },
 
+  deleteFromReport: (userId: string) => {
+    return UserReportModel.deleteMany({ reportedUserId: userId });
+  },
+
   getPendingReportsPaginated: async (page: number, limit: number) => {
     const skip = (page - 1) * limit;
 

@@ -6,6 +6,7 @@ import { errorHandler } from './middlewares/globalError.js';
 import cookieParser from 'cookie-parser';
 import userRouter from './routes/userRoute.js';
 import adminRoutes from './routes/adminRoutes.js';
+import './models/index.js';
 
 const app = express();
 
