@@ -109,7 +109,6 @@ export default function FindMatchPage() {
         return;
       }
 
-
       socket.emit('match:start', { skills });
     } catch {
       toast.error('Unable to start matching');

@@ -1,2 +1,2 @@
-import "./userModel.js";
-import "./userBan.js";
+import './userModel.js';
+import './userBan.js';

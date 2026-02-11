@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   Calendar,
   MoreVertical,
-  Ban,
   Eye,
   Mail,
 } from 'lucide-react';
@@ -55,7 +54,6 @@ export default function ReportedUsersPage() {
   const [openBanModal, setOpenBanModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [reason, setReason] = useState<string>('');
-
 
   const totalPages = 3;
 
@@ -208,7 +206,6 @@ export default function ReportedUsersPage() {
                       Reported At: {report.reportedAt}
                     </span>
                   </div>
-
                 </div>
 
                 <div className="flex gap-2 pt-2">
@@ -216,7 +213,7 @@ export default function ReportedUsersPage() {
                     onClick={() => {
                       setSelectedUser(report.id);
                       setOpenBanModal(true);
-                      setReason(report.reason)
+                      setReason(report.reason);
                     }}
                   >
                     Ban
@@ -240,16 +237,11 @@ export default function ReportedUsersPage() {
               onOpenChange={setOpenBanModal}
               userId={selectedUser}
               reason={reason}
-              onBanSuccess={(userId) => {
-
-                setReports(prev =>
-                  prev.filter(r => r.id !== userId)
-                );
-
+              onBanSuccess={userId => {
+                setReports(prev => prev.filter(r => r.id !== userId));
               }}
             />
           )}
-
         </div>
 
         {filteredUsers.length === 0 && (
@@ -277,10 +269,11 @@ export default function ReportedUsersPage() {
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${currentPage === 1
-                ? 'text-gray-300 cursor-not-allowed'
-                : 'text-foreground/60 hover:bg-gray-100'
-                }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                currentPage === 1
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : 'text-foreground/60 hover:bg-gray-100'
+              }`}
             >
               Previous
             </button>
@@ -289,10 +282,11 @@ export default function ReportedUsersPage() {
               <button
                 key={page}
                 onClick={() => setCurrentPage(page)}
-                className={`w-10 h-10 rounded-lg font-medium text-sm transition-all ${currentPage === page
-                  ? ' bg-linear-to-r from-primary to-favor text-background '
-                  : 'text-foreground/60 hover:bg-gray-100'
-                  }`}
+                className={`w-10 h-10 rounded-lg font-medium text-sm transition-all ${
+                  currentPage === page
+                    ? ' bg-linear-to-r from-primary to-favor text-background '
+                    : 'text-foreground/60 hover:bg-gray-100'
+                }`}
               >
                 {page}
               </button>
@@ -303,10 +297,11 @@ export default function ReportedUsersPage() {
                 setCurrentPage(Math.min(totalPages, currentPage + 1))
               }
               disabled={currentPage === totalPages}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${currentPage === totalPages
-                ? 'text-gray-300 cursor-not-allowed'
-                : 'text-foreground/60 hover:bg-gray-100'
-                }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                currentPage === totalPages
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : 'text-foreground/60 hover:bg-gray-100'
+              }`}
             >
               Next
             </button>

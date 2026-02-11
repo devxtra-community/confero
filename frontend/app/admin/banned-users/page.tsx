@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { axiosInstance } from '@/lib/axiosInstance';
 import { toast } from 'sonner';
+import axios from 'axios';
 
 interface BannedUser {
   id: string;
@@ -23,7 +24,7 @@ interface BannedUser {
   email: string;
   bannedOn: string;
   expires: string;
-  reason: string
+  reason: string;
 }
 
 interface BackendBan {
@@ -49,144 +50,55 @@ export default function BannedUsersPage() {
   const [totalRows, setTotalRows] = useState(0);
 
   useEffect(() => {
+    const formatDateTime = (date?: string | null) =>
+      date
+        ? new Date(date).toLocaleString(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+        : "Permanent";
 
     const fetchBannedUsers = async () => {
-
       try {
-
         const res = await axiosInstance.get("/admin/banned-users", {
           params: {
             page: currentPage,
             limit: rowsPerPage,
-          }
+          },
         });
 
-
         const formatted = res.data.data.map((ban: BackendBan) => ({
-
           id: ban.userId?._id ?? ban._id,
-          fullName: ban.userId?.fullName || "Unknown",
-          email: ban.userId?.email || "Unknown",
-          bannedOn: new Date(ban.bannedAt).toLocaleString(undefined, {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-
-          expires: ban.expiresAt
-            ? new Date(ban.expiresAt).toLocaleString(undefined, {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit"
-            })
-            : "Permanent",
-
-
+          fullName: ban.userId?.fullName ?? "Unknown",
+          email: ban.userId?.email ?? "Unknown",
+          bannedOn: formatDateTime(ban.bannedAt),
+          expires: formatDateTime(ban.expiresAt),
         }));
-
 
         setBannedUsers(formatted);
         setTotalRows(res.data.total);
 
-      } catch (error) {
-        toast.error("Failed to fetch banned users");
-      }
+      } catch (err: unknown) {
 
+        if (axios.isAxiosError(err)) {
+          toast.error(err.response?.data?.message ?? "Failed to fetch banned users");
+        } else {
+          toast.error("Failed to fetch banned users");
+        }
+
+      }
     };
 
     fetchBannedUsers();
 
   }, [currentPage, rowsPerPage]);
 
-
-  // Sample data
-  // const bannedUsers: BannedUser[] = [
-  //   {
-  //     id: '1',
-  //     fullName: 'John Smith',
-  //     email: 'john.smith@gmail.com',
-  //     bannedOn: 'March 12, 2023',
-  //     expires: 'March 12, 2024',
-  //   },
-  //   {
-  //     id: '2',
-  //     fullName: 'Olivia Bennett',
-  //     email: 'ollyben@gmail.com',
-  //     bannedOn: 'June 27, 2022',
-  //     expires: 'September 27, 2022',
-  //   },
-  //   {
-  //     id: '3',
-  //     fullName: 'Daniel Warren',
-  //     email: 'dwarren3@gmail.com',
-  //     bannedOn: 'January 8, 2024',
-  //     expires: 'March 18, 2024',
-  //   },
-  //   {
-  //     id: '4',
-  //     fullName: 'Chloe Hayes',
-  //     email: 'chloehhye@gmail.com',
-  //     bannedOn: 'October 5, 2021',
-  //     expires: 'October 28, 2021',
-  //   },
-  //   {
-  //     id: '5',
-  //     fullName: 'Marcus Reed',
-  //     email: 'reeds777@gmail.com',
-  //     bannedOn: 'February 19, 2023',
-  //     expires: 'February 28, 2023',
-  //   },
-  //   {
-  //     id: '6',
-  //     fullName: 'Isabelle Clark',
-  //     email: 'belleclark@gmail.com',
-  //     bannedOn: 'August 30, 2022',
-  //     expires: 'November 30, 2022',
-  //   },
-  //   {
-  //     id: '7',
-  //     fullName: 'Lucas Mitchell',
-  //     email: 'lucamitch@gmail.com',
-  //     bannedOn: 'April 23, 2024',
-  //     expires: 'April 23, 2024',
-  //   },
-  //   {
-  //     id: '8',
-  //     fullName: 'Mark Wilburg',
-  //     email: 'markwil32@gmail.com',
-  //     bannedOn: 'November 14, 2020',
-  //     expires: 'February 14, 2021',
-  //   },
-  //   {
-  //     id: '9',
-  //     fullName: 'Nicholas Agenn',
-  //     email: 'nicolass009@gmail.com',
-  //     bannedOn: 'July 6, 2023',
-  //     expires: 'December 6, 2023',
-  //   },
-  //   {
-  //     id: '10',
-  //     fullName: 'Mia Nadinn',
-  //     email: 'mianaddiin@gmail.com',
-  //     bannedOn: 'December 31, 2021',
-  //     expires: 'January 31, 2022',
-  //   },
-  //   {
-  //     id: '11',
-  //     fullName: 'Noemi Villan',
-  //     email: 'noemivill99@gmail.com',
-  //     bannedOn: 'August 10, 2024',
-  //     expires: 'August 19, 2024',
-  //   },
-  // ];
-
   const totalPages = Math.ceil(totalRows / rowsPerPage);
 
-  const filteredUsers = bannedUsers
+  const filteredUsers = bannedUsers;
 
   const getInitials = (name: string) => {
     return name

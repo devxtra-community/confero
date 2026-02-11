@@ -14,12 +14,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { useEffect, useState } from 'react';
 import { axiosInstance } from '@/lib/axiosInstance';
 import { toast } from 'sonner';
+import axios from 'axios';
 
 type Props = {
     open: boolean;
     onOpenChange: (val: boolean) => void;
     userId: string;
-    reason: string
+    reason: string;
     onBanSuccess?: (userId: string) => void;
 };
 
@@ -30,13 +31,11 @@ export function BanUserDialog({
     userId,
     onBanSuccess,
 }: Props) {
-
     const [localReason, setLocalReason] = useState(reason);
     const [expiry, setExpiry] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleBan = async () => {
-
         try {
             setLoading(true);
 
@@ -51,9 +50,12 @@ export function BanUserDialog({
             onBanSuccess?.(userId);
 
             onOpenChange(false);
-
-        } catch (error) {
-            toast.error('Failed to ban user');
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                toast.error(err.response?.data?.message ?? 'Failed to ban user');
+            } else {
+                toast.error('Failed to ban user');
+            }
         } finally {
             setLoading(false);
         }
@@ -66,7 +68,6 @@ export function BanUserDialog({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
-
                 <DialogHeader>
                     <DialogTitle>Ban User</DialogTitle>
                 </DialogHeader>
@@ -76,20 +77,18 @@ export function BanUserDialog({
                 <Textarea
                     placeholder="Enter ban reason..."
                     value={localReason}
-                    onChange={(e) => setLocalReason(e.target.value)}
-
+                    onChange={e => setLocalReason(e.target.value)}
                 />
 
                 <Input
                     type="datetime-local"
                     value={expiry}
-                    onChange={(e) => setExpiry(e.target.value)}
+                    onChange={e => setExpiry(e.target.value)}
                 />
 
                 <Button onClick={handleBan} disabled={loading}>
-                    {loading ? "Banning..." : "Confirm Ban"}
+                    {loading ? 'Banning...' : 'Confirm Ban'}
                 </Button>
-
             </DialogContent>
         </Dialog>
     );
