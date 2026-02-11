@@ -53,17 +53,17 @@ export default function BannedUsersPage() {
     const formatDateTime = (date?: string | null) =>
       date
         ? new Date(date).toLocaleString(undefined, {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-        : "Permanent";
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : 'Permanent';
 
     const fetchBannedUsers = async () => {
       try {
-        const res = await axiosInstance.get("/admin/banned-users", {
+        const res = await axiosInstance.get('/admin/banned-users', {
           params: {
             page: currentPage,
             limit: rowsPerPage,
@@ -72,28 +72,26 @@ export default function BannedUsersPage() {
 
         const formatted = res.data.data.map((ban: BackendBan) => ({
           id: ban.userId?._id ?? ban._id,
-          fullName: ban.userId?.fullName ?? "Unknown",
-          email: ban.userId?.email ?? "Unknown",
+          fullName: ban.userId?.fullName ?? 'Unknown',
+          email: ban.userId?.email ?? 'Unknown',
           bannedOn: formatDateTime(ban.bannedAt),
           expires: formatDateTime(ban.expiresAt),
         }));
 
         setBannedUsers(formatted);
         setTotalRows(res.data.total);
-
       } catch (err: unknown) {
-
         if (axios.isAxiosError(err)) {
-          toast.error(err.response?.data?.message ?? "Failed to fetch banned users");
+          toast.error(
+            err.response?.data?.message ?? 'Failed to fetch banned users'
+          );
         } else {
-          toast.error("Failed to fetch banned users");
+          toast.error('Failed to fetch banned users');
         }
-
       }
     };
 
     fetchBannedUsers();
-
   }, [currentPage, rowsPerPage]);
 
   const totalPages = Math.ceil(totalRows / rowsPerPage);
@@ -322,10 +320,11 @@ export default function BannedUsersPage() {
                 <button
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage === 1}
-                  className={`p-2 rounded-lg transition-all ${currentPage === 1
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                  className={`p-2 rounded-lg transition-all ${
+                    currentPage === 1
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
                 >
                   <ChevronLeft size={18} />
                   <ChevronLeft size={18} className="-ml-3" />
@@ -334,10 +333,11 @@ export default function BannedUsersPage() {
                 <button
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className={`p-2 rounded-lg transition-all ${currentPage === 1
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                  className={`p-2 rounded-lg transition-all ${
+                    currentPage === 1
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
                 >
                   <ChevronLeft size={18} />
                 </button>
@@ -346,10 +346,11 @@ export default function BannedUsersPage() {
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`w-9 h-9 rounded-lg font-medium text-sm transition-all ${currentPage === page
-                      ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
-                      : 'text-gray-600 hover:bg-gray-100'
-                      }`}
+                    className={`w-9 h-9 rounded-lg font-medium text-sm transition-all ${
+                      currentPage === page
+                        ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
                   >
                     {page}
                   </button>
@@ -359,10 +360,11 @@ export default function BannedUsersPage() {
 
                 <button
                   onClick={() => setCurrentPage(10)}
-                  className={`w-9 h-9 rounded-lg font-medium text-sm transition-all ${currentPage === 10
-                    ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
-                    : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                  className={`w-9 h-9 rounded-lg font-medium text-sm transition-all ${
+                    currentPage === 10
+                      ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
                 >
                   10
                 </button>
@@ -372,10 +374,11 @@ export default function BannedUsersPage() {
                     setCurrentPage(Math.min(totalPages, currentPage + 1))
                   }
                   disabled={currentPage === totalPages}
-                  className={`p-2 rounded-lg transition-all ${currentPage === totalPages
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                  className={`p-2 rounded-lg transition-all ${
+                    currentPage === totalPages
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
                 >
                   <ChevronRight size={18} />
                 </button>
@@ -383,10 +386,11 @@ export default function BannedUsersPage() {
                 <button
                   onClick={() => setCurrentPage(totalPages)}
                   disabled={currentPage === totalPages}
-                  className={`p-2 rounded-lg transition-all ${currentPage === totalPages
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                  className={`p-2 rounded-lg transition-all ${
+                    currentPage === totalPages
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
                 >
                   <ChevronRight size={18} />
                   <ChevronRight size={18} className="-ml-3" />
