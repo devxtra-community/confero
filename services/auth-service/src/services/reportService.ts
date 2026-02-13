@@ -20,7 +20,13 @@ export const reportService = {
     );
 
     if (existingReport) {
-      throw new AppError('Already reported', 403);
+      throw new AppError('Already reported', 208);
+    }
+
+    const banned = await userBanRepository.findActiveBan(reportedUserId);
+    console.log(banned);
+    if (banned) {
+      throw new AppError('User is Already banned', 208);
     }
 
     await userReportRepository.createReport({

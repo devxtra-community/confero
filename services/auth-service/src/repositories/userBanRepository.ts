@@ -37,7 +37,7 @@ export const userBanRepository = {
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
-      UserBanModel.find({ active: true })
+      UserBanModel.find()
         .populate('userId', 'fullName email')
         .sort({ bannedAt: -1 })
         .skip(skip)
@@ -50,5 +50,17 @@ export const userBanRepository = {
 
   getAllBans: () => {
     return UserBanModel.find({ active: true }).populate('userId');
+  },
+
+  autoDeactivateExpired: async () => {
+    return UserBanModel.updateMany(
+      {
+        active: true,
+        expiresAt: { $lte: new Date() },
+      },
+      {
+        $set: { active: false },
+      }
+    );
   },
 };

@@ -5,14 +5,14 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  Edit2,
   Trash2,
-  UserX,
   Filter,
   Download,
   Calendar,
   Mail,
+  User,
+  AlertCircle,
+  MoreVertical,
 } from 'lucide-react';
 import { axiosInstance } from '@/lib/axiosInstance';
 import { toast } from 'sonner';
@@ -20,24 +20,25 @@ import axios from 'axios';
 
 interface BannedUser {
   id: string;
+  userId: string;
   fullName: string;
   email: string;
   bannedOn: string;
   expires: string;
   reason: string;
+  active: boolean;
 }
 
 interface BackendBan {
   _id: string;
-
   userId?: {
     _id: string;
     fullName: string;
     email: string;
   };
-
   bannedAt: string;
   expiresAt?: string | null;
+  active: boolean;
 }
 
 export default function BannedUsersPage() {
@@ -45,7 +46,6 @@ export default function BannedUsersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(6);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-
   const [bannedUsers, setBannedUsers] = useState<BannedUser[]>([]);
   const [totalRows, setTotalRows] = useState(0);
 
@@ -71,9 +71,11 @@ export default function BannedUsersPage() {
         });
 
         const formatted = res.data.data.map((ban: BackendBan) => ({
-          id: ban.userId?._id ?? ban._id,
+          id: ban._id,
+          userId: ban.userId?._id,
           fullName: ban.userId?.fullName ?? 'Unknown',
           email: ban.userId?.email ?? 'Unknown',
+          active: ban.active,
           bannedOn: formatDateTime(ban.bannedAt),
           expires: formatDateTime(ban.expiresAt),
         }));
@@ -95,7 +97,6 @@ export default function BannedUsersPage() {
   }, [currentPage, rowsPerPage]);
 
   const totalPages = Math.ceil(totalRows / rowsPerPage);
-
   const filteredUsers = bannedUsers;
 
   const getInitials = (name: string) => {
@@ -121,7 +122,6 @@ export default function BannedUsersPage() {
     for (let i = 0; i < id.length; i++) {
       hash = id.charCodeAt(i) + ((hash << 5) - hash);
     }
-
     return colors[Math.abs(hash) % colors.length];
   };
 
@@ -133,6 +133,23 @@ export default function BannedUsersPage() {
     );
   };
 
+  const handleUnban = async (userId: string) => {
+    const user = bannedUsers.find(u => u.userId === userId);
+
+    if (!user?.active) {
+      toast.info('User already unbanned');
+      return;
+    }
+
+    try {
+      await axiosInstance.patch(`/admin/unban/`, { userId: userId });
+      toast.success('User unbanned');
+      setBannedUsers(prev => prev.filter(user => user.id !== userId));
+    } catch (err) {
+      toast.error('Failed to unban user');
+    }
+  };
+
   const toggleSelectAll = () => {
     setSelectedUsers(
       selectedUsers.length === filteredUsers.length
@@ -142,94 +159,65 @@ export default function BannedUsersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-gray-50">
-      <div className="p-4 sm:p-6 lg:p-8">
-        <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-gray-50 p-3 sm:p-4 md:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-6 md:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-linear-to-r from-gray-900 via-red-800 to-orange-800 bg-clip-text text-transparent mb-2">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-linear-to-r from-gray-800 via-gray-900 to-gray-800 bg-clip-text text-transparent">
                 User Management
               </h1>
-              <p className="text-sm sm:text-base text-gray-600 flex items-center gap-2">
-                <UserX size={16} className="text-red-500" />
+              <p className="text-sm sm:text-base text-gray-600 mt-1">
                 Manage banned user accounts
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <div className="relative flex-1 sm:min-w-70">
-                <Search
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                  size={18}
-                />
-                <input
-                  type="text"
-                  placeholder="Search for Users..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200 text-sm bg-white shadow-sm hover:shadow-md"
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all shadow-sm hover:shadow-md">
-                  <Filter size={16} />
-                  <span className="hidden sm:inline">Filter</span>
-                </button>
-                <button className="flex items-center gap-2 px-4 py-2.5 bg-linear-to-r from-teal-500 to-emerald-600 text-white rounded-xl text-sm font-medium hover:from-teal-600 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg">
-                  <Download size={16} />
-                  <span className="hidden sm:inline">Export</span>
-                </button>
-              </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <button className="flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-2.5 bg-white border border-gray-200 rounded-lg sm:rounded-xl hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-2 text-sm font-medium text-gray-700">
+                <Filter className="w-4 h-4" />
+                <span className="hidden sm:inline">Filter</span>
+              </button>
+              <button className="flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-2.5 bg-linear-to-r from-teal-500 to-cyan-500 text-white rounded-lg sm:rounded-xl hover:from-teal-600 hover:to-cyan-600 transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-2 text-sm font-medium">
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Export</span>
+              </button>
             </div>
+          </div>
+
+          <div className="relative mt-4 sm:mt-6">
+            <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+            <input
+              type="text"
+              placeholder="Search by name or email..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200 text-sm bg-white shadow-sm hover:shadow-md"
+            />
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-linear-to-r from-gray-700 to-gray-800 text-white">
-                  <th className="px-4 py-4 text-left">
-                    <input
-                      type="checkbox"
-                      checked={
-                        selectedUsers.length === filteredUsers.length &&
-                        filteredUsers.length > 0
-                      }
-                      onChange={toggleSelectAll}
-                      className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
-                    />
+                <tr className="bg-linear-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+                  <th className="text-left p-4 sm:p-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Full Name
                   </th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold">
-                    <div className="flex items-center gap-2">
-                      Full Name
-                      <ChevronDown size={16} className="text-gray-300" />
-                    </div>
+                  <th className="text-left p-4 sm:p-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Email
                   </th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold hidden sm:table-cell">
-                    <div className="flex items-center gap-2">
-                      Email
-                      <ChevronDown size={16} className="text-gray-300" />
-                    </div>
+                  <th className="text-left p-4 sm:p-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Banned On
                   </th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold hidden md:table-cell">
-                    <div className="flex items-center gap-2">
-                      Banned On
-                      <ChevronDown size={16} className="text-gray-300" />
-                    </div>
+                  <th className="text-left p-4 sm:p-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Expires
                   </th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold hidden lg:table-cell">
-                    <div className="flex items-center gap-2">
-                      Expires
-                      <ChevronDown size={16} className="text-gray-300" />
-                    </div>
+                  <th className="text-left p-4 sm:p-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Ban Status
                   </th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold">
-                    <div className="flex items-center gap-2">
-                      Actions
-                      <ChevronDown size={16} className="text-gray-300" />
-                    </div>
+                  <th className="text-left p-4 sm:p-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -237,83 +225,260 @@ export default function BannedUsersPage() {
                 {filteredUsers.map(user => (
                   <tr
                     key={user.id}
-                    className="hover:bg-linear-to-r hover:from-teal-50/30 hover:to-emerald-50/30 transition-all duration-200 group"
+                    className="hover:bg-gray-50 transition-colors duration-150"
                   >
-                    <td className="px-4 py-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedUsers.includes(user.id)}
-                        onChange={() => toggleUserSelection(user.id)}
-                        className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-4 py-4">
+                    <td className="p-4 sm:p-6">
                       <div className="flex items-center gap-3">
                         <div
-                          className={`w-9 h-9 rounded-full bg-linear-to-br ${getAvatarColor(user.id)} flex items-center justify-center text-white text-sm font-semibold shadow-sm group-hover:scale-110 transition-transform`}
+                          className={`w-10 h-10 rounded-full bg-linear-to-br ${getAvatarColor(
+                            user.id
+                          )} flex items-center justify-center text-white font-semibold text-sm shadow-md`}
                         >
                           {getInitials(user.fullName)}
                         </div>
-                        <span className="font-medium text-gray-900 text-sm">
-                          {user.reason}
-                        </span>
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {user.fullName}
+                          </div>
+                          {user.reason && (
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              {user.reason}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-600 hidden sm:table-cell">
-                      <div className="flex items-center gap-2">
-                        <Mail size={14} className="text-gray-400" />
-                        {user.email}
+                    <td className="p-4 sm:p-6">
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Mail className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm">{user.email}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-600 hidden md:table-cell">
-                      <div className="flex items-center gap-2">
-                        <Calendar size={14} className="text-gray-400" />
-                        {user.bannedOn}
+                    <td className="p-4 sm:p-6">
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm">{user.bannedOn}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-600 hidden lg:table-cell">
-                      <div className="flex items-center gap-2">
-                        <Calendar size={14} className="text-gray-400" />
+                    <td className="p-4 sm:p-6">
+                      <span className="text-sm text-gray-600">
                         {user.expires}
-                      </div>
+                      </span>
                     </td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-2">
-                        <button className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-all group/btn">
-                          <Edit2
-                            size={16}
-                            className="group-hover/btn:scale-110 transition-transform"
-                          />
-                        </button>
-                        <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all group/btn">
-                          <Trash2
-                            size={16}
-                            className="group-hover/btn:scale-110 transition-transform"
-                          />
-                        </button>
-                      </div>
+                    <td className="p-4 sm:p-6">
+                      <span
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          user.active
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-green-100 text-green-700'
+                        }`}
+                      >
+                        {user.active ? 'Banned' : 'Unbanned'}
+                      </span>
+                    </td>
+                    <td className="p-4 sm:p-6">
+                      <button
+                        onClick={() => handleUnban(user.userId)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all group/btn"
+                        title="Unban user"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        </div>
 
-          <div className="border-t border-gray-100 px-4 sm:px-6 py-4 bg-gray-50/50">
+        <div className="hidden md:grid lg:hidden grid-cols-1 gap-4">
+          {filteredUsers.map(user => (
+            <div
+              key={user.id}
+              className="bg-white rounded-xl shadow-md border border-gray-100 p-5 hover:shadow-lg transition-shadow duration-200"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 truncate">
+                      {user.fullName}
+                    </h3>
+                    <p className="text-sm text-gray-500 truncate">
+                      {user.email}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleUnban(user.userId)}
+                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all shrink-0"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-gray-500 text-xs mb-1">Banned On</p>
+                  <p className="text-gray-900 font-medium">{user.bannedOn}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-xs mb-1">Expires</p>
+                  <p className="text-gray-900 font-medium">{user.expires}</p>
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between">
+                {user.reason && (
+                  <p className="text-xs text-gray-600 italic flex-1">
+                    {user.reason}
+                  </p>
+                )}
+                <span
+                  className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                    user.active
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-green-100 text-green-700'
+                  }`}
+                >
+                  {user.active ? 'Banned' : 'Unbanned'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="md:hidden space-y-3">
+          {filteredUsers.map(user => (
+            <div
+              key={user.id}
+              className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow duration-200"
+            >
+              <div className="p-4 bg-linear-to-r from-gray-50 to-white border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={selectedUsers.includes(user.id)}
+                      onChange={() => toggleUserSelection(user.id)}
+                      className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer shrink-0"
+                    />
+                    <div
+                      className={`w-10 h-10 rounded-full bg-linear-to-br ${getAvatarColor(
+                        user.id
+                      )} flex items-center justify-center text-white font-semibold text-sm shadow-md shrink-0`}
+                    >
+                      {getInitials(user.fullName)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 text-sm truncate">
+                        {user.fullName}
+                      </h3>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${
+                          user.active
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-green-100 text-green-700'
+                        }`}
+                      >
+                        {user.active ? 'Banned' : 'Unbanned'}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleUnban(user.userId)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4 space-y-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="w-4 h-4 text-gray-400 shrink-0" />
+                  <span className="text-gray-600 truncate">{user.email}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      Banned On
+                    </p>
+                    <p className="text-xs text-gray-900 font-medium">
+                      {user.bannedOn}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      Expires
+                    </p>
+                    <p className="text-xs text-gray-900 font-medium">
+                      {user.expires}
+                    </p>
+                  </div>
+                </div>
+
+                {user.reason && (
+                  <div className="pt-2 border-t border-gray-100">
+                    <p className="text-xs text-gray-500 mb-1">Reason</p>
+                    <p className="text-xs text-gray-700 italic line-clamp-2">
+                      {user.reason}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {filteredUsers.length === 0 && (
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 sm:p-12 text-center">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-linear-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+              <User className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
+            </div>
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
+              No banned users found
+            </h3>
+            <p className="text-sm sm:text-base text-gray-600">
+              {searchQuery
+                ? `No results for "${searchQuery}"`
+                : 'There are no banned users at the moment.'}
+            </p>
+          </div>
+        )}
+
+        {filteredUsers.length > 0 && (
+          <div className="mt-6 bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100 p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3 text-sm">
-                <span className="text-gray-600">Rows per page</span>
+              <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-center sm:justify-start">
+                <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
+                  Rows per page
+                </span>
                 <select
                   value={rowsPerPage}
                   onChange={e => setRowsPerPage(Number(e.target.value))}
-                  className="px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-gray-700 cursor-pointer"
+                  className="px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-gray-700 cursor-pointer text-sm"
                 >
                   <option value={5}>5</option>
                   <option value={10}>10</option>
                   <option value={20}>20</option>
                   <option value={50}>50</option>
                 </select>
-                <span className="text-gray-500">of {totalRows} rows</span>
+                <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
+                  <span className="hidden sm:inline">Showing </span>
+                  <span className="font-medium text-gray-900">
+                    {Math.min((currentPage - 1) * rowsPerPage + 1, totalRows)}
+                  </span>
+                  -
+                  <span className="font-medium text-gray-900">
+                    {Math.min(currentPage * rowsPerPage, totalRows)}
+                  </span>{' '}
+                  of{' '}
+                  <span className="font-medium text-gray-900">{totalRows}</span>
+                </span>
               </div>
 
               <div className="flex items-center gap-1 sm:gap-2">
@@ -326,8 +491,8 @@ export default function BannedUsersPage() {
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  <ChevronLeft size={18} />
-                  <ChevronLeft size={18} className="-ml-3" />
+                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-4 h-4 -ml-3" />
                 </button>
 
                 <button
@@ -339,35 +504,45 @@ export default function BannedUsersPage() {
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  <ChevronLeft size={18} />
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
 
-                {[1, 2, 3].map(page => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`w-9 h-9 rounded-lg font-medium text-sm transition-all ${
-                      currentPage === page
-                        ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
+                <div className="hidden sm:flex items-center gap-1">
+                  {[1, 2, 3].map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-9 h-9 rounded-lg font-medium text-sm transition-all ${
+                        currentPage === page
+                          ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  {totalPages > 4 && (
+                    <span className="px-2 text-gray-400">...</span>
+                  )}
+                  {totalPages > 3 && (
+                    <button
+                      onClick={() => setCurrentPage(totalPages)}
+                      className={`w-9 h-9 rounded-lg font-medium text-sm transition-all ${
+                        currentPage === totalPages
+                          ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {totalPages}
+                    </button>
+                  )}
+                </div>
 
-                <button className="px-2 py-1.5 text-gray-600">...</button>
-
-                <button
-                  onClick={() => setCurrentPage(10)}
-                  className={`w-9 h-9 rounded-lg font-medium text-sm transition-all ${
-                    currentPage === 10
-                      ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  10
-                </button>
+                <div className="sm:hidden px-3 py-1.5 bg-gray-100 rounded-lg">
+                  <span className="text-sm font-medium text-gray-700">
+                    {currentPage} / {totalPages}
+                  </span>
+                </div>
 
                 <button
                   onClick={() =>
@@ -380,7 +555,7 @@ export default function BannedUsersPage() {
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  <ChevronRight size={18} />
+                  <ChevronRight className="w-4 h-4" />
                 </button>
 
                 <button
@@ -392,29 +567,9 @@ export default function BannedUsersPage() {
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  <ChevronRight size={18} />
-                  <ChevronRight size={18} className="-ml-3" />
+                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-4 h-4 -ml-3" />
                 </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {filteredUsers.length === 0 && (
-          <div className="mt-8 bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
-            <div className="max-w-md mx-auto space-y-4">
-              <div className="w-20 h-20 mx-auto bg-linear-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
-                <UserX className="text-gray-400" size={32} />
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  No banned users found
-                </h3>
-                <p className="text-base text-gray-500">
-                  {searchQuery
-                    ? `No results for "${searchQuery}"`
-                    : 'There are no banned users at the moment.'}
-                </p>
               </div>
             </div>
           </div>

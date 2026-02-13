@@ -55,7 +55,6 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile Toggle Button - Enhanced */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         className="lg:hidden fixed top-4 left-4 z-50 p-2.5 bg-white rounded-xl shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 border border-gray-100"
@@ -68,7 +67,6 @@ export default function Sidebar() {
         )}
       </button>
 
-      {/* Sidebar - Enhanced */}
       <aside
         className={`
           fixed lg:static inset-y-0 left-0 z-40
@@ -78,20 +76,17 @@ export default function Sidebar() {
           flex flex-col shadow-xl lg:shadow-none
         `}
       >
-        {/* Header with Logo - Enhanced */}
         <div className="relative flex items-center gap-3 p-6 border-b border-gray-100 overflow-hidden">
-          {/* Background gradient effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-teal-50/80 via-emerald-50/80 to-teal-50/80 opacity-50"></div>
+          <div className="absolute inset-0 bg-linear-to-r from-teal-50/80 via-emerald-50/80 to-teal-50/80 opacity-50"></div>
 
-          <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 via-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-lg shadow-md ring-2 ring-teal-100 transition-transform hover:scale-105 hover:rotate-3">
+          <div className="relative w-10 h-10 rounded-xl bg-linear-to-br from-teal-500 via-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-lg shadow-md ring-2 ring-teal-100 transition-transform hover:scale-105 hover:rotate-3">
             C
           </div>
-          <h1 className="relative text-2xl font-bold bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 bg-clip-text text-transparent">
+          <h1 className="relative text-2xl font-bold bg-linear-to-r from-teal-600 via-emerald-600 to-teal-700 bg-clip-text text-transparent">
             Confero
           </h1>
         </div>
 
-        {/* Navigation - Enhanced */}
         <nav
           className="flex-1 p-4 overflow-y-auto"
           style={{
@@ -119,7 +114,7 @@ export default function Sidebar() {
                     transition-all duration-200 group relative overflow-hidden
                     ${
                       active
-                        ? 'bg-gradient-to-r from-teal-50 to-emerald-50 text-teal-700 shadow-sm scale-[1.02]'
+                        ? 'bg-linear-to-r from-teal-50 to-emerald-50 text-teal-700 shadow-sm scale-[1.02]'
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:scale-[1.01]'
                     }
                   `}
@@ -128,12 +123,10 @@ export default function Sidebar() {
                     animationFillMode: 'backwards',
                   }}
                 >
-                  {/* Active indicator bar */}
                   {active && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-teal-500 to-emerald-600 rounded-r-full shadow-md" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-linear-to-b from-teal-500 to-emerald-600 rounded-r-full shadow-md" />
                   )}
 
-                  {/* Icon with enhanced animation */}
                   <div
                     className={`
                     relative flex items-center justify-center w-5 h-5
@@ -163,7 +156,6 @@ export default function Sidebar() {
                     {item.label}
                   </span>
 
-                  {/* Arrow indicator on hover */}
                   <ChevronRight
                     size={16}
                     className={`
@@ -176,14 +168,12 @@ export default function Sidebar() {
                     `}
                   />
 
-                  {/* Hover effect background */}
                   {!active && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-teal-50/50 to-emerald-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10 rounded-xl" />
+                    <div className="absolute inset-0 bg-linear-to-r from-teal-50/50 to-emerald-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10 rounded-xl" />
                   )}
 
-                  {/* Subtle shine effect on active */}
                   {active && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+                    <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
                   )}
                 </Link>
               );
@@ -191,14 +181,12 @@ export default function Sidebar() {
           </div>
         </nav>
 
-        {/* User Profile at Bottom - Enhanced */}
-        <div className="p-4 border-t border-gray-100 bg-gradient-to-b from-transparent to-gray-50/50">
+        <div className="p-4 border-t border-gray-100 bg-linear-to-b from-transparent to-gray-50/50">
           <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-white transition-all duration-200 cursor-pointer group shadow-sm hover:shadow-md border border-transparent hover:border-teal-100">
             <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 flex items-center justify-center text-white font-semibold shadow-md ring-2 ring-white group-hover:ring-teal-100 transition-all">
+              <div className="w-10 h-10 rounded-full bg-linear-to-br from-gray-700 via-gray-800 to-gray-900 flex items-center justify-center text-white font-semibold shadow-md ring-2 ring-white group-hover:ring-teal-100 transition-all">
                 N
               </div>
-              {/* Online status indicator */}
               <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white shadow-sm"></div>
             </div>
 
@@ -230,7 +218,6 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {/* Overlay for mobile - Enhanced */}
       {sidebarOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-30 transition-all duration-300"

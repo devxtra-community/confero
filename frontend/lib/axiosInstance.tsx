@@ -23,6 +23,8 @@ axiosInstance.interceptors.response.use(
 
     const status = error.response?.status;
     const url = originalRequest?.url || '';
+    console.log('STATUS:', status);
+    console.log('URL:', url);
 
     const isAuthEndpoint =
       url.includes('/auth/login') ||

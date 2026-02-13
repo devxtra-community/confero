@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { userBanRepository } from '../repositories/userBanRepository.js';
-import { redis } from '../config/redis.js';
 import { banService } from '../services/banService.js';
 import { reportService } from '../services/reportService.js';
 
@@ -32,6 +31,9 @@ export const banUser = async (req: Request, res: Response) => {
 export const getBannedUsers = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+
+  await userBanRepository.autoDeactivateExpired();
+
   const { data, total } = await userBanRepository.getActiveBans({
     page,
     limit,
@@ -48,10 +50,9 @@ export const getBannedUsers = async (req: Request, res: Response) => {
 
 export const unbanUser = async (req: Request, res: Response) => {
   const { userId } = req.body;
+  console.log(userId);
 
   await banService.unbanUser(userId);
-
-  await redis.srem('banned_users', userId);
 
   res.json({
     success: true,
