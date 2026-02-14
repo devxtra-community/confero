@@ -27,7 +27,6 @@ export const initSocket = (httpserver: ReturnType<typeof createServer>) => {
     }
 
     socket.join(userId);
-    console.log(userId);
     socketController(socket);
     callHandlers(socket, io);
     matchingHandlers(socket, io);

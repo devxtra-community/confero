@@ -360,7 +360,7 @@ export default function FindMatchPage() {
   "
                 >
                   <Image
-                    src={peerProfile?.image || '/auth/young.jpg'}
+                    src={ '/auth/young.jpg'}
                     fill
                     alt="Match"
                     className="object-cover"

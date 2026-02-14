@@ -7,4 +7,5 @@ export const env = {
   REDIS_URL: process.env.REDIS_URL!,
   LIVE_SERVICE: process.env.LIVE_SERVICE!,
   FRONTEND_URI: process.env.FRONTEND_URI!,
+  RABBITMQ_URL: process.env.RABBITMQ_URL!,
 };

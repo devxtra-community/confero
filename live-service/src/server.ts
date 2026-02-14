@@ -23,7 +23,7 @@
 import { createApp } from './app';
 import { env } from './config/env';
 import { logger } from './config/logger';
-import { connectRabbit } from './config/rabbitmq';
+import { closeConnection, connectRabbit } from './config/rabbitmq';
 
 const startServer = async () => {
   try {
@@ -39,5 +39,17 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+process.on('SIGINT', async () => {
+  logger.info('Shutting down gracefully...');
+  await closeConnection();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  logger.info('Shutting down gracefully...');
+  await closeConnection();
+  process.exit(0);
+});
 
 startServer();

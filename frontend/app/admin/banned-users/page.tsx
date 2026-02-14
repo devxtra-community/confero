@@ -52,12 +52,12 @@ export default function BannedUsersPage() {
     const formatDateTime = (date?: string | null) =>
       date
         ? new Date(date).toLocaleString(undefined, {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        })
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
         : 'Permanent';
 
     const fetchBannedUsers = async () => {
@@ -272,10 +272,11 @@ export default function BannedUsersPage() {
                     </td>
                     <td className="p-4 sm:p-6">
                       <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${user.active
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-green-100 text-green-700'
-                          }`}
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          user.active
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-green-100 text-green-700'
+                        }`}
                       >
                         {user.active ? 'Banned' : 'Unbanned'}
                       </span>
@@ -339,10 +340,11 @@ export default function BannedUsersPage() {
                   </p>
                 )}
                 <span
-                  className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${user.active
-                    ? 'bg-red-100 text-red-700'
-                    : 'bg-green-100 text-green-700'
-                    }`}
+                  className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                    user.active
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-green-100 text-green-700'
+                  }`}
                 >
                   {user.active ? 'Banned' : 'Unbanned'}
                 </span>
@@ -378,10 +380,11 @@ export default function BannedUsersPage() {
                         {user.fullName}
                       </h3>
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${user.active
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-green-100 text-green-700'
-                          }`}
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${
+                          user.active
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-green-100 text-green-700'
+                        }`}
                       >
                         {user.active ? 'Banned' : 'Unbanned'}
                       </span>
@@ -487,10 +490,11 @@ export default function BannedUsersPage() {
                 <button
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage === 1}
-                  className={`p-2 rounded-lg transition-all ${currentPage === 1
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                  className={`p-2 rounded-lg transition-all ${
+                    currentPage === 1
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
                 >
                   <ChevronLeft className="w-4 h-4" />
                   <ChevronLeft className="w-4 h-4 -ml-3" />
@@ -499,10 +503,11 @@ export default function BannedUsersPage() {
                 <button
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className={`p-2 rounded-lg transition-all ${currentPage === 1
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                  className={`p-2 rounded-lg transition-all ${
+                    currentPage === 1
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -512,10 +517,11 @@ export default function BannedUsersPage() {
                     <button
                       key={page}
                       onClick={() => setCurrentPage(page)}
-                      className={`w-9 h-9 rounded-lg font-medium text-sm transition-all ${currentPage === page
-                        ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
-                        : 'text-gray-600 hover:bg-gray-100'
-                        }`}
+                      className={`w-9 h-9 rounded-lg font-medium text-sm transition-all ${
+                        currentPage === page
+                          ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
                     >
                       {page}
                     </button>
@@ -526,10 +532,11 @@ export default function BannedUsersPage() {
                   {totalPages > 3 && (
                     <button
                       onClick={() => setCurrentPage(totalPages)}
-                      className={`w-9 h-9 rounded-lg font-medium text-sm transition-all ${currentPage === totalPages
-                        ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
-                        : 'text-gray-600 hover:bg-gray-100'
-                        }`}
+                      className={`w-9 h-9 rounded-lg font-medium text-sm transition-all ${
+                        currentPage === totalPages
+                          ? 'bg-linear-to-r from-blue-600 to-cyan-600 text-white shadow-md'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
                     >
                       {totalPages}
                     </button>
@@ -547,10 +554,11 @@ export default function BannedUsersPage() {
                     setCurrentPage(Math.min(totalPages, currentPage + 1))
                   }
                   disabled={currentPage === totalPages}
-                  className={`p-2 rounded-lg transition-all ${currentPage === totalPages
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                  className={`p-2 rounded-lg transition-all ${
+                    currentPage === totalPages
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -558,10 +566,11 @@ export default function BannedUsersPage() {
                 <button
                   onClick={() => setCurrentPage(totalPages)}
                   disabled={currentPage === totalPages}
-                  className={`p-2 rounded-lg transition-all ${currentPage === totalPages
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                  className={`p-2 rounded-lg transition-all ${
+                    currentPage === totalPages
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
                 >
                   <ChevronRight className="w-4 h-4" />
                   <ChevronRight className="w-4 h-4 -ml-3" />

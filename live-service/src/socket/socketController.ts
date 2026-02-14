@@ -6,6 +6,7 @@ import { registerCallHandlers } from './callHandlers';
 import { callService } from '../service/callService';
 import { logger } from '../config/logger';
 import { matchingRepository } from '../repository/matchRepository';
+import { publishEvent } from '../service/rabbitPublisher';
 
 export const callHandlers = (socket: Socket, io: Server) => {
   const userId = socket.data.user.userId;
@@ -17,12 +18,27 @@ export const callHandlers = (socket: Socket, io: Server) => {
   socket.on('disconnect', () => {
     for (const [callId, call] of callService.getAll()) {
       if (call.from === userId || call.to === userId) {
+        if (
+          call.state === 'ENDED' ||
+          call.state === 'FAILED' ||
+          call.state === 'TIMEOUT'
+        ) {
+          continue;
+        }
+
+        callService.update(callId, 'ENDED');
+
+        publishEvent('session.ended', {
+          sessionId: callId,
+          endedAt: new Date(),
+          reason: 'DISCONNECTED',
+        }).catch(console.error);
+
         io.to(call.from).to(call.to).emit(SOCKET_EVENTS.CALL_END, {
           callId,
           reason: 'DISCONNECTED',
         });
 
-        callService.update(callId, 'ENDED');
         callService.remove(callId);
       }
     }

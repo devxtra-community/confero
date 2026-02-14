@@ -1,6 +1,7 @@
 import { SOCKET_EVENTS } from './socketEvents';
 import { callService } from '../service/callService';
 import { Server, Socket } from 'socket.io';
+import { publishEvent } from '../service/rabbitPublisher';
 
 const CALL_TIMEOUT_MS = 20_000;
 
@@ -17,9 +18,17 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
 
     setTimeout(() => {
       const call = callService.get(callId);
+
       if (!call || call.state !== 'INITIATING') return;
 
       callService.update(callId, 'TIMEOUT');
+
+      publishEvent('session.ended', {
+        sessionId: callId,
+        endedAt: new Date(),
+        reason: 'TIMEOUT',
+      }).catch(console.error);
+
       io.to(call.from).to(call.to).emit(SOCKET_EVENTS.CALL_TIMEOUT, { callId });
 
       callService.remove(callId);
@@ -28,6 +37,7 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
 
   socket.on(SOCKET_EVENTS.CALL_ACCEPT, ({ callId }) => {
     const call = callService.get(callId);
+
     if (!call || call.state !== 'INITIATING') return;
 
     callService.update(callId, 'CONNECTING');
@@ -38,7 +48,6 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
     });
   });
 
-  // FIX: Include 'from' field so receiver knows who sent the offer
   socket.on(SOCKET_EVENTS.WEBRTC_OFFER, ({ callId, offer, to }) => {
     const call = callService.get(callId);
     if (!call) return;
@@ -46,15 +55,13 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
     const userId = socket.data.user.userId;
     if (userId !== call.from && userId !== call.to) return;
 
-    // FIXED: Added 'from: userId' so receiver knows who sent it
     io.to(to).emit(SOCKET_EVENTS.WEBRTC_OFFER, {
       callId,
       offer,
-      from: userId, // ← ADD THIS
+      from: userId,
     });
   });
 
-  // FIX: Include 'from' field so receiver knows who sent the answer
   socket.on(SOCKET_EVENTS.WEBRTC_ANSWER, ({ callId, answer, to }) => {
     const call = callService.get(callId);
     if (!call) return;
@@ -62,12 +69,22 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
     const userId = socket.data.user.userId;
     if (userId !== call.from && userId !== call.to) return;
 
-    // FIXED: Added 'from: userId' so receiver knows who sent it
     io.to(to).emit(SOCKET_EVENTS.WEBRTC_ANSWER, {
       callId,
       answer,
-      from: userId, // ← ADD THIS
+      from: userId,
     });
+
+    if (call.state !== 'CONNECTING') return;
+
+    callService.update(callId, 'CONNECTED');
+
+    publishEvent('session.started', {
+      sessionId: callId,
+      userA: call.from,
+      userB: call.to,
+      startedAt: new Date(),
+    }).catch(console.error);
   });
 
   socket.on(SOCKET_EVENTS.WEBRTC_ICE, ({ callId, candidate, to }) => {
@@ -77,7 +94,6 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
     const userId = socket.data.user.userId;
     if (userId !== call.from && userId !== call.to) return;
 
-    // ICE candidate forwarding is fine as-is
     io.to(to).emit(SOCKET_EVENTS.WEBRTC_ICE, { callId, candidate });
   });
 
@@ -86,6 +102,12 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
     if (!call) return;
 
     callService.update(callId, 'FAILED');
+
+    publishEvent('session.ended', {
+      sessionId: callId,
+      endedAt: new Date(),
+      reason: 'ICE_FAILED',
+    }).catch(console.error);
 
     io.to(call.from)
       .to(call.to)
