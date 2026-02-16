@@ -7,5 +7,6 @@ adminRouter.post('/ban', adminProxy);
 adminRouter.patch('/unban', adminProxy);
 adminRouter.get('/reported-users', adminProxy);
 adminRouter.get('/banned-users', adminProxy);
+adminRouter.get('/sessions', adminProxy);
 
 export default adminRouter;

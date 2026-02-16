@@ -20,12 +20,14 @@ const sessionSchema = new Schema<ISession>(
 
     userA: {
       type: String,
+      ref: 'User',
       required: true,
       index: true,
     },
 
     userB: {
       type: String,
+      ref: 'User',
       required: true,
       index: true,
     },

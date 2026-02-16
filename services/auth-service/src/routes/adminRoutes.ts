@@ -7,6 +7,7 @@ import {
   banUser,
   getBannedUsers,
   getReportedUsers,
+  getSessionHistory,
   unbanUser,
 } from '../controllers/adminController.js';
 
@@ -44,5 +45,6 @@ router.get(
   requireAdminRole,
   getBannedUsers
 );
+router.get('/sessions', verifyAccessToken, requireAdminRole, getSessionHistory);
 
 export default router;

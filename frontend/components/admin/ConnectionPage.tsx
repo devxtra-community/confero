@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Search,
   Clock,
@@ -12,6 +12,7 @@ import {
   Video as VideoIcon,
   X,
 } from 'lucide-react';
+import { axiosInstance } from '@/lib/axiosInstance';
 
 interface CallRecord {
   id: string;
@@ -21,50 +22,25 @@ interface CallRecord {
   status: 'Completed' | 'Canceled';
 }
 
+interface SessionResponse {
+  sessionId: string;
+  userA: {
+    fullName: string;
+  };
+  userB: {
+    fullName: string;
+  };
+  startedAt: string;
+  endedAt?: string;
+}
+
+
 export default function ConnectionPageContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [callRecords, setCallRecords] = useState<CallRecord[]>([]);
 
-  // Sample call records data
-  const callRecords: CallRecord[] = [
-    {
-      id: '1',
-      caller: 'Yash Ghori',
-      receiver: 'Rahul K P',
-      duration: '00:09:03',
-      status: 'Completed',
-    },
-    {
-      id: '2',
-      caller: 'Nandhu Tipu',
-      receiver: 'Niranjan K M',
-      duration: '00:00:20',
-      status: 'Canceled',
-    },
-    {
-      id: '3',
-      caller: 'Y Abhijith',
-      receiver: 'Suran P K',
-      duration: '00:08:10',
-      status: 'Completed',
-    },
-    {
-      id: '4',
-      caller: 'Rajiv Mehta',
-      receiver: 'Ravini K',
-      duration: '00:00:04',
-      status: 'Canceled',
-    },
-    {
-      id: '5',
-      caller: 'Sournabhika',
-      receiver: 'Lakshmi Praveen',
-      duration: '00:16:39',
-      status: 'Completed',
-    },
-  ];
 
-  // Connection avatars
   const connectedUsers = [
     { id: 1, name: 'User 1', color: 'from-orange-400 to-pink-400' },
     { id: 2, name: 'User 2', color: 'from-yellow-400 to-orange-400' },
@@ -81,6 +57,46 @@ export default function ConnectionPageContent() {
       record.receiver.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const formatDuration = (start: string, end: string) => {
+    const diff = new Date(end).getTime() - new Date(start).getTime();
+
+    const seconds = Math.floor(diff / 1000);
+
+    const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
+    const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+    const s = String(seconds % 60).padStart(2, '0');
+
+    return `${h}:${m}:${s}`;
+  };
+
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        const res = await axiosInstance.get('/admin/sessions');
+
+        const formatted = res.data.data.map((session: SessionResponse) => {
+          const duration = session.endedAt
+            ? formatDuration(session.startedAt, session.endedAt)
+            : '00:00:00';
+
+          return {
+            id: session.sessionId,
+            caller: session.userA.fullName,
+            receiver: session.userB.fullName,
+            duration,
+            status: session.endedAt ? 'Completed' : 'Canceled',
+          };
+        });
+
+        setCallRecords(formatted);
+      } catch (err: unknown) {
+        console.error(err);
+      }
+    };
+
+    fetchSessions();
+  }, []);
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -90,8 +106,10 @@ export default function ConnectionPageContent() {
       .slice(0, 2);
   };
 
+
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-gray-50">
       <div className="p-4 sm:p-6 lg:p-8">
         {/* Header Section - Enhanced */}
         <div className="mb-6 sm:mb-8">
@@ -107,7 +125,7 @@ export default function ConnectionPageContent() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
             {/* Left side - Title and avatars */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-teal-800 to-emerald-800 bg-clip-text text-transparent">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-linear-to-r from-gray-900 via-teal-800 to-emerald-800 bg-clip-text text-transparent">
                 Name
               </h1>
 
@@ -119,7 +137,7 @@ export default function ConnectionPageContent() {
                       key={user.id}
                       className={`
                         w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-white 
-                        bg-gradient-to-br ${user.color} 
+                        bg-linear-to-br ${user.color} 
                         flex items-center justify-center text-white text-xs font-semibold 
                         shadow-lg hover:scale-110 hover:z-20 transition-all duration-200 
                         cursor-pointer ring-1 ring-gray-100
@@ -131,13 +149,13 @@ export default function ConnectionPageContent() {
                     </div>
                   ))}
                   {connectedUsers.length > 4 && (
-                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-white bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center text-xs font-semibold text-pink-600 shadow-lg hover:scale-110 transition-all duration-200 cursor-pointer">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-white bg-linear-to-br from-pink-100 to-purple-100 flex items-center justify-center text-xs font-semibold text-pink-600 shadow-lg hover:scale-110 transition-all duration-200 cursor-pointer">
                       +2
                     </div>
                   )}
                 </div>
 
-                <button className="px-3 sm:px-4 py-2 bg-gradient-to-r from-emerald-50 to-teal-50 text-teal-600 rounded-xl text-xs sm:text-sm font-medium hover:from-emerald-100 hover:to-teal-100 transition-all duration-200 border border-teal-100 shadow-sm hover:shadow-md flex items-center gap-2">
+                <button className="px-3 sm:px-4 py-2 bg-linear-to-r from-emerald-50 to-teal-50 text-teal-600 rounded-xl text-xs sm:text-sm font-medium hover:from-emerald-100 hover:to-teal-100 transition-all duration-200 border border-teal-100 shadow-sm hover:shadow-md flex items-center gap-2">
                   <Phone size={14} />
                   <span>Connection</span>
                 </button>
@@ -147,7 +165,7 @@ export default function ConnectionPageContent() {
             {/* Right side - Search and filters */}
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               {/* Search Bar - Enhanced */}
-              <div className="relative flex-1 sm:min-w-[280px] lg:min-w-[320px]">
+              <div className="relative flex-1 sm:min-w-70 lg:min-w-[320px]">
                 <Search
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
                   size={18}
@@ -175,7 +193,7 @@ export default function ConnectionPageContent() {
                   <span className="hidden sm:inline">Filter</span>
                 </button>
 
-                <button className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-gradient-to-r from-teal-500 to-emerald-600 text-white rounded-xl text-xs sm:text-sm font-medium hover:from-teal-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg">
+                <button className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-linear-to-r from-teal-500 to-emerald-600 text-white rounded-xl text-xs sm:text-sm font-medium hover:from-teal-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg">
                   <Download size={16} />
                   <span className="hidden sm:inline">Export</span>
                 </button>
@@ -196,14 +214,14 @@ export default function ConnectionPageContent() {
                   animationFillMode: 'backwards',
                 }}
               >
-                {/* Decorative background gradient on hover */}
-                <div className="absolute inset-0 bg-gradient-to-br from-teal-50/50 via-transparent to-emerald-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                {/* Decorative background linear on hover */}
+                <div className="absolute inset-0 bg-linear-to-br from-teal-50/50 via-transparent to-emerald-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
                 <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   {/* Left side - Call info */}
                   <div className="flex-1 space-y-2 sm:space-y-3">
                     <div className="flex items-start gap-3">
-                      <div className="p-2 bg-gradient-to-br from-teal-100 to-emerald-100 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                      <div className="p-2 bg-linear-to-br from-teal-100 to-emerald-100 rounded-xl group-hover:scale-110 transition-transform duration-300">
                         <VideoIcon
                           size={18}
                           className="text-teal-600"
@@ -228,19 +246,17 @@ export default function ConnectionPageContent() {
                             className={`
                               px-2.5 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold
                               inline-flex items-center gap-1.5 shadow-sm
-                              ${
-                                record.status === 'Completed'
-                                  ? 'bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700 ring-1 ring-emerald-200'
-                                  : 'bg-gradient-to-r from-red-50 to-pink-50 text-red-700 ring-1 ring-red-200'
+                              ${record.status === 'Completed'
+                                ? 'bg-linear-to-r from-emerald-50 to-green-50 text-emerald-700 ring-1 ring-emerald-200'
+                                : 'bg-linear-to-r from-red-50 to-pink-50 text-red-700 ring-1 ring-red-200'
                               }
                             `}
                           >
                             <div
-                              className={`w-1.5 h-1.5 rounded-full ${
-                                record.status === 'Completed'
-                                  ? 'bg-emerald-500'
-                                  : 'bg-red-500'
-                              }`}
+                              className={`w-1.5 h-1.5 rounded-full ${record.status === 'Completed'
+                                ? 'bg-emerald-500'
+                                : 'bg-red-500'
+                                }`}
                             ></div>
                             {record.status === 'Completed'
                               ? 'Completed'
@@ -254,7 +270,7 @@ export default function ConnectionPageContent() {
                   {/* Right side - Duration and avatar */}
                   <div className="flex items-center gap-3 sm:gap-4 justify-end md:justify-start">
                     {/* Duration badge - Enhanced */}
-                    <div className="flex items-center gap-2 text-gray-700 bg-gradient-to-br from-gray-50 to-gray-100 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-gray-200 shadow-sm group-hover:shadow-md transition-all duration-200">
+                    <div className="flex items-center gap-2 text-gray-700 bg-linear-to-br from-gray-50 to-gray-100 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-gray-200 shadow-sm group-hover:shadow-md transition-all duration-200">
                       <Clock
                         size={18}
                         className="text-teal-500"
@@ -267,7 +283,7 @@ export default function ConnectionPageContent() {
 
                     {/* Avatar - Enhanced */}
                     <div className="relative">
-                      <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-orange-400 via-pink-400 to-pink-500 flex items-center justify-center text-white font-bold shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 ring-2 ring-white">
+                      <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-linear-to-br from-orange-400 via-pink-400 to-pink-500 flex items-center justify-center text-white font-bold shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 ring-2 ring-white">
                         {getInitials(record.receiver)}
                       </div>
                       {/* Online indicator for completed calls */}
@@ -279,13 +295,13 @@ export default function ConnectionPageContent() {
                 </div>
 
                 {/* Hover indicator line */}
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 to-emerald-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left rounded-b-2xl"></div>
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-linear-to-r from-teal-500 to-emerald-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left rounded-b-2xl"></div>
               </div>
             ))
           ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 sm:p-12 text-center">
               <div className="max-w-md mx-auto space-y-4">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto bg-linear-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
                   <Search className="text-gray-400" size={32} />
                 </div>
                 <div>
@@ -299,7 +315,7 @@ export default function ConnectionPageContent() {
                 </div>
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-600 text-white rounded-xl text-sm font-medium hover:from-teal-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                  className="px-4 py-2 bg-linear-to-r from-teal-500 to-emerald-600 text-white rounded-xl text-sm font-medium hover:from-teal-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg"
                 >
                   Clear search
                 </button>
@@ -331,10 +347,9 @@ export default function ConnectionPageContent() {
                 disabled={currentPage === 1}
                 className={`
                   p-2 rounded-lg transition-all duration-200
-                  ${
-                    currentPage === 1
-                      ? 'text-gray-300 cursor-not-allowed'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  ${currentPage === 1
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   }
                 `}
               >
@@ -346,10 +361,9 @@ export default function ConnectionPageContent() {
                 disabled={currentPage === 1}
                 className={`
                   hidden sm:flex px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200
-                  ${
-                    currentPage === 1
-                      ? 'text-gray-300 cursor-not-allowed'
-                      : 'text-gray-600 hover:bg-gray-100'
+                  ${currentPage === 1
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-600 hover:bg-gray-100'
                   }
                 `}
               >
@@ -363,10 +377,9 @@ export default function ConnectionPageContent() {
                     onClick={() => setCurrentPage(page)}
                     className={`
                       w-9 h-9 sm:w-10 sm:h-10 rounded-lg font-medium text-sm transition-all duration-200
-                      ${
-                        currentPage === page
-                          ? 'bg-gradient-to-r from-teal-500 to-emerald-600 text-white shadow-md scale-110'
-                          : 'text-gray-600 hover:bg-gray-100'
+                      ${currentPage === page
+                        ? 'bg-linear-to-r from-teal-500 to-emerald-600 text-white shadow-md scale-110'
+                        : 'text-gray-600 hover:bg-gray-100'
                       }
                     `}
                   >
@@ -382,10 +395,9 @@ export default function ConnectionPageContent() {
                 disabled={currentPage === totalPages}
                 className={`
                   hidden sm:flex px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200
-                  ${
-                    currentPage === totalPages
-                      ? 'text-gray-300 cursor-not-allowed'
-                      : 'text-gray-600 hover:bg-gray-100'
+                  ${currentPage === totalPages
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-600 hover:bg-gray-100'
                   }
                 `}
               >
@@ -399,10 +411,9 @@ export default function ConnectionPageContent() {
                 disabled={currentPage === totalPages}
                 className={`
                   p-2 rounded-lg transition-all duration-200
-                  ${
-                    currentPage === totalPages
-                      ? 'text-gray-300 cursor-not-allowed'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  ${currentPage === totalPages
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   }
                 `}
               >

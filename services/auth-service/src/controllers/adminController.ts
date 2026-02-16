@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { userBanRepository } from '../repositories/userBanRepository.js';
 import { banService } from '../services/banService.js';
 import { reportService } from '../services/reportService.js';
+import { sessionService } from '../services/sessionService.js';
 
 export const adminDashboard = async (_req: Request, res: Response) => {
   res.status(200).json({
@@ -50,7 +51,6 @@ export const getBannedUsers = async (req: Request, res: Response) => {
 
 export const unbanUser = async (req: Request, res: Response) => {
   const { userId } = req.body;
-  console.log(userId);
 
   await banService.unbanUser(userId);
 
@@ -70,5 +70,20 @@ export const getReportedUsers = async (req: Request, res: Response) => {
     success: true,
     data: result.reports,
     pagination: result.pagination,
+  });
+};
+
+export const getSessionHistory = async (req: Request, res: Response) => {
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 6;
+
+  const { data, total } = await sessionService.getSessions(page, limit);
+
+  res.json({
+    success: true,
+    data,
+    total,
+    page,
+    limit,
   });
 };

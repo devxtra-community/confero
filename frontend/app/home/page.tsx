@@ -360,7 +360,7 @@ export default function FindMatchPage() {
   "
                 >
                   <Image
-                    src={ '/auth/young.jpg'}
+                    src={'/auth/young.jpg'}
                     fill
                     alt="Match"
                     className="object-cover"
