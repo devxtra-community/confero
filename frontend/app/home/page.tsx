@@ -332,110 +332,138 @@ export default function FindMatchPage() {
         </div>
       )}
 
-      {matchFound && (
-        <div className="relative flex items-center justify-center px-4 py-12 md:py-20">
-          <div className="w-full max-w-6xl mx-auto">
-            <div className="text-center mb-10 md:mb-16 space-y-4 md:space-y-6">
-              <div className="inline-flex items-center gap-3 px-5 py-2 bg-linear-to-r from-primary to-favor text-white rounded-full">
-                <Zap className="w-5 h-5" />
-                <span className="font-semibold text-sm md:text-lg">
-                  Match Found
-                </span>
-              </div>
+ {matchFound && (
+  <div className="relative min-h-screen flex items-center justify-center px-4 py-14 sm:py-16 md:py-12">
+    <div className="w-full max-w-4xl mx-auto text-center space-y-8 sm:space-y-10">
 
-              <h2 className="font-sans text-3xl md:text-5xl font-bold text-foreground">
-                Meet Your New Connection
-              </h2>
-
-              <p className="text-base md:text-xl text-primary italic">
-                {'Every conversation is a new opportunity'}
-              </p>
-            </div>
-
-            <div className="grid gap-10 md:gap-12 lg:grid-cols-2 items-center">
-              <div className="relative flex justify-center">
-                <div
-                  className="
-    relative w-full max-w-sm md:max-w-md lg:max-w-lg
-    aspect-3/2
-    rounded-3xl overflow-hidden
-  "
-                >
-                  <Image
-                    src={peerProfile?.image || '/auth/young.jpg'}
-                    fill
-                    alt="Match"
-                    className="object-cover"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-6 md:space-y-8 text-center lg:text-left">
-                <div>
-                  {peerProfile ? (
-                    <>
-                      <h3 className="font-sans text-2xl md:text-4xl font-bold text-foreground">
-                        {peerProfile.name}
-                      </h3>
-                      <p className="text-base md:text-xl text-primary">
-                        {peerProfile.jobTitle}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-muted-foreground">Loading profile...</p>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap justify-center lg:justify-start gap-3">
-                  {peerProfile?.skills?.map(skill => (
-                    <span
-                      key={skill._id}
-                      className="px-4 py-1.5 bg-teal-200 text-primary rounded-full text-sm font-medium"
-                    >
-                      {skill.label}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="space-y-4 flex flex-col items-center lg:items-start">
-                  <button
-                    onClick={handleStartCall}
-                    className="
-    flex items-center justify-center gap-3
-    px-6 py-4
-    bg-linear-to-r from-primary to-favor
-    text-white rounded-2xl
-    font-semibold text-base md:text-lg
-    transition-transform hover:scale-105
-    cursor-pointer
-  "
-                  >
-                    <Video className="w-8 h-5" />
-                    Start Video Call
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    onClick={handleStartSearch}
-                    className="
-      px-10 py-4
-      bg-glass hover:bg-glassHover
-      border
-      text-foreground
-      rounded-2xl
-      font-semibold text-base md:text-lg
-      transition-transform hover:scale-105
-      cursor-pointer
-    "
-                  >
-                    Find Another Match
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Header */}
+      <div className="space-y-3 sm:space-y-3">
+        <div className="inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-6  py-1.5 sm:py-2 bg-linear-to-r from-primary to-favor text-white rounded-full shadow-md sm:shadow-lg">
+          <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
+          <span className="font-semibold text-sm sm:text-base md:text-lg">
+            Match Found
+          </span>
         </div>
-      )}
+
+        <h2 className="font-sans text-2xl sm:text-4xl md:text-6xl font-bold text-foreground leading-tight">
+          Meet Your New Connection
+        </h2>
+
+        <p className="text-sm sm:text-lg md:text-xl text-primary italic">
+          Every conversation is a new opportunity
+        </p>
+      </div>
+
+      {/* Avatar Section */}
+      <div className="relative flex justify-center pt-4 sm:pt-3">
+
+        {/* Glow Background */}
+        <div className="absolute w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 bg-linear-to-br from-primary/20 to-favor/20 rounded-full blur-2xl sm:blur-3xl" />
+
+        {/* Circle Avatar */}
+        <div
+          className="
+            relative 
+            w-40 h-40 
+            sm:w-56 sm:h-56 
+            md:w-72 md:h-72
+            rounded-full 
+            overflow-hidden
+            ring-2 sm:ring-4 ring-white/40
+            shadow-xl sm:shadow-2xl
+            transition-transform duration-500
+            hover:scale-105
+          "
+        >
+          <Image
+            src={peerProfile?.image || '/auth/young.jpg'}
+            fill
+            alt="Match"
+            className="object-cover object-center"
+          />
+        </div>
+      </div>
+
+      {/* Name & Role */}
+      <div className="space-y-1 sm:space-y-2">
+        {peerProfile ? (
+          <>
+            <h3 className="font-sans text-xl sm:text-2xl md:text-4xl font-bold text-foreground">
+              {peerProfile.name}
+            </h3>
+            <p className="text-sm sm:text-lg md:text-xl text-primary font-medium">
+              {peerProfile.jobTitle}
+            </p>
+          </>
+        ) : (
+          <p className="text-muted-foreground text-sm">Loading profile...</p>
+        )}
+      </div>
+
+      {/* Skills */}
+      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 max-w-xl mx-auto">
+        {peerProfile?.skills?.map(skill => (
+          <span
+            key={skill._id}
+            className="
+              px-3 sm:px-4 py-1
+              bg-white/60 
+              backdrop-blur-md
+              border border-white/40
+              text-primary 
+              rounded-full 
+              text-xs sm:text-sm
+              font-medium
+              shadow-sm
+            "
+          >
+            {skill.label}
+          </span>
+        ))}
+      </div>
+
+      {/* Buttons */}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5 pt-2 sm:pt-4">
+        <button
+          onClick={handleStartCall}
+          className="
+            flex items-center gap-2 sm:gap-3
+            px-6 sm:px-8 py-3 sm:py-4
+            bg-linear-to-r from-primary to-favor
+            text-white rounded-full
+            font-semibold text-sm sm:text-lg
+            shadow-md sm:shadow-lg
+            transition-all hover:scale-105
+            cursor-pointer
+          "
+        >
+          <Video className="w-4 h-4 sm:w-5 sm:h-5" />
+          Start Video Call
+          <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
+        </button>
+
+        <button
+          onClick={handleStartSearch}
+          className="
+            px-6 sm:px-8 py-3 sm:py-4
+            bg-white/60
+            backdrop-blur-md
+            border border-white/40
+            text-foreground
+            rounded-full
+            font-semibold text-sm sm:text-lg
+            shadow-sm
+            transition-all hover:scale-105
+            cursor-pointer
+          "
+        >
+          Find Another Match
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }
