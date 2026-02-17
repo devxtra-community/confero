@@ -148,39 +148,34 @@ export default function FindMatchPage() {
     };
   }, [isSearching]);
 
-  useEffect(() => {
-    const onIncomingCall = ({ callId }: { callId: string }) => {
-      socket.emit('call:accept', { callId });
-    };
+  // useEffect(() => {
+  //   const onIncomingCall = ({ callId }: { callId: string }) => {
+  //     socket.emit('call:accept', { callId });
+  //   };
 
-    socket.on('call:incoming', onIncomingCall);
+  //   socket.on('call:incoming', onIncomingCall);
 
-    return () => {
-      socket.off('call:incoming', onIncomingCall);
-    };
-  }, [router]);
+  //   return () => {
+  //     socket.off('call:incoming', onIncomingCall);
+  //   };
+  // }, [router]);
 
-  useEffect(() => {
-    const onCallAccepted = ({ callId }: CallAcceptedPayload) => {
-      router.push(`/session?callId=${callId}&peerId=${peerId}`);
-    };
-    socket.on('call:accepted', onCallAccepted);
+  // useEffect(() => {
+  //   const onCallAccepted = ({ callId }: CallAcceptedPayload) => {
+  //     router.push(`/session?callId=${callId}&peerId=${peerId}`);
+  //   };
+  //   socket.on('call:accepted', onCallAccepted);
 
-    return () => {
-      socket.off('call:accepted', onCallAccepted);
-    };
-  }, [peerId, router]);
+  //   return () => {
+  //     socket.off('call:accepted', onCallAccepted);
+  //   };
+  // }, [peerId, router]);
 
   const handleStartCall = () => {
-    if (!sessionId || !peerId) return;
-
-    socket.emit('call:initiate', {
-      callId: sessionId,
-      toUserId: peerId,
-    });
-
-    router.push(`/session?callId=${sessionId}&peerId=${peerId}&role=caller`);
-  };
+  if (!sessionId || !peerId) return;
+  // No socket emit needed — matchingHandler already created the call record
+  router.push(`/session?callId=${sessionId}&peerId=${peerId}`);
+};
 
   useEffect(() => {
     const init = async () => {
