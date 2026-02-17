@@ -25,5 +25,4 @@ app.use('/admin', adminRoutes);
 
 app.use(errorHandler);
 
-
 export default app;

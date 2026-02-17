@@ -6,8 +6,7 @@ export const loadBansIntoRedis = async () => {
   const bans = await userBanRepository.getActiveBans();
 
   for (const ban of bans) {
-    if(ban.userId)
-    await redis.sadd('banned_users', ban.userId.toString());
+    if (ban.userId) await redis.sadd('banned_users', ban.userId.toString());
   }
 
   logger.info('All banned users added into redis...');

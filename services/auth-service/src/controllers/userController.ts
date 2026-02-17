@@ -205,7 +205,6 @@ export const completeAvatarUpload = async (req: Request, res: Response) => {
   }
 };
 
-
 export const getBannerUploadUrl = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
