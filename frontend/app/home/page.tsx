@@ -45,7 +45,6 @@ export default function FindMatchPage() {
     key: string;
   }
 
-
   const quotes = [
     'Connecting minds, one conversation at a time...',
     'Every conversation is a new opportunity...',
