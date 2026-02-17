@@ -5,8 +5,8 @@ type CallData = {
   from: string;
   to: string;
   state: CallState;
-  fromReady: boolean;  // ← NEW
-  toReady: boolean;    // ← NEW
+  fromReady: boolean; // ← NEW
+  toReady: boolean; // ← NEW
 };
 
 const TERMINAL_STATES: CallState[] = ['FAILED', 'TIMEOUT', 'ENDED'];
@@ -19,8 +19,8 @@ export const callService = {
       from,
       to,
       state: 'INITIATING',
-      fromReady: false,  // ← NEW
-      toReady: false,    // ← NEW
+      fromReady: false, // ← NEW
+      toReady: false, // ← NEW
     });
   },
 

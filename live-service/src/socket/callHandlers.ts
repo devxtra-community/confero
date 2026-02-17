@@ -3,7 +3,6 @@ import { callService } from '../service/callService';
 import { Server, Socket } from 'socket.io';
 
 export const registerCallHandlers = (socket: Socket, io: Server) => {
-
   // ── peer:ready: fired by both users once their camera is on ──────────────
   // Call record already exists (created in matchingHandlers when match was found)
   // When BOTH users are ready → fire call:start to both → WebRTC begins
@@ -53,7 +52,11 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
     if (!call) return;
     const userId = socket.data.user.userId;
     if (userId !== call.from && userId !== call.to) return;
-    io.to(to).emit(SOCKET_EVENTS.WEBRTC_ANSWER, { callId, answer, from: userId });
+    io.to(to).emit(SOCKET_EVENTS.WEBRTC_ANSWER, {
+      callId,
+      answer,
+      from: userId,
+    });
   });
 
   socket.on(SOCKET_EVENTS.WEBRTC_ICE, ({ callId, candidate, to }) => {

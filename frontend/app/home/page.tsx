@@ -45,9 +45,6 @@ export default function FindMatchPage() {
     key: string;
   }
 
-  interface CallAcceptedPayload {
-    callId: string;
-  }
 
   const quotes = [
     'Connecting minds, one conversation at a time...',
@@ -172,10 +169,10 @@ export default function FindMatchPage() {
   // }, [peerId, router]);
 
   const handleStartCall = () => {
-  if (!sessionId || !peerId) return;
-  // No socket emit needed — matchingHandler already created the call record
-  router.push(`/session?callId=${sessionId}&peerId=${peerId}`);
-};
+    if (!sessionId || !peerId) return;
+    // No socket emit needed — matchingHandler already created the call record
+    router.push(`/session?callId=${sessionId}&peerId=${peerId}`);
+  };
 
   useEffect(() => {
     const init = async () => {
