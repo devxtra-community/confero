@@ -3,6 +3,7 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import { AppError } from './errorHandller.js';
 import { env } from '../config/env.js';
 import { Request } from 'express';
+import { redis } from '../config/redis.js';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -32,8 +33,14 @@ export const verifyAccessToken = async (
 
   try {
     const payload = jwt.verify(token, env.JWT_SECRET) as TokenPayload;
+    const userId = payload.sub as string;
+    // check if expired
+    const isBanned = (await redis.sismember('banned_users', userId)) === 1;
 
-    // Extract user data directly from JWT claims - no DB lookup
+    if (isBanned) {
+      throw new AppError('Account banned', 403);
+    }
+
     req.user = {
       id: payload.sub,
       email: payload.email,
@@ -43,6 +50,6 @@ export const verifyAccessToken = async (
 
     next();
   } catch {
-    throw new AppError('Invalid or expired token', 401);
+    throw new AppError(' or expired token', 401);
   }
 };

@@ -21,8 +21,9 @@ app.get('/debug-cookies', (req, res) => {
 
 app.use('/auth', authRouter);
 app.use('/users', userRouter);
-
 app.use('/admin', adminRoutes);
 
 app.use(errorHandler);
+
+
 export default app;

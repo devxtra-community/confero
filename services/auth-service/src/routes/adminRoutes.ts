@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import { verifyAccessToken } from '../middlewares/verifyToken.js';
-import { requireRole } from '../middlewares/requireRole.js';
+import { requireAdminRole, requireRole } from '../middlewares/requireRole.js';
 import {
   adminDashboard,
   adminProfile,
+  banUser,
+  getReportedUsers,
+  unbanUser,
 } from '../controllers/adminController.js';
 
 const router = Router();
@@ -22,4 +25,16 @@ router.get('/verify-session', verifyAccessToken, (req: any, res) => {
     },
   });
 });
+
+router.post('/ban', verifyAccessToken, requireAdminRole, banUser);
+
+router.patch('/unban', verifyAccessToken, requireAdminRole, unbanUser);
+
+router.get(
+  '/reported-users',
+  verifyAccessToken,
+  requireAdminRole,
+  getReportedUsers
+);
+
 export default router;

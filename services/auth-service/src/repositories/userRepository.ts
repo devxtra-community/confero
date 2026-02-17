@@ -110,4 +110,32 @@ export const userRepository = {
       { new: true }
     ).exec();
   },
+
+  saveResetToken(userId: string, token: string, expires: Date) {
+    return UserModel.updateOne(
+      { _id: userId },
+      {
+        resetPasswordToken: token,
+        resetPasswordExpires: expires,
+      }
+    );
+  },
+
+  findByResetToken(token: string) {
+    return UserModel.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+  },
+
+  updatePassword(userId: string, password: string) {
+    return UserModel.updateOne(
+      { _id: userId },
+      {
+        password,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+      }
+    );
+  },
 };

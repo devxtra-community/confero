@@ -4,7 +4,7 @@ export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const accessToken = req.cookies.get('accessToken');
 
-  const protectedRoutes = ['/profile', '/home'];
+  const protectedRoutes = ['/profile', '/home', '/session'];
   if (
     protectedRoutes.some(route => pathname.startsWith(route)) &&
     !accessToken
@@ -24,5 +24,10 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/profile/:path*', '/home/:path*', '/admin/:path*'],
+  matcher: [
+    '/profile/:path*',
+    '/home/:path*',
+    '/admin/:path*',
+    '/session/:path*',
+  ],
 };

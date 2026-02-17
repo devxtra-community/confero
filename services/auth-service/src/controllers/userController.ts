@@ -2,8 +2,7 @@ import { Request, Response } from 'express';
 import { userRepository } from '../repositories/userRepository.js';
 import { userService } from '../services/userService.js';
 import { getPublicUrlForKey } from '../utils/r2Upload.js';
-
-/* ---------------- common ---------------- */
+import { reportService } from '../services/reportService.js';
 
 export const currentUser = async (req: Request, res: Response) => {
   try {
@@ -115,10 +114,6 @@ export const getPublicProfile = async (req: Request, res: Response) => {
   }
 };
 
-/* ------------------------------------------------------------------ */
-/* ------------------ signed upload helpers -------------------------- */
-/* ------------------------------------------------------------------ */
-
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 function getExtensionFromMime(mime: string) {
@@ -133,10 +128,6 @@ function ensureUserOwnsKey(userId: string, key: string) {
     throw new Error('Invalid object key');
   }
 }
-
-/* ------------------------------------------------------------------ */
-/* ------------------------ AVATAR ---------------------------------- */
-/* ------------------------------------------------------------------ */
 
 export const getAvatarUploadUrl = async (req: Request, res: Response) => {
   try {
@@ -214,9 +205,6 @@ export const completeAvatarUpload = async (req: Request, res: Response) => {
   }
 };
 
-/* ------------------------------------------------------------------ */
-/* ------------------------ BANNER ---------------------------------- */
-/* ------------------------------------------------------------------ */
 
 export const getBannerUploadUrl = async (req: Request, res: Response) => {
   try {
@@ -294,10 +282,6 @@ export const completeBannerUpload = async (req: Request, res: Response) => {
   }
 };
 
-/* ------------------------------------------------------------------ */
-/* ------------------------ DELETE AVATAR ---------------------------- */
-/* ------------------------------------------------------------------ */
-
 export const deleteAvatar = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
@@ -324,4 +308,13 @@ export const deleteAvatar = async (req: Request, res: Response) => {
     console.error(err);
     return res.status(500).json({ message: 'Delete failed' });
   }
+};
+
+export const reportUser = async (req: Request, res: Response) => {
+  const { reportedUserId, reason } = req.body;
+  const userId = req.user?.id;
+
+  await reportService.reportUser(reportedUserId, userId, reason);
+
+  res.json({ success: true });
 };

@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
-import { AuthRequest } from './verifyToken.js';
 import { AppError } from './errorHandller.js';
 import { userRepository } from '../repositories/userRepository.js';
+import { AuthRequest } from './verifyToken.js';
 
 export const requireRole = (role: 'admin') => {
   return async (req: AuthRequest, _res: Response, next: NextFunction) => {
@@ -21,4 +21,20 @@ export const requireRole = (role: 'admin') => {
 
     next();
   };
+};
+
+export const requireAdminRole = (
+  req: AuthRequest,
+  _res: Response,
+  next: NextFunction
+) => {
+  if (!req.user) {
+    throw new AppError('Unauthorized', 401);
+  }
+
+  if (req.user.role !== 'admin') {
+    throw new AppError('Forbidden', 403);
+  }
+
+  next();
 };

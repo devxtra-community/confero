@@ -24,9 +24,11 @@ import {
   Star,
   Plus,
   X,
+  ChevronLeft,
 } from 'lucide-react';
 import BannerCropModal from '@/components/BannerCropModal';
 import AvatarEditModal from '@/components/AvatarEditModal';
+import Link from 'next/link';
 
 export interface Skill {
   key: string;
@@ -245,6 +247,14 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   );
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-emerald-50/20 to-slate-50 px-4 py-6 md:px-6 md:py-8 lg:px-8 lg:py-12">
+      <Link
+        href="/home"
+        className="absolute top-7 left-10 flex  font-semibold text-primary"
+      >
+        {' '}
+        <ChevronLeft size={23} className="mt-0.5" />
+        Go Back
+      </Link>
       <div className="max-w-6xl mx-auto">
         <motion.div
           variants={fadeUp}
@@ -358,7 +368,9 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600">
                     <div className="flex items-center gap-1.5">
                       <Mail className="w-4 h-4 text-slate-400" />
-                      <span>{draftUser.email}</span>
+                      <span className="truncate max-w-50 sm:max-w-none">
+                        {draftUser.email}
+                      </span>
                     </div>
 
                     {draftUser.linkedinId && (

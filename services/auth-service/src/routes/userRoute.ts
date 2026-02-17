@@ -5,6 +5,7 @@ import {
   currentUser,
   getPublicProfile,
   removeSkill,
+  reportUser,
   updateProfile,
   deleteAvatar,
   getAvatarUploadUrl,
@@ -52,5 +53,7 @@ router.get('/verify-session', verifyAccessToken, (req: any, res) => {
     },
   });
 });
+
+router.post('/report-user', verifyAccessToken, reportUser);
 
 export default router;

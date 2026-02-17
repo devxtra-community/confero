@@ -4,8 +4,9 @@ import { userRepository } from '../repositories/userRepository.js';
 import { AppError } from '../middlewares/errorHandller.js';
 import { generateOtp } from '../utils/otp.js';
 import { otpRepository } from '../repositories/otpRepository.js';
-import { sendOtpMail } from '../utils/sendOtp.js';
+import { sendOtpMail, sendResetPasswordEmail } from '../utils/sendOtp.js';
 import { logger } from '../config/logger.js';
+import Crypto from 'crypto';
 
 import { authSessionRepository } from '../repositories/authSessionRepository.js';
 import {
@@ -13,6 +14,8 @@ import {
   generateRefreshToken,
   hashRefreshToken,
 } from '../utils/jwtService.js';
+import { generateResetToken } from '../utils/resetToken.js';
+import { env } from '../config/env.js';
 
 export const authService = {
   registerUser: async (email: string, password: string, fullName: string) => {
@@ -109,9 +112,9 @@ export const authService = {
       throw new AppError('Email not verified', 403);
     }
 
-    if (user.accountStatus !== 'active') {
-      throw new AppError('Account is not active', 403);
-    }
+    // if (user.accountStatus !== 'active') {
+    //   throw new AppError('Account is not active', 403);
+    // }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
@@ -139,6 +142,7 @@ export const authService = {
       role: user.role,
     };
   },
+
   logoutUser: async (refreshToken?: string) => {
     if (!refreshToken) {
       throw new AppError('Refresh token is missing', 400);
@@ -153,6 +157,7 @@ export const authService = {
 
     const session =
       await authSessionRepository.findValidByTokenHash(refreshTokenHash);
+    console.log(session);
     if (!session) {
       throw new AppError('Invalid refresh token', 401);
     }
@@ -168,5 +173,37 @@ export const authService = {
     }
 
     return generateAccessToken(user._id.toString(), user.email, user.role);
+  },
+
+  forgotPassword: async (email: string) => {
+    const user = await userRepository.findByEmail(email);
+
+    if (!user) {
+      throw new AppError('user is not found', 404);
+    }
+
+    const { rawToken, hashedToken } = generateResetToken();
+
+    const expires = new Date(Date.now() + 15 * 60 * 1000);
+
+    await userRepository.saveResetToken(user.id, hashedToken, expires);
+
+    const resetLink = `${env.FRONTEND_URI}/reset-password?token=${rawToken}`;
+
+    await sendResetPasswordEmail(user.email, resetLink);
+  },
+
+  resetPassword: async (token: string, newPassword: string) => {
+    const hashedToken = Crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await userRepository.findByResetToken(hashedToken);
+
+    if (!user) {
+      throw new AppError('Invalid or expired link', 400);
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await userRepository.updatePassword(user.id, hashedPassword);
   },
 };

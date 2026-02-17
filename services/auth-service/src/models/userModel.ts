@@ -1,12 +1,12 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export type UserRole = 'user' | 'admin';
-export type AccountStatus = 'active' | 'suspended' | 'deleted';
 export type AuthProvider = 'local' | 'google';
 
 export type SkillLevel = 'beginner' | 'intermediate' | 'advanced';
 
 export interface IUser extends Document {
+  id: string;
   email: string;
   password?: string;
 
@@ -19,7 +19,6 @@ export interface IUser extends Document {
   sex: string;
 
   role: UserRole;
-  accountStatus: AccountStatus;
 
   jobTitle?: string;
   linkedinId?: string;
@@ -34,6 +33,9 @@ export interface IUser extends Document {
   }[];
 
   interests: string[];
+
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
 
   availableForCall: boolean;
   lastActiveAt: Date;
@@ -90,12 +92,6 @@ const userSchema = new Schema<IUser>(
       default: 'user',
     },
 
-    accountStatus: {
-      type: String,
-      enum: ['active', 'suspended', 'deleted'],
-      default: 'active',
-    },
-
     jobTitle: {
       type: String,
       default: '',
@@ -143,6 +139,13 @@ const userSchema = new Schema<IUser>(
     interests: {
       type: [String],
       default: [],
+    },
+    resetPasswordToken: {
+      type: String,
+      default: false,
+    },
+    resetPasswordExpires: {
+      type: Date,
     },
 
     availableForCall: {

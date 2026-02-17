@@ -46,9 +46,9 @@ export const googleAuthService = {
     user.lastLoginAt = new Date();
     await user.save();
 
-    if (user.accountStatus !== 'active') {
-      throw new AppError('user account is suspended', 403);
-    }
+    // if (user.accountStatus !== 'active') {
+    //   throw new AppError('user account is suspended', 403);
+    // }
 
     await authSessionRepository.revokeAllForUser(user._id);
 

@@ -10,6 +10,7 @@ userRouter.post('/me/skills', userProxy);
 userRouter.delete('/me/skills/:key', userProxy);
 
 userRouter.get('/peer/:userId', userProxy);
+userRouter.post('/report-user', userProxy);
 
 userRouter.get('/verify-session', userProxy);
 
