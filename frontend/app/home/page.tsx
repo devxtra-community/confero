@@ -332,37 +332,35 @@ export default function FindMatchPage() {
         </div>
       )}
 
- {matchFound && (
-  <div className="relative min-h-screen flex items-center justify-center px-4 py-14 sm:py-16 md:py-12">
-    <div className="w-full max-w-4xl mx-auto text-center space-y-8 sm:space-y-10">
+      {matchFound && (
+        <div className="relative min-h-screen flex items-center justify-center px-4 py-14 sm:py-16 md:py-12">
+          <div className="w-full max-w-4xl mx-auto text-center space-y-8 sm:space-y-10">
+            {/* Header */}
+            <div className="space-y-3 sm:space-y-3">
+              <div className="inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-6  py-1.5 sm:py-2 bg-linear-to-r from-primary to-favor text-white rounded-full shadow-md sm:shadow-lg">
+                <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="font-semibold text-sm sm:text-base md:text-lg">
+                  Match Found
+                </span>
+              </div>
 
-      {/* Header */}
-      <div className="space-y-3 sm:space-y-3">
-        <div className="inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-6  py-1.5 sm:py-2 bg-linear-to-r from-primary to-favor text-white rounded-full shadow-md sm:shadow-lg">
-          <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span className="font-semibold text-sm sm:text-base md:text-lg">
-            Match Found
-          </span>
-        </div>
+              <h2 className="font-sans text-2xl sm:text-4xl md:text-6xl font-bold text-foreground leading-tight">
+                Meet Your New Connection
+              </h2>
 
-        <h2 className="font-sans text-2xl sm:text-4xl md:text-6xl font-bold text-foreground leading-tight">
-          Meet Your New Connection
-        </h2>
+              <p className="text-sm sm:text-lg md:text-xl text-primary italic">
+                Every conversation is a new opportunity
+              </p>
+            </div>
 
-        <p className="text-sm sm:text-lg md:text-xl text-primary italic">
-          Every conversation is a new opportunity
-        </p>
-      </div>
+            {/* Avatar Section */}
+            <div className="relative flex justify-center pt-4 sm:pt-3">
+              {/* Glow Background */}
+              <div className="absolute w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 bg-linear-to-br from-primary/20 to-favor/20 rounded-full blur-2xl sm:blur-3xl" />
 
-      {/* Avatar Section */}
-      <div className="relative flex justify-center pt-4 sm:pt-3">
-
-        {/* Glow Background */}
-        <div className="absolute w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 bg-linear-to-br from-primary/20 to-favor/20 rounded-full blur-2xl sm:blur-3xl" />
-
-        {/* Circle Avatar */}
-        <div
-          className="
+              {/* Circle Avatar */}
+              <div
+                className="
             relative 
             w-40 h-40 
             sm:w-56 sm:h-56 
@@ -374,38 +372,40 @@ export default function FindMatchPage() {
             transition-transform duration-500
             hover:scale-105
           "
-        >
-          <Image
-            src={peerProfile?.image || '/auth/young.jpg'}
-            fill
-            alt="Match"
-            className="object-cover object-center"
-          />
-        </div>
-      </div>
+              >
+                <Image
+                  src={peerProfile?.image || '/auth/young.jpg'}
+                  fill
+                  alt="Match"
+                  className="object-cover object-center"
+                />
+              </div>
+            </div>
 
-      {/* Name & Role */}
-      <div className="space-y-1 sm:space-y-2">
-        {peerProfile ? (
-          <>
-            <h3 className="font-sans text-xl sm:text-2xl md:text-4xl font-bold text-foreground">
-              {peerProfile.name}
-            </h3>
-            <p className="text-sm sm:text-lg md:text-xl text-primary font-medium">
-              {peerProfile.jobTitle}
-            </p>
-          </>
-        ) : (
-          <p className="text-muted-foreground text-sm">Loading profile...</p>
-        )}
-      </div>
+            {/* Name & Role */}
+            <div className="space-y-1 sm:space-y-2">
+              {peerProfile ? (
+                <>
+                  <h3 className="font-sans text-xl sm:text-2xl md:text-4xl font-bold text-foreground">
+                    {peerProfile.name}
+                  </h3>
+                  <p className="text-sm sm:text-lg md:text-xl text-primary font-medium">
+                    {peerProfile.jobTitle}
+                  </p>
+                </>
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  Loading profile...
+                </p>
+              )}
+            </div>
 
-      {/* Skills */}
-      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 max-w-xl mx-auto">
-        {peerProfile?.skills?.map(skill => (
-          <span
-            key={skill._id}
-            className="
+            {/* Skills */}
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-3 max-w-xl mx-auto">
+              {peerProfile?.skills?.map(skill => (
+                <span
+                  key={skill._id}
+                  className="
               px-3 sm:px-4 py-1
               bg-white/60 
               backdrop-blur-md
@@ -416,17 +416,17 @@ export default function FindMatchPage() {
               font-medium
               shadow-sm
             "
-          >
-            {skill.label}
-          </span>
-        ))}
-      </div>
+                >
+                  {skill.label}
+                </span>
+              ))}
+            </div>
 
-      {/* Buttons */}
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5 pt-2 sm:pt-4">
-        <button
-          onClick={handleStartCall}
-          className="
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5 pt-2 sm:pt-4">
+              <button
+                onClick={handleStartCall}
+                className="
             flex items-center gap-2 sm:gap-3
             px-6 sm:px-8 py-3 sm:py-4
             bg-linear-to-r from-primary to-favor
@@ -436,15 +436,15 @@ export default function FindMatchPage() {
             transition-all hover:scale-105
             cursor-pointer
           "
-        >
-          <Video className="w-4 h-4 sm:w-5 sm:h-5" />
-          Start Video Call
-          <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
-        </button>
+              >
+                <Video className="w-4 h-4 sm:w-5 sm:h-5" />
+                Start Video Call
+                <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
+              </button>
 
-        <button
-          onClick={handleStartSearch}
-          className="
+              <button
+                onClick={handleStartSearch}
+                className="
             px-6 sm:px-8 py-3 sm:py-4
             bg-white/60
             backdrop-blur-md
@@ -456,14 +456,13 @@ export default function FindMatchPage() {
             transition-all hover:scale-105
             cursor-pointer
           "
-        >
-          Find Another Match
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
+              >
+                Find Another Match
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
