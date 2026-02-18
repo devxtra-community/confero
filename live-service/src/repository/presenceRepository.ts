@@ -33,3 +33,4 @@ export const presenceRepository = {
     return (await redis.exists(`online:${userId}`)) === 1;
   },
 };
+

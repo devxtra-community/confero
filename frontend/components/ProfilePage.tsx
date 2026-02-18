@@ -264,7 +264,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
         >
           <div className="bg-white border border-slate-200/60 rounded-2xl overflow-hidden shadow-sm">
             {/* banner */}
-            <div className="relative w-full overflow-hidden group aspect-[4/1] rounded-t-2xl">
+            <div className="relative w-full overflow-hidden group aspect-4/1 rounded-t-2xl">
               <Image
                 src={safeImage(
                   draftUser.bannerPicture,
