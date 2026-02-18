@@ -34,12 +34,10 @@ interface SessionResponse {
   endedAt?: string;
 }
 
-
 export default function ConnectionPageContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [callRecords, setCallRecords] = useState<CallRecord[]>([]);
-
 
   const connectedUsers = [
     { id: 1, name: 'User 1', color: 'from-orange-400 to-pink-400' },
@@ -62,6 +60,7 @@ export default function ConnectionPageContent() {
 
     const seconds = Math.floor(diff / 1000);
 
+    
     const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
     const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
     const s = String(seconds % 60).padStart(2, '0');
@@ -106,14 +105,10 @@ export default function ConnectionPageContent() {
       .slice(0, 2);
   };
 
-
-
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-gray-50">
       <div className="p-4 sm:p-6 lg:p-8">
-        {/* Header Section - Enhanced */}
         <div className="mb-6 sm:mb-8">
-          {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4">
             <span className="hover:text-teal-600 transition-colors cursor-pointer">
               Connection
@@ -123,13 +118,11 @@ export default function ConnectionPageContent() {
           </div>
 
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
-            {/* Left side - Title and avatars */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-linear-to-r from-gray-900 via-teal-800 to-emerald-800 bg-clip-text text-transparent">
                 Name
               </h1>
 
-              {/* Connected Users Avatars - Enhanced */}
               <div className="flex items-center gap-3">
                 <div className="flex -space-x-2">
                   {connectedUsers.slice(0, 4).map((user, index) => (
@@ -162,9 +155,7 @@ export default function ConnectionPageContent() {
               </div>
             </div>
 
-            {/* Right side - Search and filters */}
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              {/* Search Bar - Enhanced */}
               <div className="relative flex-1 sm:min-w-70 lg:min-w-[320px]">
                 <Search
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
@@ -202,7 +193,6 @@ export default function ConnectionPageContent() {
           </div>
         </div>
 
-        {/* Call Records List - Enhanced */}
         <div className="space-y-3 sm:space-y-4">
           {filteredRecords.length > 0 ? (
             filteredRecords.map((record, index) => (
@@ -214,11 +204,9 @@ export default function ConnectionPageContent() {
                   animationFillMode: 'backwards',
                 }}
               >
-                {/* Decorative background linear on hover */}
                 <div className="absolute inset-0 bg-linear-to-br from-teal-50/50 via-transparent to-emerald-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
                 <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  {/* Left side - Call info */}
                   <div className="flex-1 space-y-2 sm:space-y-3">
                     <div className="flex items-start gap-3">
                       <div className="p-2 bg-linear-to-br from-teal-100 to-emerald-100 rounded-xl group-hover:scale-110 transition-transform duration-300">
@@ -267,9 +255,7 @@ export default function ConnectionPageContent() {
                     </div>
                   </div>
 
-                  {/* Right side - Duration and avatar */}
                   <div className="flex items-center gap-3 sm:gap-4 justify-end md:justify-start">
-                    {/* Duration badge - Enhanced */}
                     <div className="flex items-center gap-2 text-gray-700 bg-linear-to-br from-gray-50 to-gray-100 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-gray-200 shadow-sm group-hover:shadow-md transition-all duration-200">
                       <Clock
                         size={18}
@@ -281,12 +267,10 @@ export default function ConnectionPageContent() {
                       </span>
                     </div>
 
-                    {/* Avatar - Enhanced */}
                     <div className="relative">
                       <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-linear-to-br from-orange-400 via-pink-400 to-pink-500 flex items-center justify-center text-white font-bold shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 ring-2 ring-white">
                         {getInitials(record.receiver)}
                       </div>
-                      {/* Online indicator for completed calls */}
                       {record.status === 'Completed' && (
                         <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white shadow-sm"></div>
                       )}
@@ -294,7 +278,6 @@ export default function ConnectionPageContent() {
                   </div>
                 </div>
 
-                {/* Hover indicator line */}
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-linear-to-r from-teal-500 to-emerald-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left rounded-b-2xl"></div>
               </div>
             ))
@@ -324,10 +307,8 @@ export default function ConnectionPageContent() {
           )}
         </div>
 
-        {/* Pagination - Enhanced */}
         {filteredRecords.length > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 sm:mt-8 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
-            {/* Page info */}
             <div className="text-xs sm:text-sm text-gray-600">
               Showing{' '}
               <span className="font-semibold text-gray-900">
@@ -340,7 +321,6 @@ export default function ConnectionPageContent() {
               results
             </div>
 
-            {/* Pagination controls */}
             <div className="flex items-center gap-1 sm:gap-2">
               <button
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
