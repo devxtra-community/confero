@@ -7,6 +7,8 @@ export interface CreateUserInput {
   authProvider?: 'local' | 'google';
   googleId?: string;
   emailVerified?: boolean;
+  bannerPicture?: string;
+  profilePicture?: string;
 }
 
 export type UpdateUserProfileInput = Partial<
@@ -18,10 +20,10 @@ export type UpdateUserProfileInput = Partial<
     | 'age'
     | 'sex'
     | 'profilePicture'
+    | 'bannerPicture'
     | 'availableForCall'
   >
 >;
-
 export const userRepository = {
   findByEmail(email: string) {
     return UserModel.findOne({ email }).exec();

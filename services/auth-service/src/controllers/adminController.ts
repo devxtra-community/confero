@@ -11,7 +11,7 @@ export const adminDashboard = async (_req: Request, res: Response) => {
   });
 };
 
-export const adminProfile = async (_req: Request, res: Response) => {
+export const adminProfile = async (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: 'Admin profile',
@@ -63,7 +63,6 @@ export const unbanUser = async (req: Request, res: Response) => {
 export const getReportedUsers = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 6;
-
   const result = await reportService.getReportedUsers(page, limit);
 
   res.json({

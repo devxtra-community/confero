@@ -1,7 +1,8 @@
 'use client';
 
-import { io, Socket } from 'socket.io-client';
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { socket } from '@/lib/socket';
+import { useEffect, useRef, useCallback, useState, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Mic,
   MicOff,
@@ -11,69 +12,70 @@ import {
   Settings,
   MessageSquare,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
-interface VideoCallProps {
-  callId: string;
-  peerUserId: string;
-  isInitiator: boolean;
-}
+type PermissionState = 'idle' | 'requesting' | 'granted' | 'denied';
 
-export default function VideoCall({
-  callId,
-  peerUserId,
-  isInitiator,
-}: VideoCallProps) {
-  const socketRef = useRef<Socket | null>(null);
+// ── Inner component that uses useSearchParams ──────────────────────────────
+function VideoCallInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Read directly from URL — never from props
+  const callId = searchParams.get('callId') ?? '';
+  const peerId = searchParams.get('peerId') ?? '';
+
+  // Keep latest values in refs so async callbacks always see current value
+  const callIdRef = useRef<string>(callId);
+  const peerUserIdRef = useRef<string>(peerId);
+
+  useEffect(() => {
+    callIdRef.current = callId;
+  }, [callId]);
+  useEffect(() => {
+    peerUserIdRef.current = peerId;
+  }, [peerId]);
+
   const pcRef = useRef<RTCPeerConnection | null>(null);
-
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
-
-  const callIdRef = useRef<string>(callId);
-  const peerUserIdRef = useRef<string>(peerUserId);
-
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
+  const tracksAddedRef = useRef(false);
+  const isCallActiveRef = useRef(false);
+  const sessionStartedRef = useRef(false); // guard against StrictMode double-fire
 
-  const pendingIceCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
-  const tracksAddedRef = useRef<boolean>(false);
-
-  const [status, setStatus] = useState<string>('Initializing...');
-  const [iceState, setIceState] = useState<string>('new');
+  const [status, setStatus] = useState('Initializing...');
+  const [iceState, setIceState] = useState('new');
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [isCallStarted, setIsCallStarted] = useState(false);
-
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
+  const [permissionState, setPermissionState] =
+    useState<PermissionState>('idle');
+  const [waitingForPeer, setWaitingForPeer] = useState(false);
 
-  const isCallActiveRef = useRef(false);
-
-  const router = useRouter();
-
+  // ── Timer ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (isCallStarted) {
-      const interval = setInterval(() => {
-        setCallDuration(prev => prev + 1);
-      }, 1000);
-      return () => clearInterval(interval);
-    }
+    if (!isCallStarted) return;
+    const t = setInterval(() => setCallDuration(p => p + 1), 1000);
+    return () => clearInterval(t);
   }, [isCallStarted]);
 
-  const formatDuration = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  const fmt = (s: number) => {
+    const h = Math.floor(s / 3600),
+      m = Math.floor((s % 3600) / 60),
+      sec = s % 60;
+    return [h, m, sec].map(n => String(n).padStart(2, '0')).join(':');
   };
 
-  const getMediaStream = useCallback(async () => {
+  // ── Camera ───────────────────────────────────────────────────────────────
+  const requestCamera = useCallback(async () => {
     if (localStreamRef.current) return localStreamRef.current;
-
+    setPermissionState('requesting');
     try {
-      console.log('📹 Requesting media stream...');
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true },
         video: {
@@ -82,18 +84,19 @@ export default function VideoCall({
           facingMode: 'user',
         },
       });
-
       localStreamRef.current = stream;
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-      setStatus('Media ready');
+      setPermissionState('granted');
+      setStatus('Camera ready');
       return stream;
-    } catch (err: unknown) {
-      console.error(' Media error:', err);
-      setStatus('Media access denied');
-      throw err;
+    } catch {
+      setPermissionState('denied');
+      setStatus('Camera access denied');
+      throw new Error('Camera denied');
     }
   }, []);
 
+  // ── Cleanup ──────────────────────────────────────────────────────────────
   const cleanup = useCallback(() => {
     isCallActiveRef.current = false;
     pcRef.current?.close();
@@ -103,9 +106,11 @@ export default function VideoCall({
     setHasRemoteVideo(false);
     setCallDuration(0);
     setIsCallStarted(false);
+    setWaitingForPeer(false);
   }, []);
 
-  const createPeerConnection = useCallback(() => {
+  // ── PeerConnection ───────────────────────────────────────────────────────
+  const createPC = useCallback(() => {
     const pc = new RTCPeerConnection({
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -113,31 +118,27 @@ export default function VideoCall({
       ],
     });
 
-    pc.onicecandidate = event => {
-      if (!isCallActiveRef.current || !event.candidate) return;
-      socketRef.current?.emit('webrtc:ice', {
+    pc.onicecandidate = e => {
+      if (!isCallActiveRef.current || !e.candidate) return;
+      socket.emit('webrtc:ice', {
         callId: callIdRef.current,
         to: peerUserIdRef.current,
-        candidate: event.candidate.toJSON(),
+        candidate: e.candidate.toJSON(),
       });
     };
 
     pc.onconnectionstatechange = () => {
       setIceState(pc.connectionState);
       if (pc.connectionState === 'connected') {
-        setStatus('Connected successfully');
+        setStatus('Connected');
         setIsCallStarted(true);
+        setWaitingForPeer(false);
       }
     };
 
-    pc.ontrack = event => {
-      console.log('🎥 REMOTE TRACK RECEIVED:', event.track.kind);
-      if (!remoteStreamRef.current) {
-        remoteStreamRef.current = new MediaStream();
-      }
-
-      remoteStreamRef.current.addTrack(event.track);
-
+    pc.ontrack = e => {
+      if (!remoteStreamRef.current) remoteStreamRef.current = new MediaStream();
+      remoteStreamRef.current.addTrack(e.track);
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStreamRef.current;
         setHasRemoteVideo(true);
@@ -150,170 +151,235 @@ export default function VideoCall({
 
   const getOrCreatePC = useCallback(() => {
     if (pcRef.current) return pcRef.current;
-    const pc = createPeerConnection();
+    const pc = createPC();
     pcRef.current = pc;
     tracksAddedRef.current = false;
     return pc;
-  }, [createPeerConnection]);
+  }, [createPC]);
 
-  const addTracksToPC = useCallback(
-    async (pc: RTCPeerConnection) => {
-      if (tracksAddedRef.current) return;
-      const stream = await getMediaStream();
-      stream.getTracks().forEach(track => pc.addTrack(track, stream));
-      tracksAddedRef.current = true;
-    },
-    [getMediaStream]
-  );
+  const addTracks = useCallback((pc: RTCPeerConnection) => {
+    if (tracksAddedRef.current || !localStreamRef.current) return;
+    localStreamRef.current
+      .getTracks()
+      .forEach(t => pc.addTrack(t, localStreamRef.current!));
+    tracksAddedRef.current = true;
+  }, []);
 
+  // ── Main session effect ──────────────────────────────────────────────────
+  // Depends on callId so it re-runs once searchParams resolves from '' to real value
   useEffect(() => {
-    const socket = io(process.env.NEXT_PUBLIC_API_URL!, {
-      path: '/live/socket.io',
-      withCredentials: true,
-      transports: ['websocket'],
-    });
+    // Don't run until we have a real callId
+    if (!callId || !peerId) return;
 
-    socketRef.current = socket;
+    // StrictMode guard — only start once per real mount
+    if (sessionStartedRef.current) return;
+    sessionStartedRef.current = true;
 
-    socket.on('connect', async () => {
-      setStatus('Connected to server');
-      if (isInitiator) {
-        isCallActiveRef.current = true;
-        try {
-          await getMediaStream();
-          socket.emit('call:initiate', {
-            callId: callIdRef.current,
-            toUserId: peerUserIdRef.current,
-          });
-        } catch (err: unknown) {
-          console.error(' Media error:', err);
-          throw err;
-        }
-      }
-    });
-
-    socket.on('call:incoming', async ({ callId, from }) => {
-      callIdRef.current = callId;
-      peerUserIdRef.current = from;
-      isCallActiveRef.current = true;
+    const startSession = async () => {
       try {
-        await getMediaStream();
-        getOrCreatePC();
-        socket.emit('call:accept', { callId });
-      } catch (err: unknown) {
-        console.error(' Media error:', err);
-        throw err;
-      }
-    });
+        console.log('[session] Starting — callId:', callId, 'peerId:', peerId);
+        await requestCamera();
+        isCallActiveRef.current = true;
 
-    socket.on('webrtc:offer', async ({ callId, offer, from }) => {
+        const emitReady = () => {
+          console.log(
+            '[session] Emitting peer:ready — callId:',
+            callIdRef.current
+          );
+          socket.emit('peer:ready', { callId: callIdRef.current });
+          setWaitingForPeer(true);
+          setStatus('Waiting for peer camera...');
+        };
+
+        if (socket.connected) {
+          emitReady();
+        } else {
+          socket.once('connect', emitReady);
+          socket.connect();
+        }
+      } catch {
+        setStatus('Camera denied — cannot join call');
+      }
+    };
+
+    startSession();
+
+    // ── Socket event handlers ────────────────────────────────────────────
+    const onCallStart = async ({
+      callId: cId,
+      peerUserId: peer,
+      shouldCreateOffer,
+    }: {
+      callId: string;
+      peerUserId: string;
+      shouldCreateOffer: boolean;
+    }) => {
+      console.log(
+        '[session] call:start — shouldCreateOffer:',
+        shouldCreateOffer
+      );
+      callIdRef.current = cId;
+      peerUserIdRef.current = peer;
+      isCallActiveRef.current = true;
+      setStatus('Partner ready — connecting...');
+
       try {
         const pc = getOrCreatePC();
-        await addTracksToPC(pc);
-        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        addTracks(pc);
+        if (shouldCreateOffer) {
+          const offer = await pc.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: true,
+          });
+          await pc.setLocalDescription(offer);
+          socket.emit('webrtc:offer', {
+            callId: cId,
+            offer: pc.localDescription,
+            to: peer,
+          });
+        }
+      } catch (err) {
+        console.error('[session] call:start error', err);
+      }
+    };
 
-        pendingIceCandidatesRef.current.forEach(c =>
+    const onOffer = async ({
+      callId: cId,
+      offer,
+      from,
+    }: {
+      callId: string;
+      offer: RTCSessionDescriptionInit;
+      from: string;
+    }) => {
+      console.log('[session] webrtc:offer from', from);
+      try {
+        const pc = getOrCreatePC();
+        addTracks(pc);
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        pendingIceRef.current.forEach(c =>
           pc.addIceCandidate(new RTCIceCandidate(c))
         );
-        pendingIceCandidatesRef.current = [];
-
+        pendingIceRef.current = [];
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         socket.emit('webrtc:answer', {
-          callId,
+          callId: cId,
           answer: pc.localDescription,
           to: from,
         });
-      } catch (err: unknown) {
-        console.error(' Media error:', err);
-        throw err;
+      } catch (err) {
+        console.error('[session] offer error', err);
       }
-    });
+    };
 
-    socket.on('call:accepted', async ({ callId, to }) => {
-      isCallActiveRef.current = true;
+    const onAnswer = async ({
+      answer,
+    }: {
+      answer: RTCSessionDescriptionInit;
+    }) => {
+      console.log('[session] webrtc:answer received');
       try {
-        const pc = getOrCreatePC();
-        await addTracksToPC(pc);
-        const offer = await pc.createOffer({
-          offerToReceiveAudio: true,
-          offerToReceiveVideo: true,
-        });
-        await pc.setLocalDescription(offer);
-        socket.emit('webrtc:offer', { callId, offer: pc.localDescription, to });
-      } catch (err: unknown) {
-        console.error(' Media error:', err);
-        throw err;
+        if (!pcRef.current) return;
+        await pcRef.current.setRemoteDescription(
+          new RTCSessionDescription(answer)
+        );
+        pendingIceRef.current.forEach(c =>
+          pcRef.current?.addIceCandidate(new RTCIceCandidate(c))
+        );
+        pendingIceRef.current = [];
+      } catch (err) {
+        console.error('[session] answer error', err);
       }
-    });
+    };
 
-    socket.on('webrtc:answer', async ({ answer }) => {
-      try {
-        if (pcRef.current) {
-          await pcRef.current.setRemoteDescription(
-            new RTCSessionDescription(answer)
-          );
-          pendingIceCandidatesRef.current.forEach(c =>
-            pcRef.current?.addIceCandidate(new RTCIceCandidate(c))
-          );
-          pendingIceCandidatesRef.current = [];
-        }
-      } catch (err: unknown) {
-        console.error(' Media error:', err);
-        throw err;
-      }
-    });
-
-    socket.on('webrtc:ice', async ({ candidate }) => {
-      const pc = pcRef.current;
-      if (pc && pc.remoteDescription && pc.remoteDescription.type) {
-        pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
+    const onIce = ({ candidate }: { candidate: RTCIceCandidateInit }) => {
+      if (pcRef.current?.remoteDescription?.type) {
+        pcRef.current
+          .addIceCandidate(new RTCIceCandidate(candidate))
+          .catch(() => {});
       } else {
-        pendingIceCandidatesRef.current.push(candidate);
+        pendingIceRef.current.push(candidate);
       }
-    });
+    };
 
-    socket.on('call:end', () => cleanup());
+    const onCallEnd = () => {
+      console.log('[session] call:end');
+      cleanup();
+    };
+
+    socket.on('call:start', onCallStart);
+    socket.on('webrtc:offer', onOffer);
+    socket.on('webrtc:answer', onAnswer);
+    socket.on('webrtc:ice', onIce);
+    socket.on('call:end', onCallEnd);
 
     return () => {
+      sessionStartedRef.current = false;
+      socket.off('call:start', onCallStart);
+      socket.off('webrtc:offer', onOffer);
+      socket.off('webrtc:answer', onAnswer);
+      socket.off('webrtc:ice', onIce);
+      socket.off('call:end', onCallEnd);
+      socket.off('connect'); // remove pending ready emitter if unmounted early
       cleanup();
-      socket.disconnect();
+      localStreamRef.current?.getTracks().forEach(t => t.stop());
+      localStreamRef.current = null;
     };
-  }, [isInitiator, getOrCreatePC, addTracksToPC, cleanup, getMediaStream]);
+  }, [callId, peerId, requestCamera, getOrCreatePC, addTracks, cleanup]);
 
+  // ── Controls ─────────────────────────────────────────────────────────────
   const toggleMute = () => {
-    if (localStreamRef.current) {
-      const track = localStreamRef.current.getAudioTracks()[0];
-      if (track) {
-        track.enabled = !track.enabled;
-        setIsMuted(!track.enabled);
-      }
+    const track = localStreamRef.current?.getAudioTracks()[0];
+    if (track) {
+      track.enabled = !track.enabled;
+      setIsMuted(!track.enabled);
     }
   };
 
   const toggleVideo = () => {
-    if (localStreamRef.current) {
-      const track = localStreamRef.current.getVideoTracks()[0];
-      if (track) {
-        track.enabled = !track.enabled;
-        setIsVideoOff(!track.enabled);
-      }
+    const track = localStreamRef.current?.getVideoTracks()[0];
+    if (track) {
+      track.enabled = !track.enabled;
+      setIsVideoOff(!track.enabled);
     }
   };
 
   const endCall = () => {
     localStreamRef.current?.getTracks().forEach(t => t.stop());
-    socketRef.current?.emit('call:end', {
+    localStreamRef.current = null;
+    socket.emit('call:end', {
       callId: callIdRef.current,
       reason: 'USER_ENDED',
     });
-
     cleanup();
-    setTimeout(() => {
-      router.push('/home');
-    }, 1100);
+    setTimeout(() => router.push('/home'), 500);
   };
 
+  // ── Denied screen ─────────────────────────────────────────────────────────
+  if (permissionState === 'denied') {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-gray-900">
+        <div className="text-center">
+          <VideoOff className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-white text-xl font-semibold mb-2">
+            Camera Access Denied
+          </h2>
+          <p className="text-gray-400 mb-4">
+            Allow camera access in browser settings and refresh.
+          </p>
+          <button
+            onClick={() => router.push('/home')}
+            className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Main UI ───────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen w-full flex overflow-hidden">
       <main className="flex-1 flex flex-col relative">
@@ -323,7 +389,7 @@ export default function VideoCall({
               <>
                 <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                 <span className="text-primary text-sm">
-                  REC {formatDuration(callDuration)}
+                  REC {fmt(callDuration)}
                 </span>
               </>
             )}
@@ -336,7 +402,8 @@ export default function VideoCall({
           </span>
         </header>
 
-        <section className="flex-1 relative ">
+        <section className="flex-1 relative">
+          {/* Remote video — full screen */}
           <video
             ref={remoteVideoRef}
             autoPlay
@@ -344,20 +411,33 @@ export default function VideoCall({
             className="w-full h-full object-cover scale-x-[-1]"
           />
 
+          {/* Waiting overlay */}
           {!hasRemoteVideo && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
               <div className="text-center">
                 <div className="w-32 h-32 mx-auto bg-gray-700 rounded-full flex items-center justify-center mb-4">
                   <span className="text-white text-4xl">👤</span>
                 </div>
-                <p className="text-white text-lg font-medium">{status}</p>
-                <p className="text-gray-400 text-sm mt-2">
-                  Waiting for peer...
+                <p className="text-white text-lg font-medium">
+                  {permissionState === 'requesting' &&
+                    'Waiting for camera permission...'}
+                  {permissionState === 'granted' &&
+                    waitingForPeer &&
+                    'Your camera is ready! Waiting for partner...'}
+                  {permissionState === 'granted' && !waitingForPeer && status}
                 </p>
+                {waitingForPeer && (
+                  <div className="mt-3 flex justify-center gap-1">
+                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                  </div>
+                )}
               </div>
             </div>
           )}
 
+          {/* Local video — bottom right corner */}
           <div className="absolute bottom-10 right-3 lg:w-80 h-45 sm:w-60 sm:h-40 rounded-xl overflow-hidden border border-gray-700 shadow-2xl">
             <video
               ref={localVideoRef}
@@ -366,13 +446,23 @@ export default function VideoCall({
               playsInline
               className="w-full h-full object-cover scale-x-[-1]"
             />
-            <span className="absolute bottom-2 right-2 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+            <span
+              className={`absolute bottom-2 right-2 w-3 h-3 rounded-full border-2 border-white
+              ${permissionState === 'granted' ? 'bg-green-500' : 'bg-gray-500'}`}
+            />
+            {permissionState === 'granted' && (
+              <span className="absolute bottom-2 left-2 text-white text-xs bg-black/50 px-1.5 py-0.5 rounded">
+                You
+              </span>
+            )}
           </div>
 
+          {/* Controls */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-gray-800/80 backdrop-blur px-6 py-3 rounded-full">
             <button
               onClick={toggleMute}
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition ${isMuted ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+              className={`w-11 h-11 rounded-full flex items-center justify-center transition
+                ${isMuted ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}
             >
               {isMuted ? (
                 <MicOff className="text-white" />
@@ -382,7 +472,8 @@ export default function VideoCall({
             </button>
             <button
               onClick={toggleVideo}
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition ${isVideoOff ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+              className={`w-11 h-11 rounded-full flex items-center justify-center transition
+                ${isVideoOff ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}
             >
               {isVideoOff ? (
                 <VideoOff className="text-white" />
@@ -428,7 +519,7 @@ export default function VideoCall({
               <div>
                 <p className="text-gray-400 text-xs">Peer</p>
                 <div className="bg-gray-700 text-sm text-white p-3 rounded-lg">
-                  Hey, How s the connection
+                  Hey, how is the connection?
                 </div>
               </div>
             </div>
@@ -447,5 +538,20 @@ export default function VideoCall({
         </aside>
       )}
     </div>
+  );
+}
+
+// ── Outer page wraps inner in Suspense (required for useSearchParams in Next.js) ──
+export default function SessionPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-900">
+          <p className="text-white">Loading session...</p>
+        </div>
+      }
+    >
+      <VideoCallInner />
+    </Suspense>
   );
 }

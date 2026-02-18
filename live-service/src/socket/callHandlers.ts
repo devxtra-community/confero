@@ -3,104 +3,81 @@ import { callService } from '../service/callService';
 import { Server, Socket } from 'socket.io';
 import { publishEvent } from '../service/rabbitPublisher';
 
-const CALL_TIMEOUT_MS = 20_000;
-
 export const registerCallHandlers = (socket: Socket, io: Server) => {
-  socket.on(SOCKET_EVENTS.CALL_INITIATE, ({ callId, toUserId }) => {
-    const fromUserId = socket.data.user.userId;
-
-    callService.create(callId, fromUserId, toUserId);
-
-    io.to(toUserId).emit(SOCKET_EVENTS.CALL_INCOMING, {
-      callId,
-      from: fromUserId,
-    });
-
-    setTimeout(() => {
-      const call = callService.get(callId);
-
-      if (!call || call.state !== 'INITIATING') return;
-
-      callService.update(callId, 'TIMEOUT');
-
-      publishEvent('session.ended', {
-        sessionId: callId,
-        endedAt: new Date(),
-        reason: 'TIMEOUT',
-      }).catch(console.error);
-
-      io.to(call.from).to(call.to).emit(SOCKET_EVENTS.CALL_TIMEOUT, { callId });
-
-      callService.remove(callId);
-    }, CALL_TIMEOUT_MS);
-  });
-
-  socket.on(SOCKET_EVENTS.CALL_ACCEPT, ({ callId }) => {
+  // ── peer:ready: fired by both users once their camera is on ──────────────
+  // Call record already exists (created in matchingHandlers when match was found)
+  // When BOTH users are ready → fire call:start to both → WebRTC begins
+  socket.on(SOCKET_EVENTS.PEER_READY, ({ callId }) => {
+    const userId = socket.data.user.userId;
     const call = callService.get(callId);
 
+    // Guard: call must exist and be in INITIATING state
     if (!call || call.state !== 'INITIATING') return;
 
-    callService.update(callId, 'CONNECTING');
+    // Mark this user ready
+    callService.markReady(callId, userId);
 
-    io.to(call.from).emit(SOCKET_EVENTS.CALL_ACCEPTED, {
-      callId,
-      to: call.to,
-    });
+    const updated = callService.get(callId);
+    if (!updated) return;
+
+    // Both ready → start WebRTC signaling
+    if (updated.fromReady && updated.toReady) {
+      callService.update(callId, 'CONNECTING');
+
+      publishEvent('session.started', {
+        sessionId: callId,
+        userA: updated.from,
+        userB: updated.to,
+        startedAt: new Date(),
+      }).catch(console.error);
+
+      // userA (from) creates the offer, userB (to) waits
+      io.to(updated.from).emit(SOCKET_EVENTS.CALL_START, {
+        callId,
+        peerUserId: updated.to,
+        shouldCreateOffer: true,
+      });
+
+      io.to(updated.to).emit(SOCKET_EVENTS.CALL_START, {
+        callId,
+        peerUserId: updated.from,
+        shouldCreateOffer: false,
+      });
+    }
   });
 
+  // ── WebRTC signaling — completely unchanged ──────────────────────────────
   socket.on(SOCKET_EVENTS.WEBRTC_OFFER, ({ callId, offer, to }) => {
     const call = callService.get(callId);
     if (!call) return;
-
     const userId = socket.data.user.userId;
     if (userId !== call.from && userId !== call.to) return;
-
-    io.to(to).emit(SOCKET_EVENTS.WEBRTC_OFFER, {
-      callId,
-      offer,
-      from: userId,
-    });
+    io.to(to).emit(SOCKET_EVENTS.WEBRTC_OFFER, { callId, offer, from: userId });
   });
 
   socket.on(SOCKET_EVENTS.WEBRTC_ANSWER, ({ callId, answer, to }) => {
     const call = callService.get(callId);
     if (!call) return;
-
     const userId = socket.data.user.userId;
     if (userId !== call.from && userId !== call.to) return;
-
     io.to(to).emit(SOCKET_EVENTS.WEBRTC_ANSWER, {
       callId,
       answer,
       from: userId,
     });
-
-    if (call.state !== 'CONNECTING') return;
-
-    callService.update(callId, 'CONNECTED');
-
-    publishEvent('session.started', {
-      sessionId: callId,
-      userA: call.from,
-      userB: call.to,
-      startedAt: new Date(),
-    }).catch(console.error);
   });
 
   socket.on(SOCKET_EVENTS.WEBRTC_ICE, ({ callId, candidate, to }) => {
     const call = callService.get(callId);
     if (!call) return;
-
     const userId = socket.data.user.userId;
     if (userId !== call.from && userId !== call.to) return;
-
     io.to(to).emit(SOCKET_EVENTS.WEBRTC_ICE, { callId, candidate });
   });
 
   socket.on(SOCKET_EVENTS.WEBRTC_ICE_FAILED, ({ callId }) => {
     const call = callService.get(callId);
     if (!call) return;
-
     callService.update(callId, 'FAILED');
 
     publishEvent('session.ended', {
@@ -109,10 +86,28 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
       reason: 'ICE_FAILED',
     }).catch(console.error);
 
-    io.to(call.from)
-      .to(call.to)
-      .emit(SOCKET_EVENTS.CALL_END, { callId, reason: 'ICE_FAILED' });
+    io.to(call.from).to(call.to).emit(SOCKET_EVENTS.CALL_END, {
+      callId,
+      reason: 'ICE_FAILED',
+    });
+    callService.remove(callId);
+  });
 
+  socket.on(SOCKET_EVENTS.CALL_END, ({ callId }) => {
+    const call = callService.get(callId);
+    if (!call) return;
+    callService.update(callId, 'ENDED');
+
+    publishEvent('session.ended', {
+      sessionId: callId,
+      endedAt: new Date(),
+      reason: 'USER_ENDED',
+    }).catch(console.error);
+
+    io.to(call.from).to(call.to).emit(SOCKET_EVENTS.CALL_END, {
+      callId,
+      reason: 'USER_ENDED',
+    });
     callService.remove(callId);
   });
 };

@@ -34,6 +34,8 @@ export const authService = {
       email,
       password: hashedPassword,
       fullName,
+      bannerPicture: '/profile/default-banner.jpg',
+      profilePicture: '/profile/default-avatar.png',
     });
 
     const otp = generateOtp().toString();

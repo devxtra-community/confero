@@ -18,6 +18,8 @@ export const SOCKET_EVENTS = {
   CALL_REJECT: 'call:reject',
   CALL_TIMEOUT: 'call:timeout',
   CALL_END: 'call:end',
+  PEER_READY: 'peer:ready',
+  CALL_START: 'call:start',
 
   // Matching events
   MATCH_START: 'match:start',

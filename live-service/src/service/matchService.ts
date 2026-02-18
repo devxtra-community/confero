@@ -6,6 +6,7 @@ import { MatchSession } from '../matching/matchingTypes';
 export const matchingService = {
   async startMatch(userId: string, skills: string[]) {
     const isOnline = await presenceRepository.isOnline(userId);
+    console.log(isOnline);
     if (!isOnline) return null;
 
     const state = await matchingRepository.getState(userId);
@@ -16,10 +17,9 @@ export const matchingService = {
       .filter(Boolean);
 
     await matchingRepository.setState(userId, 'SEARCHING');
-
     for (const skill of normalizedSkills) {
       const peerId = await matchingRepository.popQueueBySkill(skill);
-
+      console.log('peer', peerId);
       if (!peerId) continue;
 
       if (peerId === userId) {

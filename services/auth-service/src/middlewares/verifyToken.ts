@@ -2,7 +2,6 @@ import { Response, NextFunction } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { AppError } from './errorHandller.js';
 import { env } from '../config/env.js';
-import { userRepository } from '../repositories/userRepository.js';
 import { Request } from 'express';
 import { redis } from '../config/redis.js';
 
@@ -12,6 +11,13 @@ export interface AuthRequest extends Request {
     email: string;
     role: 'user' | 'admin';
   };
+}
+
+// Custom JWT payload interface
+interface TokenPayload extends JwtPayload {
+  sub: string;
+  email: string;
+  role: 'user' | 'admin';
 }
 
 export const verifyAccessToken = async (
@@ -26,16 +32,8 @@ export const verifyAccessToken = async (
   }
 
   try {
-    const payload = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
-
+    const payload = jwt.verify(token, env.JWT_SECRET) as TokenPayload;
     const userId = payload.sub as string;
-
-    const user = await userRepository.findById(userId);
-
-    if (!user) {
-      throw new AppError('User not found', 401);
-    }
-
     // check if expired
     const isBanned = (await redis.sismember('banned_users', userId)) === 1;
 
@@ -44,9 +42,9 @@ export const verifyAccessToken = async (
     }
 
     req.user = {
-      id: user._id.toString(),
-      email: user.email,
-      role: user.role,
+      id: payload.sub,
+      email: payload.email,
+      role: payload.role,
     };
 
     next();
