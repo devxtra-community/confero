@@ -324,8 +324,8 @@ export default function FindMatchPage() {
       )}
 
       {matchFound && (
-        <div className="relative min-h-screen flex items-center justify-center px-4 py-14 sm:py-16 md:py-12">
-          <div className="w-full max-w-4xl mx-auto text-center space-y-8 sm:space-y-10">
+        <div className="relative min-h-screen flex items-center justify-center px-4 py-14 sm:py-16 md:py-6">
+          <div className="w-full max-w-4xl mx-auto text-center space-y-8 sm:space-y-5">
             {/* Header */}
             <div className="space-y-3 sm:space-y-3">
               <div className="inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-6  py-1.5 sm:py-2 bg-linear-to-r from-primary to-favor text-white rounded-full shadow-md sm:shadow-lg">
@@ -339,7 +339,7 @@ export default function FindMatchPage() {
                 Meet Your New Connection
               </h2>
 
-              <p className="text-sm sm:text-lg md:text-xl text-primary italic">
+              <p className="text-sm sm:text-lg md:text-xl text-primary italic -mt-2">
                 Every conversation is a new opportunity
               </p>
             </div>
@@ -414,7 +414,7 @@ export default function FindMatchPage() {
             </div>
 
             {/* Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5 pt-2 sm:pt-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5 pt-2 sm:pt-4 -m-1">
               <button
                 onClick={handleStartCall}
                 className="
