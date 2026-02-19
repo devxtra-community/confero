@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Video, Sparkles, Zap, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
-import { socket } from '@/lib/socket';
+import { socket, connectSocket } from '@/lib/socket';
 import { axiosInstance } from '@/lib/axiosInstance';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -18,6 +18,10 @@ export default function FindMatchPage() {
   const [peerProfile, setPeerProfile] = useState<PeerProfile | null>(null);
   const [currentQuote, setCurrentQuote] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // ── Duplicate tab guard ──────────────────────────────────────────────────
+  const [isDuplicateTab, setIsDuplicateTab] = useState(false);
+  // ────────────────────────────────────────────────────────────────────────
 
   const router = useRouter();
 
@@ -53,9 +57,11 @@ export default function FindMatchPage() {
   ];
 
   useEffect(() => {
-    if (!socket.connected) {
-      socket.connect();
-    }
+    connectSocket().catch((err: Error) => {
+      if (err.message === 'ALREADY_CONNECTED') {
+        setIsDuplicateTab(true);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -144,32 +150,8 @@ export default function FindMatchPage() {
     };
   }, [isSearching]);
 
-  // useEffect(() => {
-  //   const onIncomingCall = ({ callId }: { callId: string }) => {
-  //     socket.emit('call:accept', { callId });
-  //   };
-
-  //   socket.on('call:incoming', onIncomingCall);
-
-  //   return () => {
-  //     socket.off('call:incoming', onIncomingCall);
-  //   };
-  // }, [router]);
-
-  // useEffect(() => {
-  //   const onCallAccepted = ({ callId }: CallAcceptedPayload) => {
-  //     router.push(`/session?callId=${callId}&peerId=${peerId}`);
-  //   };
-  //   socket.on('call:accepted', onCallAccepted);
-
-  //   return () => {
-  //     socket.off('call:accepted', onCallAccepted);
-  //   };
-  // }, [peerId, router]);
-
   const handleStartCall = () => {
     if (!sessionId || !peerId) return;
-    // No socket emit needed — matchingHandler already created the call record
     router.push(`/session?callId=${sessionId}&peerId=${peerId}`);
   };
 
@@ -182,6 +164,60 @@ export default function FindMatchPage() {
   }, []);
 
   if (loading) return <Loading />;
+
+  // ── Duplicate tab modal — shown instead of normal UI ────────────────────
+  if (isDuplicateTab) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 via-white to-teal-50 px-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
+          <div className="w-16 h-16 mx-auto bg-amber-100 rounded-full flex items-center justify-center">
+            <svg
+              className="w-8 h-8 text-amber-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+              />
+            </svg>
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-foreground">
+              Session Already Active
+            </h2>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              You already have an active session open in another tab. Only one
+              tab can be connected at a time to prevent disrupting your ongoing
+              match.
+            </p>
+            <p className="text-muted-foreground text-xs pt-1">
+              If your other tab is closed or crashed, please wait a moment and
+              then refresh this page.
+            </p>
+          </div>
+
+          <button
+            onClick={() => {
+              socket.disconnect();
+              window.close();
+              // Fallback: window.close() is blocked when tab was manually opened
+              setTimeout(() => router.push('/login'), 300);
+            }}
+            className="w-full py-3 px-6 bg-linear-to-r from-primary to-favor text-white rounded-full font-semibold transition-all hover:scale-105"
+          >
+            Close This Tab
+          </button>
+        </div>
+      </div>
+    );
+  }
+  // ────────────────────────────────────────────────────────────────────────
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-linear-to-br from-slate-50 via-white to-teal-50">
       <ProfileHover />

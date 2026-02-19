@@ -32,4 +32,13 @@ export const presenceRepository = {
   async isOnline(userId: string) {
     return (await redis.exists(`online:${userId}`)) === 1;
   },
+
+  /**
+   * Returns the number of active sockets for a user.
+   * Used by socketMiddleware to block duplicate tab connections.
+   * A count > 0 means the user already has an active socket.
+   */
+  async getSocketCount(userId: string): Promise<number> {
+    return redis.scard(`online:${userId}`);
+  },
 };
