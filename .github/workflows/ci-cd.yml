@@ -108,7 +108,12 @@ jobs:
         with:
           name: gateway-prod
           path: gateway-prod
-
+      - name: Verify artifacts exist
+        run: |
+          ls -la
+          ls -la auth-service-prod
+          ls -la live-service-prod
+          ls -la gateway-prod
       # Upload to Azure VM
       - name: Upload services to Azure
         uses: appleboy/scp-action@v0.1.7
@@ -116,10 +121,7 @@ jobs:
           host: ${{ secrets.AZURE_HOST }}
           username: ${{ secrets.AZURE_USER }}
           key: ${{ secrets.AZURE_KEY }}
-          source: |
-            auth-service-prod
-            live-service-prod
-            gateway-prod
+          source: 'auth-service-prod,live-service-prod,gateway-prod'
           target: /var/www/confero
 
       # Restart services
