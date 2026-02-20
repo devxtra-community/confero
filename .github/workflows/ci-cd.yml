@@ -108,13 +108,19 @@ jobs:
         with:
           name: gateway-prod
           path: gateway-prod
-      - name: Verify artifacts exist
-        run: |
-          ls -la
-          ls -la auth-service-prod
-          ls -la live-service-prod
-          ls -la gateway-prod
-      # Upload to Azure VM
+
+      - name: Clean production directory
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.AZURE_HOST }}
+          username: ${{ secrets.AZURE_USER }}
+          key: ${{ secrets.AZURE_KEY }}
+          script: |
+            rm -rf /var/www/confero/auth-service-prod
+            rm -rf /var/www/confero/live-service-prod
+            rm -rf /var/www/confero/gateway-prod
+
+      # Upload artifacts
       - name: Upload services to Azure
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -124,7 +130,7 @@ jobs:
           source: 'auth-service-prod,live-service-prod,gateway-prod'
           target: /var/www/confero
 
-      # Restart services
+      # Restart services properly
       - name: Restart backend services
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -136,16 +142,19 @@ jobs:
             echo "Deploying AUTH SERVICE"
             cd /var/www/confero/auth-service-prod
             npm install --omit=dev
-            pm2 reload confero-auth || pm2 start dist/index.js --name confero-auth
+            pm2 delete confero-auth || true
+            pm2 start dist/index.js --name confero-auth
 
             echo "Deploying LIVE SERVICE"
             cd /var/www/confero/live-service-prod
             npm install --omit=dev
-            pm2 reload confero-live || pm2 start dist/server.js --name confero-live
+            pm2 delete confero-live || true
+            pm2 start dist/server.js --name confero-live
 
             echo "Deploying GATEWAY"
             cd /var/www/confero/gateway-prod
             npm install --omit=dev
-            pm2 reload confero-gateway || pm2 start dist/index.js --name confero-gateway
+            pm2 delete confero-gateway || true
+            pm2 start dist/index.js --name confero-gateway
 
             pm2 save
