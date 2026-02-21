@@ -15,7 +15,10 @@ export const startRabbitConsumer = async () => {
   };
 
   if (isTLS) {
-    connectionOptions.servername = new URL(url).hostname;
+    const parsed = new URL(url);
+
+    connectionOptions.servername = parsed.hostname;
+    connectionOptions.rejectUnauthorized = false;
   }
 
   const connection = await amqp.connect(url, connectionOptions);
