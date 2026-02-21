@@ -18,7 +18,12 @@ export const startRabbitConsumer = async () => {
     const parsed = new URL(url);
 
     connectionOptions.servername = parsed.hostname;
+
     connectionOptions.rejectUnauthorized = false;
+
+    connectionOptions.ssl = {
+      servername: parsed.hostname,
+    };
   }
 
   const connection = await amqp.connect(url, connectionOptions);

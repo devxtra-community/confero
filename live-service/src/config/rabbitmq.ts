@@ -32,6 +32,10 @@ export const connectRabbit = async (): Promise<void> => {
       connectionOptions.servername = parsed.hostname;
 
       connectionOptions.rejectUnauthorized = false;
+
+      connectionOptions.ssl = {
+        servername: parsed.hostname,
+      };
     }
 
     connection = await amqp.connect(url, connectionOptions);
