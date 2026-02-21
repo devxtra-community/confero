@@ -15,10 +15,22 @@ export const connectRabbit = async (): Promise<void> => {
   try {
     isConnecting = true;
 
-    // USE CONFIG HERE for URL and heartbeat
-    connection = await amqp.connect(rabbitConfig.url, {
-      heartbeat: rabbitConfig.heartbeat,
-    });
+    const url = rabbitConfig.url;
+
+    const isTLS = url.startsWith('amqps://');
+
+    const connectionOptions: any = {
+      heartbeat: rabbitConfig.options.heartbeat,
+      clientProperties: {
+        connection_name: 'confero-live-service',
+      },
+    };
+
+    if (isTLS) {
+      connectionOptions.servername = new URL(url).hostname;
+    }
+
+    connection = await amqp.connect(url, connectionOptions);
 
     connection.on('error', err => {
       logger.error('RabbitMQ connection error:', err);
@@ -49,8 +61,10 @@ export const connectRabbit = async (): Promise<void> => {
     logger.info('RabbitMQ connected successfully');
   } catch (error) {
     logger.error('Failed to connect to RabbitMQ:', error);
+
     connection = null;
     channel = null;
+
     setTimeout(connectRabbit, rabbitConfig.reconnectDelay);
   } finally {
     isConnecting = false;

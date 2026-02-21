@@ -4,7 +4,21 @@ import { logger } from './logger.js';
 import { SessionModel } from '../models/sessionModel.js';
 
 export const startRabbitConsumer = async () => {
-  const connection = await amqp.connect(env.RABBITMQ_URL!);
+  const url = env.RABBITMQ_URL!;
+  const isTLS = url.startsWith('amqps://');
+
+  const connectionOptions: any = {
+    heartbeat: 60,
+    clientProperties: {
+      connection_name: 'confero-auth-consumer',
+    },
+  };
+
+  if (isTLS) {
+    connectionOptions.servername = new URL(url).hostname;
+  }
+
+  const connection = await amqp.connect(url, connectionOptions);
   const channel = await connection.createChannel();
 
   const exchange = 'live.exchange';
