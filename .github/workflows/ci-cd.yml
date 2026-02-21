@@ -131,7 +131,7 @@ jobs:
           target: /var/www/confero
 
       # Restart services properly
-      - name: Restart backend services
+      - name: Reload backend services
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.AZURE_HOST }}
@@ -139,22 +139,12 @@ jobs:
           key: ${{ secrets.AZURE_KEY }}
           script: |
 
-            echo "Deploying AUTH SERVICE"
-            cd /var/www/confero/auth-service-prod
-            npm install --omit=dev
-            pm2 delete confero-auth || true
-            pm2 start dist/index.js --name confero-auth
+            cd /var/www/confero
 
-            echo "Deploying LIVE SERVICE"
-            cd /var/www/confero/live-service-prod
-            npm install --omit=dev
-            pm2 delete confero-live || true
-            pm2 start dist/server.js --name confero-live
+            npm install --omit=dev --prefix auth-service-prod
+            npm install --omit=dev --prefix live-service-prod
+            npm install --omit=dev --prefix gateway-prod
 
-            echo "Deploying GATEWAY"
-            cd /var/www/confero/gateway-prod
-            npm install --omit=dev
-            pm2 delete confero-gateway || true
-            pm2 start dist/index.js --name confero-gateway
+            pm2 reload ecosystem.config.js
 
             pm2 save
