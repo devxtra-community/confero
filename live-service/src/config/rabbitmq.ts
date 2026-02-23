@@ -17,11 +17,7 @@ export const connectRabbit = async (): Promise<void> => {
 
     const url = rabbitConfig.url;
 
-    connection = await amqp.connect(url, {
-      protocol: 'amqps',
-      servername: 'fly.rmq.cloudamqp.com',
-      rejectUnauthorized: false,
-    });
+    connection = await amqp.connect(url);
 
     connection.on('error', err => {
       logger.error('RabbitMQ connection error:', err);
