@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Video, Sparkles, Zap, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
-import { socket, connectSocket } from '@/lib/socket';
+import { socket, connectSocket, resetSocket } from '@/lib/socket';
 import { axiosInstance } from '@/lib/axiosInstance';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -19,9 +19,7 @@ export default function FindMatchPage() {
   const [currentQuote, setCurrentQuote] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // ── Duplicate tab guard ──────────────────────────────────────────────────
   const [isDuplicateTab, setIsDuplicateTab] = useState(false);
-  // ────────────────────────────────────────────────────────────────────────
 
   const router = useRouter();
 
@@ -57,6 +55,7 @@ export default function FindMatchPage() {
   ];
 
   useEffect(() => {
+    resetSocket();
     connectSocket().catch((err: Error) => {
       if (err.message === 'ALREADY_CONNECTED') {
         setIsDuplicateTab(true);

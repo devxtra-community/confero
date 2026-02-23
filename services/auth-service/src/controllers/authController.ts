@@ -3,6 +3,9 @@ import { authService } from '../services/authServices.js';
 import { googleAuthService } from '../services/googleAuth.service.js';
 import { logger } from '../config/logger.js';
 import { AppError } from '../middlewares/errorHandller.js';
+import { authSessionRepository } from '../repositories/authSessionRepository.js';
+import { hashRefreshToken } from '../utils/jwtService.js';
+import { redis } from '../config/redis.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -62,7 +65,7 @@ export const login = async (req: Request, res: Response) => {
     sameSite: 'lax',
     domain: 'localhost',
     path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
   res.cookie('accessToken', accessToken, {
@@ -112,7 +115,7 @@ export const googleLogin = async (req: Request, res: Response) => {
     sameSite: 'lax',
     domain: 'localhost',
     path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
   res.cookie('accessToken', accessToken, {
@@ -132,6 +135,30 @@ export const googleLogin = async (req: Request, res: Response) => {
 
 export const logout = async (req: Request, res: Response) => {
   const refreshToken = req.cookies?.refreshToken;
+
+  if (refreshToken) {
+    try {
+      const refreshTokenHash = hashRefreshToken(refreshToken);
+      const session =
+        await authSessionRepository.findValidByTokenHash(refreshTokenHash);
+
+      if (session) {
+        const userId = session.userId.toString();
+
+        await Promise.all([
+          redis.del(`online:${userId}`),
+          redis.del(`match:state:${userId}`),
+          redis.del(`match:searching:${userId}`),
+          redis.del(`match:incall:${userId}`),
+        ]);
+
+        logger.info(`Redis cleaned for user ${userId} on logout`);
+      }
+    } catch (err) {
+      logger.error('Redis cleanup failed during logout', err);
+    }
+  }
+
   await authService.logoutUser(refreshToken);
 
   res.clearCookie('refreshToken', {

@@ -40,3 +40,10 @@ export function connectSocket(): Promise<void> {
     socket.connect();
   });
 }
+
+export function resetSocket(): void {
+  if (socket.connected) {
+    socket.disconnect();
+  }
+  socket.removeAllListeners();
+}
