@@ -8,4 +8,9 @@ export const env = {
   LIVE_SERVICE: process.env.LIVE_SERVICE!,
   FRONTEND_URI: process.env.FRONTEND_URI!,
   RABBITMQ_URL: process.env.RABBITMQ_URL!,
+  TURN_SECRET: process.env.TURN_SECRET!,
+  TURN_PUBLIC_IP: process.env.TURN_PUBLIC_IP!,
+  TURN_PORT: Number(process.env.TURN_PORT || 3478),
+  TURN_REALM: process.env.TURN_REALM!,
+  TURN_TTL: Number(process.env.TURN_TTL || 3600),
 };

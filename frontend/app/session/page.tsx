@@ -57,6 +57,8 @@ function VideoCallInner() {
     useState<PermissionState>('idle');
   const [waitingForPeer, setWaitingForPeer] = useState(false);
 
+  const iceServersRef = useRef<RTCIceServer[] | null>(null);
+
   // ── Timer ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isCallStarted) return;
@@ -110,16 +112,14 @@ function VideoCallInner() {
   }, []);
 
   // ── PeerConnection ───────────────────────────────────────────────────────
-  const createPC = useCallback(() => {
+  const createPC = useCallback((iceServers: RTCIceServer[]) => {
+    console.log("CREATING PC WITH ICE:", iceServers);
     const pc = new RTCPeerConnection({
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-      ],
+      iceServers
     });
 
     pc.onicecandidate = e => {
-      if (!isCallActiveRef.current || !e.candidate) return;
+      if (!e.candidate) return;
       socket.emit('webrtc:ice', {
         callId: callIdRef.current,
         to: peerUserIdRef.current,
@@ -142,16 +142,16 @@ function VideoCallInner() {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStreamRef.current;
         setHasRemoteVideo(true);
-        remoteVideoRef.current.play().catch(() => {});
+        remoteVideoRef.current.play().catch(() => { });
       }
     };
 
     return pc;
   }, []);
 
-  const getOrCreatePC = useCallback(() => {
+  const getOrCreatePC = useCallback((iceServers: RTCIceServer[]) => {
     if (pcRef.current) return pcRef.current;
-    const pc = createPC();
+    const pc = createPC(iceServers);
     pcRef.current = pc;
     tracksAddedRef.current = false;
     return pc;
@@ -209,22 +209,25 @@ function VideoCallInner() {
       callId: cId,
       peerUserId: peer,
       shouldCreateOffer,
+      iceServers
     }: {
       callId: string;
       peerUserId: string;
       shouldCreateOffer: boolean;
+      iceServers: RTCIceServer[];
     }) => {
       console.log(
         '[session] call:start — shouldCreateOffer:',
         shouldCreateOffer
       );
+      isCallActiveRef.current = true;
       callIdRef.current = cId;
       peerUserIdRef.current = peer;
-      isCallActiveRef.current = true;
+      iceServersRef.current = iceServers;
       setStatus('Partner ready — connecting...');
 
       try {
-        const pc = getOrCreatePC();
+        const pc = getOrCreatePC(iceServers);
         addTracks(pc);
         if (shouldCreateOffer) {
           const offer = await pc.createOffer({
@@ -254,7 +257,12 @@ function VideoCallInner() {
     }) => {
       console.log('[session] webrtc:offer from', from);
       try {
-        const pc = getOrCreatePC();
+        if (!iceServersRef.current) {
+          console.error('ICE servers not initialized');
+          return;
+        }
+
+        const pc = getOrCreatePC(iceServersRef.current);
         addTracks(pc);
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
         pendingIceRef.current.forEach(c =>
@@ -297,7 +305,7 @@ function VideoCallInner() {
       if (pcRef.current?.remoteDescription?.type) {
         pcRef.current
           .addIceCandidate(new RTCIceCandidate(candidate))
-          .catch(() => {});
+          .catch(() => { });
       } else {
         pendingIceRef.current.push(candidate);
       }

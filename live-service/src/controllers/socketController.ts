@@ -1,8 +1,8 @@
-import { SOCKET_EVENTS } from './socketEvents';
+import { SOCKET_EVENTS } from '../socket/socketEvents';
 import { Server, Socket } from 'socket.io';
 import { PresenceService } from '../service/presenceService';
 import { AuthenticatedUser } from '../types/tokenType';
-import { registerCallHandlers } from './callHandlers';
+import { registerCallHandlers } from '../socket/callHandlers';
 import { callService } from '../service/callService';
 import { logger } from '../config/logger';
 import { matchingRepository } from '../repository/matchRepository';

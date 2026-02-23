@@ -2,6 +2,7 @@ import { SOCKET_EVENTS } from './socketEvents';
 import { callService } from '../service/callService';
 import { Server, Socket } from 'socket.io';
 import { publishEvent } from '../service/rabbitPublisher';
+import { webRTCService } from '../service/webrtcService';
 
 export const registerCallHandlers = (socket: Socket, io: Server) => {
   // ── peer:ready: fired by both users once their camera is on ──────────────
@@ -31,17 +32,23 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
         startedAt: new Date(),
       }).catch(console.error);
 
-      // userA (from) creates the offer, userB (to) waits
+      const iceServersFrom = webRTCService.getIceServers(updated.from, callId);
+      const iceServersTo = webRTCService.getIceServers(updated.to, callId);
+
+      // userA (from) creates offer
       io.to(updated.from).emit(SOCKET_EVENTS.CALL_START, {
         callId,
         peerUserId: updated.to,
         shouldCreateOffer: true,
+        iceServers: iceServersFrom,
       });
 
+      // userB waits
       io.to(updated.to).emit(SOCKET_EVENTS.CALL_START, {
         callId,
         peerUserId: updated.from,
         shouldCreateOffer: false,
+        iceServers: iceServersTo,
       });
     }
   });
