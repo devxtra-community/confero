@@ -11,10 +11,9 @@ export const startRabbitConsumer = async () => {
     const url = env.RABBITMQ_URL!;
 
     connection = await amqp.connect(url, {
-      heartbeat: 60,
-      clientProperties: {
-        connection_name: 'confero-auth-consumer',
-      },
+      protocol: 'amqps',
+      servername: 'fly.rmq.cloudamqp.com',
+      rejectUnauthorized: false,
     });
 
     connection.on('error', err => {

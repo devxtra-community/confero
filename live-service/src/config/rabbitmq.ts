@@ -18,10 +18,9 @@ export const connectRabbit = async (): Promise<void> => {
     const url = rabbitConfig.url;
 
     connection = await amqp.connect(url, {
-      heartbeat: rabbitConfig.heartbeat,
-      clientProperties: {
-        connection_name: 'confero-live-service',
-      },
+      protocol: 'amqps',
+      servername: 'fly.rmq.cloudamqp.com',
+      rejectUnauthorized: false,
     });
 
     connection.on('error', err => {
