@@ -113,9 +113,9 @@ function VideoCallInner() {
 
   // ── PeerConnection ───────────────────────────────────────────────────────
   const createPC = useCallback((iceServers: RTCIceServer[]) => {
-    console.log("CREATING PC WITH ICE:", iceServers);
+    console.log('CREATING PC WITH ICE:', iceServers);
     const pc = new RTCPeerConnection({
-      iceServers
+      iceServers,
     });
 
     pc.onicecandidate = e => {
@@ -142,20 +142,23 @@ function VideoCallInner() {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStreamRef.current;
         setHasRemoteVideo(true);
-        remoteVideoRef.current.play().catch(() => { });
+        remoteVideoRef.current.play().catch(() => {});
       }
     };
 
     return pc;
   }, []);
 
-  const getOrCreatePC = useCallback((iceServers: RTCIceServer[]) => {
-    if (pcRef.current) return pcRef.current;
-    const pc = createPC(iceServers);
-    pcRef.current = pc;
-    tracksAddedRef.current = false;
-    return pc;
-  }, [createPC]);
+  const getOrCreatePC = useCallback(
+    (iceServers: RTCIceServer[]) => {
+      if (pcRef.current) return pcRef.current;
+      const pc = createPC(iceServers);
+      pcRef.current = pc;
+      tracksAddedRef.current = false;
+      return pc;
+    },
+    [createPC]
+  );
 
   const addTracks = useCallback((pc: RTCPeerConnection) => {
     if (tracksAddedRef.current || !localStreamRef.current) return;
@@ -209,7 +212,7 @@ function VideoCallInner() {
       callId: cId,
       peerUserId: peer,
       shouldCreateOffer,
-      iceServers
+      iceServers,
     }: {
       callId: string;
       peerUserId: string;
@@ -305,7 +308,7 @@ function VideoCallInner() {
       if (pcRef.current?.remoteDescription?.type) {
         pcRef.current
           .addIceCandidate(new RTCIceCandidate(candidate))
-          .catch(() => { });
+          .catch(() => {});
       } else {
         pendingIceRef.current.push(candidate);
       }
