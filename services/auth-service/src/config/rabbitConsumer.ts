@@ -10,7 +10,7 @@ export const startRabbitConsumer = async () => {
   try {
     const url = env.RABBITMQ_URL!;
 
-    connection = await amqp.connect(url)
+    connection = await amqp.connect(url);
 
     connection.on('error', err => {
       logger.error('RabbitMQ connection error:', err);
