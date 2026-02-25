@@ -52,10 +52,25 @@ export const verifyOtp = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
-  const { accessToken, refreshToken, role } = await authService.loginUser(
-    email,
-    password
-  );
+  const { accessToken, refreshToken, role, userId } =
+    await authService.loginUser(email, password);
+
+  // ── Single-device login block ─────────────────────────────────────────────
+  // Check if this user already has an active socket (online:{userId} exists).
+  // Both services share the same Redis instance so this check is reliable.
+  // If online → reject with 409 and return userId so frontend can force logout.
+  // The user must force-logout the other device before they can log in here.
+  // ─────────────────────────────────────────────────────────────────────────
+  const alreadyOnline = await redis.exists(`online:${userId}`);
+  if (alreadyOnline) {
+    logger.info(`Login blocked — user ${userId} already online`);
+    return res.status(409).json({
+      success: false,
+      message: 'You are already logged in on another device or tab.',
+      code: 'ALREADY_LOGGED_IN',
+      userId,
+    });
+  }
 
   logger.info('Login Succesfull');
 
@@ -78,9 +93,10 @@ export const login = async (req: Request, res: Response) => {
   });
 
   res.status(200).json({
-    message: ' Login Successfully Completed',
+    message: 'Login Successfully Completed',
     success: true,
     role,
+    userId,
   });
 };
 
@@ -134,6 +150,37 @@ export const googleLogin = async (req: Request, res: Response) => {
 };
 
 export const logout = async (req: Request, res: Response) => {
+  const { forceUserId } = req.body;
+
+  // ── Force logout path ─────────────────────────────────────────────────────
+  // Called from the login modal when user wants to kick the other device.
+  // No cookie available — uses forceUserId from body to clean Redis directly
+  // and delete all sessions for that user from the DB.
+  // ─────────────────────────────────────────────────────────────────────────
+  if (forceUserId) {
+    try {
+      await Promise.all([
+        redis.del(`online:${forceUserId}`),
+        redis.del(`match:state:${forceUserId}`),
+        redis.del(`match:searching:${forceUserId}`),
+        redis.del(`match:incall:${forceUserId}`),
+      ]);
+
+      // Delete all auth sessions for this user so their token is invalidated
+      await authSessionRepository.deleteAllByUserId(forceUserId);
+
+      logger.info(`Force logout completed for user ${forceUserId}`);
+    } catch (err) {
+      logger.error('Force logout Redis cleanup failed', err);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Other device logged out successfully.',
+    });
+  }
+
+  // ── Normal logout path (existing logic) ──────────────────────────────────
   const refreshToken = req.cookies?.refreshToken;
 
   if (refreshToken) {

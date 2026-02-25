@@ -34,4 +34,7 @@ export const authSessionRepository = {
   deleteByRefreshTokenHash: async (refreshTokenHash: string) => {
     return AuthSession.deleteOne({ refreshTokenHash });
   },
+  deleteAllByUserId: async (userId: string) => {
+    await AuthSession.deleteMany({ userId });
+  },
 };

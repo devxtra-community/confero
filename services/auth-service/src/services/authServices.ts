@@ -7,7 +7,6 @@ import { otpRepository } from '../repositories/otpRepository.js';
 import { sendOtpMail, sendResetPasswordEmail } from '../utils/sendOtp.js';
 import { logger } from '../config/logger.js';
 import Crypto from 'crypto';
-
 import { authSessionRepository } from '../repositories/authSessionRepository.js';
 import {
   generateAccessToken,
@@ -43,10 +42,7 @@ export const authService = {
     await sendOtpMail(email, otp);
 
     const verificationToken = signJwt(
-      {
-        email,
-        type: 'email_verification',
-      },
+      { email, type: 'email_verification' },
       '15m'
     );
 
@@ -56,25 +52,19 @@ export const authService = {
 
   verifyOtp: async (otp: string, verificationToken: string) => {
     const payload = verifyJwt(verificationToken);
-
     const email = payload.email;
-
     const record = await otpRepository.find(email, otp);
 
     if (!record) {
       throw new AppError('Invalid or expired OTP', 403);
     }
 
-    await userRepository.updateByEmail(email, {
-      emailVerified: true,
-    });
-
+    await userRepository.updateByEmail(email, { emailVerified: true });
     await otpRepository.delete(email);
   },
 
   resendOtp: async (verificationToken: string) => {
     const payload = verifyJwt(verificationToken);
-
     const email = payload.email.toLowerCase().trim();
 
     const user = await userRepository.findByEmail(email);
@@ -83,17 +73,10 @@ export const authService = {
     }
 
     await otpRepository.delete(email);
-
     const otp = generateOtp().toString();
-
     await otpRepository.create(email, otp);
-
     await sendOtpMail(email, otp);
-
-    await userRepository.updateByEmail(email, {
-      emailVerified: true,
-    });
-
+    await userRepository.updateByEmail(email, { emailVerified: true });
     return;
   },
 
@@ -112,10 +95,6 @@ export const authService = {
       throw new AppError('Email not verified', 403);
     }
 
-    // if (user.accountStatus !== 'active') {
-    //   throw new AppError('Account is not active', 403);
-    // }
-
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
       throw new AppError('Incorrect Password', 401);
@@ -124,7 +103,6 @@ export const authService = {
     const userId = user._id.toString();
 
     const accessToken = generateAccessToken(userId, user.email, user.role);
-
     const refreshToken = generateRefreshToken();
     const refreshTokenHash = hashRefreshToken(refreshToken);
 
@@ -136,10 +114,13 @@ export const authService = {
 
     await userRepository.updateLastLogin(userId);
 
+    // userId added to return so authController can check Redis
+    // and return it to frontend for force logout use
     return {
       accessToken,
       refreshToken,
       role: user.role,
+      userId,
     };
   },
 
@@ -154,13 +135,13 @@ export const authService = {
 
   refreshAccessToken: async (refreshToken: string) => {
     const refreshTokenHash = hashRefreshToken(refreshToken);
-
     const session =
       await authSessionRepository.findValidByTokenHash(refreshTokenHash);
-    console.log(session);
+
     if (!session) {
       throw new AppError('Invalid refresh token', 401);
     }
+
     const userId = session.userId.toString();
 
     if (session.expiresAt < new Date()) {
@@ -177,25 +158,21 @@ export const authService = {
 
   forgotPassword: async (email: string) => {
     const user = await userRepository.findByEmail(email);
-
     if (!user) {
       throw new AppError('user is not found', 404);
     }
 
     const { rawToken, hashedToken } = generateResetToken();
-
     const expires = new Date(Date.now() + 15 * 60 * 1000);
 
     await userRepository.saveResetToken(user.id, hashedToken, expires);
 
     const resetLink = `${env.FRONTEND_URI}/reset-password?token=${rawToken}`;
-
     await sendResetPasswordEmail(user.email, resetLink);
   },
 
   resetPassword: async (token: string, newPassword: string) => {
     const hashedToken = Crypto.createHash('sha256').update(token).digest('hex');
-
     const user = await userRepository.findByResetToken(hashedToken);
 
     if (!user) {
@@ -203,7 +180,6 @@ export const authService = {
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-
     await userRepository.updatePassword(user.id, hashedPassword);
   },
 };

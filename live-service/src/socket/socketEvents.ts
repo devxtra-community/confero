@@ -20,7 +20,7 @@ export const SOCKET_EVENTS = {
   CALL_END: 'call:end',
   PEER_READY: 'peer:ready',
   CALL_START: 'call:start',
-
+  ALREADY_SEARCHING: 'already_searching',
   // Matching events
   MATCH_START: 'match:start',
   MATCH_FOUND: 'match:found',
