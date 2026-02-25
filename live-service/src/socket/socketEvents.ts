@@ -30,6 +30,7 @@ export const SOCKET_EVENTS = {
   MATCH_TIMEOUT: 'match:timeout',
   MATCH_DECLINE: 'match:decline',
   MATCH_DECLINED_BY_PEER: 'match:declined_by_peer',
+  MATCH_FIND_ANOTHER_READY: 'match:find_another_ready',
 
   // webrtc signaling events
   WEBRTC_OFFER: 'webrtc:offer',

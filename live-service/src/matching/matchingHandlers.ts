@@ -70,7 +70,15 @@ export const matchingHandlers = (socket: Socket, io: Server) => {
   );
   socket.on(
     SOCKET_EVENTS.MATCH_FIND_ANOTHER,
-    async ({ sessionId, peerId }: { sessionId: string; peerId: string }) => {
+    async ({
+      sessionId,
+      peerId,
+      skills,
+    }: {
+      sessionId: string;
+      peerId: string;
+      skills: string[];
+    }) => {
       const userId = socket.data.user.userId;
 
       await Promise.all([
@@ -78,15 +86,15 @@ export const matchingHandlers = (socket: Socket, io: Server) => {
         matchingRepository.removeUserFromAllQueues(userId),
         presenceRepository.clearSearching(userId),
         presenceRepository.clearInCall(userId),
-
         matchingRepository.setState(peerId, 'IDLE'),
         matchingRepository.removeUserFromAllQueues(peerId),
         presenceRepository.clearSearching(peerId),
         presenceRepository.clearInCall(peerId),
-
         redis.del(`match:session:${sessionId}`),
       ]);
 
+      // Tell both frontends to show searching UI only — no match:start from frontend
+      socket.emit(SOCKET_EVENTS.MATCH_FIND_ANOTHER_READY, { skills });
       io.to(peerId).emit(SOCKET_EVENTS.MATCH_PEER_FIND_ANOTHER);
     }
   );

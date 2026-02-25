@@ -90,10 +90,36 @@ export default function FindMatchPage() {
     if (isSearching) return;
 
     if (matchFound && sessionId && peerId) {
-      socket.emit('match:find_another', { sessionId, peerId });
-      await new Promise(resolve => setTimeout(resolve, 300)); // wait for backend cleanup
+      try {
+        const res = await axiosInstance.get('/users/me');
+        const skills = res.data.user.skills.map((s: { key: string }) => s.key);
+        if (!skills.length) {
+          toast.warning('Please add skills to your profile');
+          return;
+        }
+
+        socket.emit('match:find_another', { sessionId, peerId, skills });
+
+        // Wait for backend confirmation — backend will trigger match:start itself
+        await new Promise<void>(resolve => {
+          socket.once('match:find_another_ready', resolve);
+        });
+
+        setIsSearching(true);
+        setMatchFound(false);
+        setSessionId(null);
+        setPeerId(null);
+        setPeerProfile(null);
+        setCurrentQuote(0);
+        // Don't emit match:start here — backend handles it via match:find_another_ready
+        socket.emit('match:start', { skills });
+      } catch {
+        toast.error('Unable to start matching');
+      }
+      return;
     }
 
+    // Normal flow — coming from idle page
     setIsSearching(true);
     setMatchFound(false);
     setSessionId(null);
@@ -182,14 +208,14 @@ export default function FindMatchPage() {
       toast.info(
         'Your match is looking for someone else. Searching for a new one...'
       );
+      setIsSearching(true);
+      setCurrentQuote(0);
 
-      await new Promise(resolve => setTimeout(resolve, 300)); // wait for backend cleanup
-
+      // Fetch skills and start searching — backend already cleaned up before emitting this
       try {
         const res = await axiosInstance.get('/users/me');
         const skills = res.data.user.skills.map((s: { key: string }) => s.key);
         if (!skills.length) return;
-        setIsSearching(true);
         socket.emit('match:start', { skills });
       } catch {
         toast.error('Unable to start matching');
