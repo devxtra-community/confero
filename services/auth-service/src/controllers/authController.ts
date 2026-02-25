@@ -58,18 +58,16 @@ export const login = async (req: Request, res: Response) => {
 
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
-    secure: false,
-    sameSite: 'lax',
-    domain: 'localhost',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
-    secure: false,
-    sameSite: 'lax',
-    domain: 'localhost',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/',
     maxAge: 24 * 60 * 60 * 1000,
   });
@@ -108,18 +106,16 @@ export const googleLogin = async (req: Request, res: Response) => {
 
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
-    secure: false,
-    sameSite: 'lax',
-    domain: 'localhost',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
-    secure: false,
-    sameSite: 'lax',
-    domain: 'localhost',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/',
     maxAge: 24 * 60 * 60 * 1000,
   });
@@ -136,14 +132,16 @@ export const logout = async (req: Request, res: Response) => {
 
   res.clearCookie('refreshToken', {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: isProduction ? 'none' : 'lax',
     secure: isProduction,
+    path: '/',
   });
 
   res.clearCookie('accessToken', {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: isProduction ? 'none' : 'lax',
     secure: isProduction,
+    path: '/',
   });
 
   res.status(200).json({
@@ -163,7 +161,8 @@ export const refresh = async (req: Request, res: Response) => {
   res.cookie('accessToken', newAccessToken, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: 'lax',
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/',
   });
 
   res.status(200).json({

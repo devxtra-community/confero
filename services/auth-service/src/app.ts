@@ -20,6 +20,8 @@ app.get('/debug-cookies', (req, res) => {
   res.json(req.cookies);
 });
 
+app.set('trust proxy', 1);
+
 app.use('/auth', authRouter);
 app.use('/users', userRouter);
 app.use('/admin', adminRoutes);

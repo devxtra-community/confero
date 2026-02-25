@@ -6,15 +6,21 @@ import { liveProxy } from './proxies/liveProxy.js';
 import helmet from 'helmet';
 import userRouter from './routes/userRoute.js';
 import adminRouter from './routes/adminRoute.js';
+import cookieParser from 'cookie-parser';
 dotenv.config();
 
 const app = express();
+
+app.set('trust proxy', 1);
+
 app.use(
   cors({
     origin: process.env.FRONTEND_URI,
     credentials: true,
   })
 );
+app.use(express.json());
+app.use(cookieParser());
 app.use(helmet());
 
 app.use('/auth', authRouter);

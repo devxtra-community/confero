@@ -6,6 +6,7 @@ dotenv.config();
 export const authProxy = createProxyMiddleware({
   target: `${process.env.AUTH_SERVICE_URL}/auth`,
   changeOrigin: true,
+  cookieDomainRewrite: '', 
 
   on: {
     proxyReq: (proxyReq: ClientRequest, req: IncomingMessage) => {
