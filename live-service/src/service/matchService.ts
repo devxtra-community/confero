@@ -89,7 +89,6 @@ export const matchingService = {
   },
 
   async cancelMatching(userId: string) {
-
     await Promise.all([
       matchingRepository.removeUserFromAllQueues(userId),
       matchingRepository.setState(userId, 'IDLE'),
