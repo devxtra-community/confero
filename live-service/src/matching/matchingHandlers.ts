@@ -68,4 +68,26 @@ export const matchingHandlers = (socket: Socket, io: Server) => {
       io.to(peerId).emit(SOCKET_EVENTS.MATCH_DECLINED_BY_PEER);
     }
   );
+  socket.on(
+    SOCKET_EVENTS.MATCH_FIND_ANOTHER,
+    async ({ sessionId, peerId }: { sessionId: string; peerId: string }) => {
+      const userId = socket.data.user.userId;
+
+      await Promise.all([
+        matchingRepository.setState(userId, 'IDLE'),
+        matchingRepository.removeUserFromAllQueues(userId),
+        presenceRepository.clearSearching(userId),
+        presenceRepository.clearInCall(userId),
+
+        matchingRepository.setState(peerId, 'IDLE'),
+        matchingRepository.removeUserFromAllQueues(peerId),
+        presenceRepository.clearSearching(peerId),
+        presenceRepository.clearInCall(peerId),
+
+        redis.del(`match:session:${sessionId}`),
+      ]);
+
+      io.to(peerId).emit(SOCKET_EVENTS.MATCH_PEER_FIND_ANOTHER);
+    }
+  );
 };

@@ -93,25 +93,26 @@ export default function FindMatchPage() {
   const handleStartSearch = async () => {
     if (isSearching) return;
 
+    if (matchFound && sessionId && peerId) {
+      socket.emit('match:find_another', { sessionId, peerId });
+      await new Promise(resolve => setTimeout(resolve, 300)); // wait for backend cleanup
+    }
+
     setIsSearching(true);
     setMatchFound(false);
     setSessionId(null);
     setPeerId(null);
+    setPeerProfile(null);
     setCurrentQuote(0);
 
     try {
       const res = await axiosInstance.get('/users/me');
-
-      const skills = res.data.user.skills.map((s: skill) => s.key);
-
+      const skills = res.data.user.skills.map((s: { key: string }) => s.key);
       if (!skills.length) {
         toast.warning('Please add skills to your profile');
         setIsSearching(false);
         return;
       }
-
-      console.log('Starting match with skills:', skills);
-
       socket.emit('match:start', { skills });
     } catch {
       toast.error('Unable to start matching');
@@ -160,6 +161,7 @@ export default function FindMatchPage() {
     setPeerId(null);
     setPeerProfile(null);
   };
+
   useEffect(() => {
     const onPeerDeclined = () => {
       setMatchFound(false);
@@ -174,6 +176,36 @@ export default function FindMatchPage() {
       socket.off('match:declined_by_peer', onPeerDeclined);
     };
   }, []);
+
+  useEffect(() => {
+    const onPeerFindAnother = async () => {
+      setMatchFound(false);
+      setSessionId(null);
+      setPeerId(null);
+      setPeerProfile(null);
+      toast.info(
+        'Your match is looking for someone else. Searching for a new one...'
+      );
+
+      await new Promise(resolve => setTimeout(resolve, 300)); // wait for backend cleanup
+
+      try {
+        const res = await axiosInstance.get('/users/me');
+        const skills = res.data.user.skills.map((s: { key: string }) => s.key);
+        if (!skills.length) return;
+        setIsSearching(true);
+        socket.emit('match:start', { skills });
+      } catch {
+        toast.error('Unable to start matching');
+      }
+    };
+
+    socket.on('match:peer_find_another', onPeerFindAnother);
+    return () => {
+      socket.off('match:peer_find_another', onPeerFindAnother);
+    };
+  }, []);
+
   useEffect(() => {
     const init = async () => {
       await Promise.resolve();
