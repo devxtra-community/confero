@@ -34,7 +34,7 @@ export function LoginRight() {
       console.log(role);
       const target = role === 'admin' ? '/admin' : '/home';
       console.log('navigating navigating');
-      console.log(target)
+      console.log(target);
       router.push(target);
       setTimeout(() => {
         router.refresh();
