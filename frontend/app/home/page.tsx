@@ -20,7 +20,7 @@ export default function FindMatchPage() {
   const [loading, setLoading] = useState(true);
 
   const [isDuplicateTab, setIsDuplicateTab] = useState(false);
-
+  const [searchTimeout, setSearchTimeout] = useState(false);
   const router = useRouter();
 
   type Skills = {
@@ -85,6 +85,18 @@ export default function FindMatchPage() {
       clearInterval(quoteInterval);
     };
   }, [isSearching, quotes.length]);
+
+  useEffect(() => {
+    if (!isSearching) return;
+
+    const timer = setTimeout(() => {
+      socket.emit('match:cancel');
+      setIsSearching(false);
+      setSearchTimeout(true);
+    }, 8000);
+
+    return () => clearTimeout(timer);
+  }, [isSearching]);
 
   const handleStartSearch = async () => {
     if (isSearching) return;
@@ -285,6 +297,74 @@ export default function FindMatchPage() {
           >
             Close This Tab
           </button>
+        </div>
+      </div>
+    );
+  }
+  if (searchTimeout) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 via-white to-teal-50 px-4">
+        <div className="max-w-sm w-full text-center space-y-8">
+          {/* Image */}
+          <div className="relative w-48 h-48 mx-auto">
+            <Image
+              src="/auth/home.jpg"
+              fill
+              alt="No match"
+              className="object-cover rounded-full ring-4 ring-white shadow-xl"
+            />
+            <div className="absolute inset-0 rounded-full bg-linear-to-br from-primary/20 to-favor/20" />
+          </div>
+
+          {/* Text */}
+          <div className="space-y-3">
+            <h2 className="font-sans text-3xl font-bold text-foreground">
+              No one around yet
+            </h2>
+            <p className="text-muted-foreground text-sm leading-relaxed max-w-xs mx-auto">
+              Looks like everyone&apos;s busy right now. The right connection is
+              just around the corner — try again in a bit.
+            </p>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={async () => {
+                setSearchTimeout(false);
+                setIsSearching(true);
+                setCurrentQuote(0);
+                try {
+                  const res = await axiosInstance.get('/users/me');
+                  const skills = res.data.user.skills.map(
+                    (s: { key: string }) => s.key
+                  );
+                  if (!skills.length) {
+                    toast.warning('Please add skills to your profile');
+                    setIsSearching(false);
+                    return;
+                  }
+                  socket.emit('match:start', { skills });
+                } catch {
+                  toast.error('Unable to start matching');
+                  setIsSearching(false);
+                }
+              }}
+              className="w-full py-3 px-6 bg-linear-to-r from-primary to-favor text-white rounded-full font-semibold transition-all hover:scale-105"
+            >
+              Try Again
+            </button>
+
+            <button
+              onClick={() => {
+                setSearchTimeout(false);
+                router.push('/home');
+              }}
+              className="w-full py-3 px-6 text-muted-foreground text-sm font-medium hover:text-foreground transition-colors"
+            >
+              ← Go Back to Home
+            </button>
+          </div>
         </div>
       </div>
     );
