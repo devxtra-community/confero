@@ -1,23 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function middleware(req: NextRequest) {
-  const pathname = req.nextUrl.pathname;
-  const accessToken = req.cookies.get('accessToken');
+const protectedRoutes = ['/profile', '/home', '/session', '/admin'];
 
-  const protectedRoutes = ['/profile', '/home', '/session'];
-  if (
-    protectedRoutes.some(route => pathname.startsWith(route)) &&
-    !accessToken
-  ) {
-    return NextResponse.redirect(new URL('/login', req.url));
+export function middleware(req: NextRequest) {
+  const pathname = req.nextUrl.pathname;
+
+  const isProtected = protectedRoutes.some(route => pathname.startsWith(route));
+
+  if (!isProtected) {
+    return NextResponse.next();
   }
 
-  if (pathname.startsWith('/admin')) {
-    if (!accessToken) {
-      return NextResponse.redirect(new URL('/login', req.url));
-    }
+  const hasAccessToken = req.cookies.has('accessToken');
 
-    return NextResponse.next();
+  if (!hasAccessToken) {
+    return NextResponse.redirect(new URL('/login', req.url));
   }
 
   return NextResponse.next();

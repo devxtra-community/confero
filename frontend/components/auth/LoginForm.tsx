@@ -25,15 +25,21 @@ export function LoginRight() {
     setLoading(true);
 
     try {
-      await axiosInstance.post('/auth/login', {
+      const res = await axiosInstance.post('/auth/login', {
         email,
         password,
       });
 
-      const meRes = await axiosInstance.get('/users/me');
-      const user = meRes.data.user;
+      const role = res.data.role;
+      console.log(role)
+      const target = role === 'admin' ? '/admin' : '/home';
+      console.log("navigating navigating")
+      router.replace(target);
+      setTimeout(() => {
+        router.refresh()
+      }, 50);
+      console.log("after navigating")
 
-      router.replace(user.role === 'admin' ? '/admin' : '/home');
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         toast.error(err.response?.data?.message ?? 'Login failed');

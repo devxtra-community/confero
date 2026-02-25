@@ -99,7 +99,7 @@ export const resendOtp = async (req: Request, res: Response) => {
 export const googleLogin = async (req: Request, res: Response) => {
   const { idToken } = req.body;
 
-  const { accessToken, refreshToken } =
+  const { accessToken, refreshToken, role } =
     await googleAuthService.authenticate(idToken);
 
   logger.info('Google login successful');
@@ -123,6 +123,7 @@ export const googleLogin = async (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: 'Google login successfully completed',
+    role,
   });
 };
 
