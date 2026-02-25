@@ -31,15 +31,17 @@ export function LoginRight() {
       });
 
       const role = res.data.role;
-      console.log(role);
       const target = role === 'admin' ? '/admin' : '/home';
-      console.log('navigating navigating');
-      console.log(target);
+
+      console.log('target route:', target);
+
+      router.prefetch(target);
+      console.log('prefetch success');
+
       router.push(target);
-      setTimeout(() => {
-        router.refresh();
-      }, 50);
+
       console.log('after navigating');
+
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         toast.error(err.response?.data?.message ?? 'Login failed');
@@ -50,7 +52,6 @@ export function LoginRight() {
       setLoading(false);
     }
   };
-
   // FORGOT PASSWORD
   const handleForgotPassword = async () => {
     try {
