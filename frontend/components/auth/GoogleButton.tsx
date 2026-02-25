@@ -24,16 +24,15 @@ export default function GoogleButton() {
             });
 
             const role = res.data.role;
-            console.log(role)
+            console.log(role);
             const target = role === 'admin' ? '/admin' : '/home';
-            console.log("navigating navigating")
+            console.log('navigating navigating');
             router.replace(target);
             setTimeout(() => {
-              router.refresh()
+              router.refresh();
             }, 50);
 
-            console.log("after navigating")
-
+            console.log('after navigating');
           } catch (error) {
             console.error('Google auth API failed', error);
             router.replace('/login');
