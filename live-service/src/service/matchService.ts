@@ -52,7 +52,11 @@ export const matchingService = {
         await matchingRepository.pushQueueOnce(skill, peerId);
         continue;
       }
-
+      const onCooldown = await matchingRepository.hasCooldown(userId, peerId);
+      if (onCooldown) {
+        await matchingRepository.pushQueueOnce(skill, peerId);
+        continue;
+      }
       const session: MatchSession = {
         sessionId: uuid(),
         userA: userId,
@@ -72,7 +76,7 @@ export const matchingService = {
       await presenceRepository.clearSearching(peerId);
       await presenceRepository.setInCall(userId, session.sessionId);
       await presenceRepository.setInCall(peerId, session.sessionId);
-
+      await matchingRepository.setCooldown(userId, peerId);
       return session;
     }
 
@@ -85,15 +89,11 @@ export const matchingService = {
   },
 
   async cancelMatching(userId: string) {
-    const state = await matchingRepository.getState(userId);
 
-    if (state !== 'SEARCHING') {
-      await matchingRepository.setState(userId, 'IDLE');
-      return;
-    }
-
-    await matchingRepository.removeUserFromAllQueues(userId);
-    await matchingRepository.setState(userId, 'IDLE');
-    await presenceRepository.clearSearching(userId);
+    await Promise.all([
+      matchingRepository.removeUserFromAllQueues(userId),
+      matchingRepository.setState(userId, 'IDLE'),
+      presenceRepository.clearSearching(userId),
+    ]);
   },
 };

@@ -62,6 +62,7 @@ export const matchingHandlers = (socket: Socket, io: Server) => {
 
         // Delete session
         redis.del(`match:session:${sessionId}`),
+        matchingRepository.setCooldown(userId, peerId),
       ]);
 
       // Notify peer
