@@ -2,6 +2,9 @@ import { Server, Socket } from 'socket.io';
 import { SOCKET_EVENTS } from '../socket/socketEvents';
 import { matchingService } from '../service/matchService';
 import { callService } from '../service/callService';
+import { matchingRepository } from '../repository/matchRepository';
+import { presenceRepository } from '../repository/presenceRepository';
+import redis from '../config/redis';
 
 export const matchingHandlers = (socket: Socket, io: Server) => {
   socket.on(SOCKET_EVENTS.MATCH_START, async ({ skills }) => {
@@ -38,4 +41,31 @@ export const matchingHandlers = (socket: Socket, io: Server) => {
     const userId = socket.data.user.userId;
     await matchingService.cancelMatching(userId);
   });
+
+  socket.on(
+    SOCKET_EVENTS.MATCH_DECLINE,
+    async ({ sessionId, peerId }: { sessionId: string; peerId: string }) => {
+      const userId = socket.data.user.userId;
+
+      await Promise.all([
+        // Clean this user
+        matchingRepository.setState(userId, 'IDLE'),
+        matchingRepository.removeUserFromAllQueues(userId),
+        presenceRepository.clearSearching(userId),
+        presenceRepository.clearInCall(userId),
+
+        // Clean peer
+        matchingRepository.setState(peerId, 'IDLE'),
+        matchingRepository.removeUserFromAllQueues(peerId),
+        presenceRepository.clearSearching(peerId),
+        presenceRepository.clearInCall(peerId),
+
+        // Delete session
+        redis.del(`match:session:${sessionId}`),
+      ]);
+
+      // Notify peer
+      io.to(peerId).emit(SOCKET_EVENTS.MATCH_DECLINED_BY_PEER);
+    }
+  );
 };

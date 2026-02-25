@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Video, Sparkles, Zap, ArrowRight } from 'lucide-react';
+import { Video, Sparkles, Zap, ArrowRight, ChevronLeft } from 'lucide-react';
 import Image from 'next/image';
 import { socket, connectSocket, resetSocket } from '@/lib/socket';
 import { axiosInstance } from '@/lib/axiosInstance';
@@ -153,7 +153,27 @@ export default function FindMatchPage() {
     if (!sessionId || !peerId) return;
     router.push(`/session?callId=${sessionId}&peerId=${peerId}`);
   };
+  const handleBackFromMatch = () => {
+    socket.emit('match:decline', { sessionId, peerId });
+    setMatchFound(false);
+    setSessionId(null);
+    setPeerId(null);
+    setPeerProfile(null);
+  };
+  useEffect(() => {
+    const onPeerDeclined = () => {
+      setMatchFound(false);
+      setSessionId(null);
+      setPeerId(null);
+      setPeerProfile(null);
+      toast.info('Your match went back. Find a new one!');
+    };
 
+    socket.on('match:declined_by_peer', onPeerDeclined);
+    return () => {
+      socket.off('match:declined_by_peer', onPeerDeclined);
+    };
+  }, []);
   useEffect(() => {
     const init = async () => {
       await Promise.resolve();
@@ -219,7 +239,7 @@ export default function FindMatchPage() {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-linear-to-br from-slate-50 via-white to-teal-50">
-      <ProfileHover />
+      {!isSearching && !matchFound && <ProfileHover />}
 
       {/* 2. BACKGROUND DECORATIONS */}
       <div className="absolute top-20 right-0 sm:right-10 w-56 sm:w-72 h-56 sm:h-72 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
@@ -360,6 +380,13 @@ export default function FindMatchPage() {
 
       {matchFound && (
         <div className="relative min-h-screen flex items-center justify-center px-4 py-14 sm:py-16 md:py-6">
+          <button
+            onClick={handleBackFromMatch}
+            className="absolute top-7 left-10 flex font-semibold text-primary"
+          >
+            <ChevronLeft size={23} className="mt-0.5" />
+            Go Back
+          </button>
           <div className="w-full max-w-4xl mx-auto text-center space-y-8 sm:space-y-5">
             {/* Header */}
             <div className="space-y-3 sm:space-y-3">

@@ -36,4 +36,16 @@ export const matchingRepository = {
   createSession(session: MatchSession) {
     return redis.hset(sessionKey(session.sessionId), session as any);
   },
+  async deleteSession(userId: string) {
+    // find and delete the session where userA or userB is this userId
+    const keys = await redis.keys('match:session:*');
+    for (const key of keys) {
+      const raw = await redis.get(key);
+      if (!raw) continue;
+      const session = JSON.parse(raw);
+      if (session.userA === userId || session.userB === userId) {
+        await redis.del(key);
+      }
+    }
+  },
 };
