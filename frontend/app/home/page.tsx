@@ -43,10 +43,6 @@ export default function FindMatchPage() {
     peerId: string;
   }
 
-  interface skill {
-    key: string;
-  }
-
   const quotes = [
     'Connecting minds, one conversation at a time...',
     'Every conversation is a new opportunity...',
