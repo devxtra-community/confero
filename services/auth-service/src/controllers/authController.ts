@@ -6,6 +6,15 @@ import { AppError } from '../middlewares/errorHandller.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+const cookieOptions = (maxAge: number) => ({
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
+  path: '/',
+  maxAge,
+  ...(isProduction && { domain: '.conferoo.in' }),
+});
+
 export const register = async (req: Request, res: Response) => {
   const { email, password, fullName } = req.body;
   const verificationToken = await authService.registerUser(
@@ -56,24 +65,15 @@ export const login = async (req: Request, res: Response) => {
 
   logger.info('Login Succesfull');
 
-  res.cookie('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-
-  res.cookie('accessToken', accessToken, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    path: '/',
-    maxAge: 24 * 60 * 60 * 1000,
-  });
+  res.cookie(
+    'refreshToken',
+    refreshToken,
+    cookieOptions(7 * 24 * 60 * 60 * 1000)
+  );
+  res.cookie('accessToken', accessToken, cookieOptions(24 * 60 * 60 * 1000));
 
   res.status(200).json({
-    message: ' Login Successfully Completed',
+    message: 'Login Successfully Completed',
     success: true,
     role,
   });
@@ -104,21 +104,12 @@ export const googleLogin = async (req: Request, res: Response) => {
 
   logger.info('Google login successful');
 
-  res.cookie('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-
-  res.cookie('accessToken', accessToken, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    path: '/',
-    maxAge: 24 * 60 * 60 * 1000,
-  });
+  res.cookie(
+    'refreshToken',
+    refreshToken,
+    cookieOptions(7 * 24 * 60 * 60 * 1000)
+  );
+  res.cookie('accessToken', accessToken, cookieOptions(24 * 60 * 60 * 1000));
 
   res.status(200).json({
     success: true,
@@ -131,19 +122,16 @@ export const logout = async (req: Request, res: Response) => {
   const refreshToken = req.cookies?.refreshToken;
   await authService.logoutUser(refreshToken);
 
-  res.clearCookie('refreshToken', {
+  const clearOptions = {
     httpOnly: true,
-    sameSite: isProduction ? 'none' : 'lax',
     secure: isProduction,
+    sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
     path: '/',
-  });
+    ...(isProduction && { domain: '.conferoo.in' }),
+  };
 
-  res.clearCookie('accessToken', {
-    httpOnly: true,
-    sameSite: isProduction ? 'none' : 'lax',
-    secure: isProduction,
-    path: '/',
-  });
+  res.clearCookie('refreshToken', clearOptions);
+  res.clearCookie('accessToken', clearOptions);
 
   res.status(200).json({
     success: true,
@@ -159,12 +147,7 @@ export const refresh = async (req: Request, res: Response) => {
 
   const newAccessToken = await authService.refreshAccessToken(refreshToken);
 
-  res.cookie('accessToken', newAccessToken, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    path: '/',
-  });
+  res.cookie('accessToken', newAccessToken, cookieOptions(24 * 60 * 60 * 1000));
 
   res.status(200).json({
     message: 'refresh succesfully',
