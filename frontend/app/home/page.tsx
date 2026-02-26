@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Video, Sparkles, Zap, ArrowRight, ChevronLeft } from 'lucide-react';
 import Image from 'next/image';
 import { socket, connectSocket, resetSocket } from '@/lib/socket';
@@ -21,6 +21,10 @@ export default function FindMatchPage() {
 
   const [isDuplicateTab, setIsDuplicateTab] = useState(false);
   const [searchTimeout, setSearchTimeout] = useState(false);
+
+  const [countdown, setCountdown] = useState(5);
+  const autoJoinRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const router = useRouter();
 
   type Skills = {
@@ -98,8 +102,46 @@ export default function FindMatchPage() {
     return () => clearTimeout(timer);
   }, [isSearching]);
 
+  useEffect(() => {
+    if (!matchFound) return;
+
+    autoJoinRef.current = setInterval(() => {
+      // setState inside a callback — allowed by react-hooks/set-state-in-effect
+      setCountdown(prev => {
+        if (prev <= 1) {
+          if (autoJoinRef.current) {
+            clearInterval(autoJoinRef.current);
+            autoJoinRef.current = null;
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (autoJoinRef.current) {
+        clearInterval(autoJoinRef.current);
+        autoJoinRef.current = null;
+      }
+      // setCountdown in cleanup is also allowed — not in effect body
+      setCountdown(5);
+    };
+  }, [matchFound]);
+
+  useEffect(() => {
+    if (countdown === 0 && matchFound && sessionId && peerId) {
+      router.push(`/session?callId=${sessionId}&peerId=${peerId}`);
+    }
+  }, [countdown, matchFound, sessionId, peerId, router]);
+
   const handleStartSearch = async () => {
     if (isSearching) return;
+
+    if (autoJoinRef.current) {
+      clearInterval(autoJoinRef.current);
+      autoJoinRef.current = null;
+    }
 
     if (matchFound && sessionId && peerId) {
       try {
@@ -112,7 +154,6 @@ export default function FindMatchPage() {
 
         socket.emit('match:find_another', { sessionId, peerId, skills });
 
-        // Wait for backend confirmation — backend will trigger match:start itself
         await new Promise<void>(resolve => {
           socket.once('match:find_another_ready', resolve);
         });
@@ -123,7 +164,6 @@ export default function FindMatchPage() {
         setPeerId(null);
         setPeerProfile(null);
         setCurrentQuote(0);
-        // Don't emit match:start here — backend handles it via match:find_another_ready
         socket.emit('match:start', { skills });
       } catch {
         toast.error('Unable to start matching');
@@ -131,7 +171,6 @@ export default function FindMatchPage() {
       return;
     }
 
-    // Normal flow — coming from idle page
     setIsSearching(true);
     setMatchFound(false);
     setSessionId(null);
@@ -186,9 +225,18 @@ export default function FindMatchPage() {
 
   const handleStartCall = () => {
     if (!sessionId || !peerId) return;
+    if (autoJoinRef.current) {
+      clearInterval(autoJoinRef.current);
+      autoJoinRef.current = null;
+    }
     router.push(`/session?callId=${sessionId}&peerId=${peerId}`);
   };
+
   const handleBackFromMatch = () => {
+    if (autoJoinRef.current) {
+      clearInterval(autoJoinRef.current);
+      autoJoinRef.current = null;
+    }
     socket.emit('match:decline', { sessionId, peerId });
     setMatchFound(false);
     setSessionId(null);
@@ -223,7 +271,6 @@ export default function FindMatchPage() {
       setIsSearching(true);
       setCurrentQuote(0);
 
-      // Fetch skills and start searching — backend already cleaned up before emitting this
       try {
         const res = await axiosInstance.get('/users/me');
         const skills = res.data.user.skills.map((s: { key: string }) => s.key);
@@ -250,7 +297,6 @@ export default function FindMatchPage() {
 
   if (loading) return <Loading />;
 
-  // ── Duplicate tab modal — shown instead of normal UI ────────────────────
   if (isDuplicateTab) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 via-white to-teal-50 px-4">
@@ -290,7 +336,6 @@ export default function FindMatchPage() {
             onClick={() => {
               socket.disconnect();
               window.close();
-              // Fallback: window.close() is blocked when tab was manually opened
               setTimeout(() => router.push('/login'), 300);
             }}
             className="w-full py-3 px-6 bg-linear-to-r from-primary to-favor text-white rounded-full font-semibold transition-all hover:scale-105"
@@ -301,11 +346,11 @@ export default function FindMatchPage() {
       </div>
     );
   }
+
   if (searchTimeout) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 via-white to-teal-50 px-4">
         <div className="max-w-sm w-full text-center space-y-8">
-          {/* Image */}
           <div className="relative w-48 h-48 mx-auto">
             <Image
               src="/auth/home1.svg"
@@ -316,7 +361,6 @@ export default function FindMatchPage() {
             <div className="absolute inset-0 rounded-full bg-linear-to-br from-primary/20 to-favor/20" />
           </div>
 
-          {/* Text */}
           <div className="space-y-3">
             <h2 className="font-sans text-3xl font-bold text-foreground">
               No one around yet
@@ -327,7 +371,6 @@ export default function FindMatchPage() {
             </p>
           </div>
 
-          {/* Buttons */}
           <div className="flex flex-col gap-3">
             <button
               onClick={async () => {
@@ -369,13 +412,11 @@ export default function FindMatchPage() {
       </div>
     );
   }
-  // ────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-linear-to-br from-slate-50 via-white to-teal-50">
       {!isSearching && !matchFound && <ProfileHover />}
 
-      {/* 2. BACKGROUND DECORATIONS */}
       <div className="absolute top-20 right-0 sm:right-10 w-56 sm:w-72 h-56 sm:h-72 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-40 left-0 sm:left-10 w-64 sm:w-96 h-64 sm:h-96 bg-favor/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -489,12 +530,7 @@ export default function FindMatchPage() {
                 ].map((src, i) => (
                   <div
                     key={i}
-                    className="
-                relative w-15 h-15
-                rounded-full overflow-hidden
-                ring-2 ring-primary/20
-                animate-fade-slide
-              "
+                    className="relative w-15 h-15 rounded-full overflow-hidden ring-2 ring-primary/20 animate-fade-slide"
                     style={{ animationDelay: `${i * 120}ms` }}
                   >
                     <Image src={src} fill alt="User" className="object-cover" />
@@ -522,7 +558,6 @@ export default function FindMatchPage() {
             Go Back
           </button>
           <div className="w-full max-w-4xl mx-auto text-center space-y-8 sm:space-y-5">
-            {/* Header */}
             <div className="space-y-3 sm:space-y-3">
               <div className="inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-6  py-1.5 sm:py-2 bg-linear-to-r from-primary to-favor text-white rounded-full shadow-md sm:shadow-lg">
                 <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -540,26 +575,9 @@ export default function FindMatchPage() {
               </p>
             </div>
 
-            {/* Avatar Section */}
             <div className="relative flex justify-center pt-4 sm:pt-3">
-              {/* Glow Background */}
               <div className="absolute w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 bg-linear-to-br from-primary/20 to-favor/20 rounded-full blur-2xl sm:blur-3xl" />
-
-              {/* Circle Avatar */}
-              <div
-                className="
-            relative 
-            w-40 h-40 
-            sm:w-56 sm:h-56 
-            md:w-72 md:h-72
-            rounded-full 
-            overflow-hidden
-            ring-2 sm:ring-4 ring-white/40
-            shadow-xl sm:shadow-2xl
-            transition-transform duration-500
-            hover:scale-105
-          "
-              >
+              <div className="relative w-40 h-40 sm:w-56 sm:h-56 md:w-72 md:h-72 rounded-full overflow-hidden ring-2 sm:ring-4 ring-white/40 shadow-xl sm:shadow-2xl transition-transform duration-500 hover:scale-105">
                 <Image
                   src={peerProfile?.image || '/auth/young.jpg'}
                   fill
@@ -569,7 +587,6 @@ export default function FindMatchPage() {
               </div>
             </div>
 
-            {/* Name & Role */}
             <div className="space-y-1 sm:space-y-2">
               {peerProfile ? (
                 <>
@@ -587,62 +604,45 @@ export default function FindMatchPage() {
               )}
             </div>
 
-            {/* Skills */}
             <div className="flex flex-wrap justify-center gap-2 sm:gap-3 max-w-xl mx-auto">
               {peerProfile?.skills?.map(skill => (
                 <span
                   key={skill._id}
-                  className="
-              px-3 sm:px-4 py-1
-              bg-white/60 
-              backdrop-blur-md
-              border border-white/40
-              text-primary 
-              rounded-full 
-              text-xs sm:text-sm
-              font-medium
-              shadow-sm
-            "
+                  className="px-3 sm:px-4 py-1 bg-white/60 backdrop-blur-md border border-white/40 text-primary rounded-full text-xs sm:text-sm font-medium shadow-sm"
                 >
                   {skill.label}
                 </span>
               ))}
             </div>
 
-            {/* Buttons */}
+            <div className="w-full max-w-xs mx-auto space-y-1">
+              <div className="relative w-full h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="absolute inset-y-0 left-0 bg-linear-to-r from-primary to-favor rounded-full transition-all duration-1000 ease-linear"
+                  style={{ width: `${((5 - countdown) / 5) * 100}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Joining automatically in {countdown}s
+              </p>
+            </div>
+
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5 pt-2 sm:pt-4 -m-1">
               <button
                 onClick={handleStartCall}
-                className="
-            flex items-center gap-2 sm:gap-3
-            px-6 sm:px-8 py-3 sm:py-4
-            bg-linear-to-r from-primary to-favor
-            text-white rounded-full
-            font-semibold text-sm sm:text-lg
-            shadow-md sm:shadow-lg
-            transition-all hover:scale-105
-            cursor-pointer
-          "
+                className="flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 bg-linear-to-r from-primary to-favor text-white rounded-full font-semibold text-sm sm:text-lg shadow-md sm:shadow-lg transition-all hover:scale-105 cursor-pointer"
               >
                 <Video className="w-4 h-4 sm:w-5 sm:h-5" />
                 Start Video Call
+                <span className="text-white/80 text-sm font-normal">
+                  ({countdown}s)
+                </span>
                 <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
 
               <button
                 onClick={handleStartSearch}
-                className="
-            px-6 sm:px-8 py-3 sm:py-4
-            bg-white/60
-            backdrop-blur-md
-            border border-white/40
-            text-foreground
-            rounded-full
-            font-semibold text-sm sm:text-lg
-            shadow-sm
-            transition-all hover:scale-105
-            cursor-pointer
-          "
+                className="px-6 sm:px-8 py-3 sm:py-4 bg-white/60 backdrop-blur-md border border-white/40 text-foreground rounded-full font-semibold text-sm sm:text-lg shadow-sm transition-all hover:scale-105 cursor-pointer"
               >
                 Find Another Match
               </button>
