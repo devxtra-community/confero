@@ -93,7 +93,7 @@ export default function FindMatchPage() {
       socket.emit('match:cancel');
       setIsSearching(false);
       setSearchTimeout(true);
-    }, 8000);
+    }, 20000);
 
     return () => clearTimeout(timer);
   }, [isSearching]);
@@ -308,7 +308,7 @@ export default function FindMatchPage() {
           {/* Image */}
           <div className="relative w-48 h-48 mx-auto">
             <Image
-              src="/auth/home.jpg"
+              src="/auth/home1.svg"
               fill
               alt="No match"
               className="object-cover rounded-full ring-4 ring-white shadow-xl"
