@@ -15,7 +15,8 @@ export const callHandlers = (socket: Socket, io: Server) => {
 
   registerCallHandlers(socket, io);
 
-  socket.on('disconnect', () => {
+  // async — needs to await clearInCall
+  socket.on('disconnect', async () => {
     for (const [callId, call] of callService.getAll()) {
       if (call.from === userId || call.to === userId) {
         if (
@@ -38,6 +39,12 @@ export const callHandlers = (socket: Socket, io: Server) => {
           callId,
           reason: 'DISCONNECTED',
         });
+
+        callService.update(callId, 'ENDED');
+
+        // Clear incall locks for both users on disconnect
+        await PresenceService.clearInCall(call.from);
+        await PresenceService.clearInCall(call.to);
 
         callService.remove(callId);
       }
@@ -68,13 +75,14 @@ export const socketController = async (socket: Socket) => {
   socket.on('disconnect', async () => {
     clearInterval(heartbeat);
 
-    const fullyOffline = await PresenceService.markOffline(
-      user.userId,
-      socket.id
-    );
+    // Clean all three keys in parallel on disconnect
+    // Covers: tab close, browser crash, network drop, beforeunload
+    await Promise.all([
+      PresenceService.markOffline(user.userId, socket.id),
+      PresenceService.clearSearching(user.userId),
+      PresenceService.clearInCall(user.userId),
+    ]);
 
-    if (fullyOffline) {
-      logger.info(`User fully offline: ${user.userId}`);
-    }
+    logger.info(`User disconnected and Redis cleaned: ${user.userId}`);
   });
 };

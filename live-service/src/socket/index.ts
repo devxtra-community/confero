@@ -29,7 +29,7 @@ export const initSocket = (httpserver: ReturnType<typeof createServer>) => {
       return;
     }
 
-    socket.join(userId);
+    // socket.join(userId) is called inside callHandlers — removed duplicate here
     socketController(socket);
     callHandlers(socket, io);
     matchingHandlers(socket, io);

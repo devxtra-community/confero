@@ -1,6 +1,12 @@
 'use client';
 
-import { ArrowRight, Eye, EyeOff, LockKeyholeOpen } from 'lucide-react';
+import {
+  ArrowRight,
+  Eye,
+  EyeOff,
+  LockKeyholeOpen,
+  MonitorX,
+} from 'lucide-react';
 import { useState } from 'react';
 import GoogleButton from './GoogleButton';
 import Link from 'next/link';
@@ -18,6 +24,17 @@ export function LoginRight() {
   const [openForgotModal, setOpenForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
 
+  // ── Single-device block state ────────────────────────────────────────────
+  // When API returns 409 ALREADY_LOGGED_IN, show modal with force logout.
+  // blockedUserId holds the userId returned by the API so we can pass it
+  // to POST /auth/logout { forceUserId } to kill the other session.
+  // forceLoading prevents double-clicks on the Force Logout button.
+  // ─────────────────────────────────────────────────────────────────────────
+  const [showAlreadyLoggedInModal, setShowAlreadyLoggedInModal] =
+    useState(false);
+  const [blockedUserId, setBlockedUserId] = useState<string | null>(null);
+  const [forceLoading, setForceLoading] = useState(false);
+
   const router = useRouter();
 
   // LOGIN
@@ -25,10 +42,7 @@ export function LoginRight() {
     setLoading(true);
 
     try {
-      await axiosInstance.post('/auth/login', {
-        email,
-        password,
-      });
+      await axiosInstance.post('/auth/login', { email, password });
 
       const meRes = await axiosInstance.get('/users/me');
       const user = meRes.data.user;
@@ -36,7 +50,16 @@ export function LoginRight() {
       router.replace(user.role === 'admin' ? '/admin' : '/home');
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
-        toast.error(err.response?.data?.message ?? 'Login failed');
+        // ── Single-device block — API returned 409 ───────────────────────
+        if (
+          err.response?.status === 409 &&
+          err.response?.data?.code === 'ALREADY_LOGGED_IN'
+        ) {
+          setBlockedUserId(err.response.data.userId);
+          setShowAlreadyLoggedInModal(true);
+        } else {
+          toast.error(err.response?.data?.message ?? 'Login failed');
+        }
       } else {
         toast.error('Login failed');
       }
@@ -45,15 +68,33 @@ export function LoginRight() {
     }
   };
 
+  // FORCE LOGOUT — kick the other device then retry login automatically
+  const handleForceLogout = async () => {
+    if (!blockedUserId) return;
+    setForceLoading(true);
+
+    try {
+      await axiosInstance.post('/auth/logout', { forceUserId: blockedUserId });
+      toast.success('Other device logged out. Logging you in...');
+      setShowAlreadyLoggedInModal(false);
+      setBlockedUserId(null);
+
+      // Small delay so Redis cleanup propagates, then retry login
+      setTimeout(() => {
+        handleLogin();
+      }, 800);
+    } catch {
+      toast.error('Failed to log out other device. Please try again.');
+    } finally {
+      setForceLoading(false);
+    }
+  };
+
   // FORGOT PASSWORD
   const handleForgotPassword = async () => {
     try {
-      await axiosInstance.post('/auth/forgot-password', {
-        email: forgotEmail,
-      });
-
+      await axiosInstance.post('/auth/forgot-password', { email: forgotEmail });
       toast.success('Reset link sent if email exists');
-
       setOpenForgotModal(false);
       setForgotEmail('');
     } catch {
@@ -90,7 +131,6 @@ export function LoginRight() {
                   onChange={e => setPassword(e.target.value)}
                   className="w-full h-11 px-4 rounded-md border border-input"
                 />
-
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -110,7 +150,7 @@ export function LoginRight() {
               <button
                 onClick={handleLogin}
                 disabled={loading}
-                className="w-full h-11 rounded-md bg-primary text-primary-foreground font-medium hover:opacity-90"
+                className="w-full h-11 rounded-md bg-primary text-primary-foreground font-medium hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading ? 'Logging in...' : 'Login'}
               </button>
@@ -134,6 +174,64 @@ export function LoginRight() {
         </div>
       </div>
 
+      {/* ── Already Logged In Modal ──────────────────────────────────────────
+          Shown when API returns 409 ALREADY_LOGGED_IN.
+          Force Logout button calls POST /auth/logout { forceUserId }
+          which kills the other session + Redis, then retries login.
+      ─────────────────────────────────────────────────────────────────── */}
+      {showAlreadyLoggedInModal && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
+          onClick={e =>
+            e.target === e.currentTarget && setShowAlreadyLoggedInModal(false)
+          }
+        >
+          <div className="bg-background p-1 rounded-[2rem] shadow-2xl w-full max-w-sm animate-in fade-in zoom-in duration-200">
+            <div className="bg-background rounded-[1.9rem] p-8 space-y-6">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-50 rounded-2xl mb-4">
+                  <MonitorX size={32} className="text-amber-500" />
+                </div>
+                <h3 className="text-2xl font-sans text-foreground tracking-tight">
+                  Already Logged In
+                </h3>
+                <p className="text-foreground/60 text-sm mt-2 leading-relaxed">
+                  Your account is active on another device or tab. Only one
+                  session is allowed at a time.
+                </p>
+                <p className="text-foreground/40 text-xs mt-2">
+                  Click below to log out the other device and continue here.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={handleForceLogout}
+                  disabled={forceLoading}
+                  className="w-full h-14 bg-primary hover:opacity-90 text-primary-foreground cursor-pointer font-semibold rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <span>
+                    {forceLoading ? 'Logging out...' : 'Log Out Other Device'}
+                  </span>
+                  {!forceLoading && <ArrowRight size={18} />}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowAlreadyLoggedInModal(false);
+                    setBlockedUserId(null);
+                  }}
+                  className="w-full py-2 text-sm font-semibold text-foreground/60 hover:text-primary transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Forgot Password Modal — unchanged ────────────────────────────── */}
       {openForgotModal && (
         <div
           className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4 transition-opacity duration-300"

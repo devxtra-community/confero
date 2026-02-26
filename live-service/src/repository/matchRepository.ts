@@ -11,9 +11,8 @@ export const matchingRepository = {
   },
 
   setState(userId: string, state: string) {
-    return redis.set(stateKey(userId), state, 'EX', 120);
+    return redis.set(stateKey(userId), state, 'EX', 3600); // 1 hour, not 120s
   },
-
   popQueueBySkill(skill: string) {
     return redis.lpop(queueKey(skill));
   },
@@ -35,5 +34,27 @@ export const matchingRepository = {
 
   createSession(session: MatchSession) {
     return redis.hset(sessionKey(session.sessionId), session as any);
+  },
+  async deleteSession(userId: string) {
+    // find and delete the session where userA or userB is this userId
+    const keys = await redis.keys('match:session:*');
+    for (const key of keys) {
+      const raw = await redis.get(key);
+      if (!raw) continue;
+      const session = JSON.parse(raw);
+      if (session.userA === userId || session.userB === userId) {
+        await redis.del(key);
+      }
+    }
+  },
+  async setCooldown(userA: string, userB: string): Promise<void> {
+    await Promise.all([
+      redis.set(`match:cooldown:${userA}:${userB}`, '1', 'EX', 300),
+      redis.set(`match:cooldown:${userB}:${userA}`, '1', 'EX', 300),
+    ]);
+  },
+
+  async hasCooldown(userA: string, userB: string): Promise<boolean> {
+    return (await redis.exists(`match:cooldown:${userA}:${userB}`)) === 1;
   },
 };

@@ -1,8 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { Video, Sparkles, Zap, ArrowRight } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Video, Sparkles, Zap, ArrowRight, ChevronLeft } from 'lucide-react';
 import Image from 'next/image';
-import { socket } from '@/lib/socket';
+import { socket, connectSocket, resetSocket } from '@/lib/socket';
 import { axiosInstance } from '@/lib/axiosInstance';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -18,6 +18,12 @@ export default function FindMatchPage() {
   const [peerProfile, setPeerProfile] = useState<PeerProfile | null>(null);
   const [currentQuote, setCurrentQuote] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  const [isDuplicateTab, setIsDuplicateTab] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState(false);
+
+  const [countdown, setCountdown] = useState(5);
+  const autoJoinRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const router = useRouter();
 
@@ -41,10 +47,6 @@ export default function FindMatchPage() {
     peerId: string;
   }
 
-  interface skill {
-    key: string;
-  }
-
   const quotes = [
     'Connecting minds, one conversation at a time...',
     'Every conversation is a new opportunity...',
@@ -53,9 +55,12 @@ export default function FindMatchPage() {
   ];
 
   useEffect(() => {
-    if (!socket.connected) {
-      socket.connect();
-    }
+    resetSocket();
+    connectSocket().catch((err: Error) => {
+      if (err.message === 'ALREADY_CONNECTED') {
+        setIsDuplicateTab(true);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -85,26 +90,102 @@ export default function FindMatchPage() {
     };
   }, [isSearching, quotes.length]);
 
+  useEffect(() => {
+    if (!isSearching) return;
+
+    const timer = setTimeout(() => {
+      socket.emit('match:cancel');
+      setIsSearching(false);
+      setSearchTimeout(true);
+    }, 20000);
+
+    return () => clearTimeout(timer);
+  }, [isSearching]);
+
+  useEffect(() => {
+    if (!matchFound) return;
+
+    autoJoinRef.current = setInterval(() => {
+      // setState inside a callback — allowed by react-hooks/set-state-in-effect
+      setCountdown(prev => {
+        if (prev <= 1) {
+          if (autoJoinRef.current) {
+            clearInterval(autoJoinRef.current);
+            autoJoinRef.current = null;
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (autoJoinRef.current) {
+        clearInterval(autoJoinRef.current);
+        autoJoinRef.current = null;
+      }
+      // setCountdown in cleanup is also allowed — not in effect body
+      setCountdown(5);
+    };
+  }, [matchFound]);
+
+  useEffect(() => {
+    if (countdown === 0 && matchFound && sessionId && peerId) {
+      router.push(`/session?callId=${sessionId}&peerId=${peerId}`);
+    }
+  }, [countdown, matchFound, sessionId, peerId, router]);
+
   const handleStartSearch = async () => {
     if (isSearching) return;
+
+    if (autoJoinRef.current) {
+      clearInterval(autoJoinRef.current);
+      autoJoinRef.current = null;
+    }
+
+    if (matchFound && sessionId && peerId) {
+      try {
+        const res = await axiosInstance.get('/users/me');
+        const skills = res.data.user.skills.map((s: { key: string }) => s.key);
+        if (!skills.length) {
+          toast.warning('Please add skills to your profile');
+          return;
+        }
+
+        socket.emit('match:find_another', { sessionId, peerId, skills });
+
+        await new Promise<void>(resolve => {
+          socket.once('match:find_another_ready', resolve);
+        });
+
+        setIsSearching(true);
+        setMatchFound(false);
+        setSessionId(null);
+        setPeerId(null);
+        setPeerProfile(null);
+        setCurrentQuote(0);
+        socket.emit('match:start', { skills });
+      } catch {
+        toast.error('Unable to start matching');
+      }
+      return;
+    }
 
     setIsSearching(true);
     setMatchFound(false);
     setSessionId(null);
     setPeerId(null);
+    setPeerProfile(null);
     setCurrentQuote(0);
 
     try {
       const res = await axiosInstance.get('/users/me');
-
-      const skills = res.data.user.skills.map((s: skill) => s.key);
-
+      const skills = res.data.user.skills.map((s: { key: string }) => s.key);
       if (!skills.length) {
         toast.warning('Please add skills to your profile');
         setIsSearching(false);
         return;
       }
-
       socket.emit('match:start', { skills });
     } catch {
       toast.error('Unable to start matching');
@@ -142,34 +223,69 @@ export default function FindMatchPage() {
     };
   }, [isSearching]);
 
-  // useEffect(() => {
-  //   const onIncomingCall = ({ callId }: { callId: string }) => {
-  //     socket.emit('call:accept', { callId });
-  //   };
-
-  //   socket.on('call:incoming', onIncomingCall);
-
-  //   return () => {
-  //     socket.off('call:incoming', onIncomingCall);
-  //   };
-  // }, [router]);
-
-  // useEffect(() => {
-  //   const onCallAccepted = ({ callId }: CallAcceptedPayload) => {
-  //     router.push(`/session?callId=${callId}&peerId=${peerId}`);
-  //   };
-  //   socket.on('call:accepted', onCallAccepted);
-
-  //   return () => {
-  //     socket.off('call:accepted', onCallAccepted);
-  //   };
-  // }, [peerId, router]);
-
   const handleStartCall = () => {
     if (!sessionId || !peerId) return;
-    // No socket emit needed — matchingHandler already created the call record
+    if (autoJoinRef.current) {
+      clearInterval(autoJoinRef.current);
+      autoJoinRef.current = null;
+    }
     router.push(`/session?callId=${sessionId}&peerId=${peerId}`);
   };
+
+  const handleBackFromMatch = () => {
+    if (autoJoinRef.current) {
+      clearInterval(autoJoinRef.current);
+      autoJoinRef.current = null;
+    }
+    socket.emit('match:decline', { sessionId, peerId });
+    setMatchFound(false);
+    setSessionId(null);
+    setPeerId(null);
+    setPeerProfile(null);
+  };
+
+  useEffect(() => {
+    const onPeerDeclined = () => {
+      setMatchFound(false);
+      setSessionId(null);
+      setPeerId(null);
+      setPeerProfile(null);
+      toast.info('Your match went back. Find a new one!');
+    };
+
+    socket.on('match:declined_by_peer', onPeerDeclined);
+    return () => {
+      socket.off('match:declined_by_peer', onPeerDeclined);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onPeerFindAnother = async () => {
+      setMatchFound(false);
+      setSessionId(null);
+      setPeerId(null);
+      setPeerProfile(null);
+      toast.info(
+        'Your match is looking for someone else. Searching for a new one...'
+      );
+      setIsSearching(true);
+      setCurrentQuote(0);
+
+      try {
+        const res = await axiosInstance.get('/users/me');
+        const skills = res.data.user.skills.map((s: { key: string }) => s.key);
+        if (!skills.length) return;
+        socket.emit('match:start', { skills });
+      } catch {
+        toast.error('Unable to start matching');
+      }
+    };
+
+    socket.on('match:peer_find_another', onPeerFindAnother);
+    return () => {
+      socket.off('match:peer_find_another', onPeerFindAnother);
+    };
+  }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -180,11 +296,127 @@ export default function FindMatchPage() {
   }, []);
 
   if (loading) return <Loading />;
+
+  if (isDuplicateTab) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 via-white to-teal-50 px-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
+          <div className="w-16 h-16 mx-auto bg-amber-100 rounded-full flex items-center justify-center">
+            <svg
+              className="w-8 h-8 text-amber-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+              />
+            </svg>
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-foreground">
+              Session Already Active
+            </h2>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              You already have an active session open in another tab. Only one
+              tab can be connected at a time to prevent disrupting your ongoing
+              match.
+            </p>
+            <p className="text-muted-foreground text-xs pt-1">
+              If your other tab is closed or crashed, please wait a moment and
+              then refresh this page.
+            </p>
+          </div>
+
+          <button
+            onClick={() => {
+              socket.disconnect();
+              window.close();
+              setTimeout(() => router.push('/login'), 300);
+            }}
+            className="w-full py-3 px-6 bg-linear-to-r from-primary to-favor text-white rounded-full font-semibold transition-all hover:scale-105"
+          >
+            Close This Tab
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (searchTimeout) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 via-white to-teal-50 px-4">
+        <div className="max-w-sm w-full text-center space-y-8">
+          <div className="relative w-48 h-48 mx-auto">
+            <Image
+              src="/auth/home1.svg"
+              fill
+              alt="No match"
+              className="object-cover rounded-full ring-4 ring-white shadow-xl"
+            />
+            <div className="absolute inset-0 rounded-full bg-linear-to-br from-primary/20 to-favor/20" />
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="font-sans text-3xl font-bold text-foreground">
+              No one around yet
+            </h2>
+            <p className="text-muted-foreground text-sm leading-relaxed max-w-xs mx-auto">
+              Looks like everyone&apos;s busy right now. The right connection is
+              just around the corner — try again in a bit.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={async () => {
+                setSearchTimeout(false);
+                setIsSearching(true);
+                setCurrentQuote(0);
+                try {
+                  const res = await axiosInstance.get('/users/me');
+                  const skills = res.data.user.skills.map(
+                    (s: { key: string }) => s.key
+                  );
+                  if (!skills.length) {
+                    toast.warning('Please add skills to your profile');
+                    setIsSearching(false);
+                    return;
+                  }
+                  socket.emit('match:start', { skills });
+                } catch {
+                  toast.error('Unable to start matching');
+                  setIsSearching(false);
+                }
+              }}
+              className="w-full py-3 px-6 bg-linear-to-r from-primary to-favor text-white rounded-full font-semibold transition-all hover:scale-105"
+            >
+              Try Again
+            </button>
+
+            <button
+              onClick={() => {
+                setSearchTimeout(false);
+                router.push('/home');
+              }}
+              className="w-full py-3 px-6 text-muted-foreground text-sm font-medium hover:text-foreground transition-colors"
+            >
+              ← Go Back to Home
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-linear-to-br from-slate-50 via-white to-teal-50">
-      <ProfileHover />
+      {!isSearching && !matchFound && <ProfileHover />}
 
-      {/* 2. BACKGROUND DECORATIONS */}
       <div className="absolute top-20 right-0 sm:right-10 w-56 sm:w-72 h-56 sm:h-72 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-40 left-0 sm:left-10 w-64 sm:w-96 h-64 sm:h-96 bg-favor/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -298,12 +530,7 @@ export default function FindMatchPage() {
                 ].map((src, i) => (
                   <div
                     key={i}
-                    className="
-                relative w-15 h-15
-                rounded-full overflow-hidden
-                ring-2 ring-primary/20
-                animate-fade-slide
-              "
+                    className="relative w-15 h-15 rounded-full overflow-hidden ring-2 ring-primary/20 animate-fade-slide"
                     style={{ animationDelay: `${i * 120}ms` }}
                   >
                     <Image src={src} fill alt="User" className="object-cover" />
@@ -322,9 +549,15 @@ export default function FindMatchPage() {
       )}
 
       {matchFound && (
-        <div className="relative min-h-screen flex items-center justify-center px-4 py-14 sm:py-16 md:py-12">
-          <div className="w-full max-w-4xl mx-auto text-center space-y-8 sm:space-y-10">
-            {/* Header */}
+        <div className="relative min-h-screen flex items-center justify-center px-4 py-14 sm:py-16 md:py-6">
+          <button
+            onClick={handleBackFromMatch}
+            className="absolute top-7 left-10 flex font-semibold text-primary"
+          >
+            <ChevronLeft size={23} className="mt-0.5" />
+            Go Back
+          </button>
+          <div className="w-full max-w-4xl mx-auto text-center space-y-8 sm:space-y-5">
             <div className="space-y-3 sm:space-y-3">
               <div className="inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-6  py-1.5 sm:py-2 bg-linear-to-r from-primary to-favor text-white rounded-full shadow-md sm:shadow-lg">
                 <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -337,31 +570,14 @@ export default function FindMatchPage() {
                 Meet Your New Connection
               </h2>
 
-              <p className="text-sm sm:text-lg md:text-xl text-primary italic">
+              <p className="text-sm sm:text-lg md:text-xl text-primary italic -mt-2">
                 Every conversation is a new opportunity
               </p>
             </div>
 
-            {/* Avatar Section */}
             <div className="relative flex justify-center pt-4 sm:pt-3">
-              {/* Glow Background */}
               <div className="absolute w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 bg-linear-to-br from-primary/20 to-favor/20 rounded-full blur-2xl sm:blur-3xl" />
-
-              {/* Circle Avatar */}
-              <div
-                className="
-            relative 
-            w-40 h-40 
-            sm:w-56 sm:h-56 
-            md:w-72 md:h-72
-            rounded-full 
-            overflow-hidden
-            ring-2 sm:ring-4 ring-white/40
-            shadow-xl sm:shadow-2xl
-            transition-transform duration-500
-            hover:scale-105
-          "
-              >
+              <div className="relative w-40 h-40 sm:w-56 sm:h-56 md:w-72 md:h-72 rounded-full overflow-hidden ring-2 sm:ring-4 ring-white/40 shadow-xl sm:shadow-2xl transition-transform duration-500 hover:scale-105">
                 <Image
                   src={peerProfile?.image || '/auth/young.jpg'}
                   fill
@@ -371,7 +587,6 @@ export default function FindMatchPage() {
               </div>
             </div>
 
-            {/* Name & Role */}
             <div className="space-y-1 sm:space-y-2">
               {peerProfile ? (
                 <>
@@ -389,62 +604,45 @@ export default function FindMatchPage() {
               )}
             </div>
 
-            {/* Skills */}
             <div className="flex flex-wrap justify-center gap-2 sm:gap-3 max-w-xl mx-auto">
               {peerProfile?.skills?.map(skill => (
                 <span
                   key={skill._id}
-                  className="
-              px-3 sm:px-4 py-1
-              bg-white/60 
-              backdrop-blur-md
-              border border-white/40
-              text-primary 
-              rounded-full 
-              text-xs sm:text-sm
-              font-medium
-              shadow-sm
-            "
+                  className="px-3 sm:px-4 py-1 bg-white/60 backdrop-blur-md border border-white/40 text-primary rounded-full text-xs sm:text-sm font-medium shadow-sm"
                 >
                   {skill.label}
                 </span>
               ))}
             </div>
 
-            {/* Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5 pt-2 sm:pt-4">
+            <div className="w-full max-w-xs mx-auto space-y-1">
+              <div className="relative w-full h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="absolute inset-y-0 left-0 bg-linear-to-r from-primary to-favor rounded-full transition-all duration-1000 ease-linear"
+                  style={{ width: `${((5 - countdown) / 5) * 100}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Joining automatically in {countdown}s
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5 pt-2 sm:pt-4 -m-1">
               <button
                 onClick={handleStartCall}
-                className="
-            flex items-center gap-2 sm:gap-3
-            px-6 sm:px-8 py-3 sm:py-4
-            bg-linear-to-r from-primary to-favor
-            text-white rounded-full
-            font-semibold text-sm sm:text-lg
-            shadow-md sm:shadow-lg
-            transition-all hover:scale-105
-            cursor-pointer
-          "
+                className="flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 bg-linear-to-r from-primary to-favor text-white rounded-full font-semibold text-sm sm:text-lg shadow-md sm:shadow-lg transition-all hover:scale-105 cursor-pointer"
               >
                 <Video className="w-4 h-4 sm:w-5 sm:h-5" />
                 Start Video Call
+                <span className="text-white/80 text-sm font-normal">
+                  ({countdown}s)
+                </span>
                 <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
 
               <button
                 onClick={handleStartSearch}
-                className="
-            px-6 sm:px-8 py-3 sm:py-4
-            bg-white/60
-            backdrop-blur-md
-            border border-white/40
-            text-foreground
-            rounded-full
-            font-semibold text-sm sm:text-lg
-            shadow-sm
-            transition-all hover:scale-105
-            cursor-pointer
-          "
+                className="px-6 sm:px-8 py-3 sm:py-4 bg-white/60 backdrop-blur-md border border-white/40 text-foreground rounded-full font-semibold text-sm sm:text-lg shadow-sm transition-all hover:scale-105 cursor-pointer"
               >
                 Find Another Match
               </button>

@@ -1,6 +1,6 @@
 'use client';
 
-import { socket } from '@/lib/socket';
+import { socket, connectSocket } from '@/lib/socket';
 import { useEffect, useRef, useCallback, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
@@ -58,6 +58,10 @@ function VideoCallInner() {
   const [waitingForPeer, setWaitingForPeer] = useState(false);
 
   const iceServersRef = useRef<RTCIceServer[] | null>(null);
+
+  // ── Duplicate tab guard ──────────────────────────────────────────────────
+  const [isDuplicateTab, setIsDuplicateTab] = useState(false);
+  // ────────────────────────────────────────────────────────────────────────
 
   // ── Timer ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -169,12 +173,8 @@ function VideoCallInner() {
   }, []);
 
   // ── Main session effect ──────────────────────────────────────────────────
-  // Depends on callId so it re-runs once searchParams resolves from '' to real value
   useEffect(() => {
-    // Don't run until we have a real callId
     if (!callId || !peerId) return;
-
-    // StrictMode guard — only start once per real mount
     if (sessionStartedRef.current) return;
     sessionStartedRef.current = true;
 
@@ -194,12 +194,22 @@ function VideoCallInner() {
           setStatus('Waiting for peer camera...');
         };
 
-        if (socket.connected) {
+        // ── Use connectSocket() so ALREADY_CONNECTED is caught here too ──
+        try {
+          await connectSocket();
           emitReady();
-        } else {
-          socket.once('connect', emitReady);
-          socket.connect();
+        } catch (err) {
+          const error = err as Error;
+          if (error.message === 'ALREADY_CONNECTED') {
+            setIsDuplicateTab(true);
+            // Stop camera — we won't be using it
+            localStreamRef.current?.getTracks().forEach(t => t.stop());
+            localStreamRef.current = null;
+            return;
+          }
+          throw err;
         }
+        // ────────────────────────────────────────────────────────────────
       } catch {
         setStatus('Camera denied — cannot join call');
       }
@@ -332,7 +342,7 @@ function VideoCallInner() {
       socket.off('webrtc:answer', onAnswer);
       socket.off('webrtc:ice', onIce);
       socket.off('call:end', onCallEnd);
-      socket.off('connect'); // remove pending ready emitter if unmounted early
+      socket.off('connect');
       cleanup();
       localStreamRef.current?.getTracks().forEach(t => t.stop());
       localStreamRef.current = null;
@@ -366,6 +376,58 @@ function VideoCallInner() {
     cleanup();
     setTimeout(() => router.push('/home'), 500);
   };
+
+  // ── Duplicate tab screen ──────────────────────────────────────────────────
+  if (isDuplicateTab) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-gray-900 px-4">
+        <div className="max-w-md w-full bg-gray-800 rounded-2xl shadow-xl p-8 text-center space-y-6">
+          <div className="w-16 h-16 mx-auto bg-amber-900/40 rounded-full flex items-center justify-center">
+            <svg
+              className="w-8 h-8 text-amber-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+              />
+            </svg>
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-white">
+              Session Already Active
+            </h2>
+            <p className="text-gray-400 text-sm leading-relaxed">
+              You already have an active session open in another tab. Only one
+              tab can be connected at a time to prevent disrupting your ongoing
+              call.
+            </p>
+            <p className="text-gray-500 text-xs pt-1">
+              If your other tab is closed or crashed, please wait a moment and
+              then refresh this page.
+            </p>
+          </div>
+
+          <button
+            onClick={() => {
+              socket.disconnect();
+              window.close();
+              // Fallback: window.close() is blocked when tab was manually opened
+              setTimeout(() => router.push('/login'), 300);
+            }}
+            className="w-full py-3 px-6 bg-red-600 hover:bg-red-700 text-white rounded-full font-semibold transition-all hover:scale-105"
+          >
+            Close This Tab
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // ── Denied screen ─────────────────────────────────────────────────────────
   if (permissionState === 'denied') {

@@ -20,12 +20,17 @@ export const SOCKET_EVENTS = {
   CALL_END: 'call:end',
   PEER_READY: 'peer:ready',
   CALL_START: 'call:start',
-
+  ALREADY_SEARCHING: 'already_searching',
   // Matching events
+  MATCH_FIND_ANOTHER: 'match:find_another',
+  MATCH_PEER_FIND_ANOTHER: 'match:peer_find_another',
   MATCH_START: 'match:start',
   MATCH_FOUND: 'match:found',
   MATCH_CANCEL: 'match:cancel',
   MATCH_TIMEOUT: 'match:timeout',
+  MATCH_DECLINE: 'match:decline',
+  MATCH_DECLINED_BY_PEER: 'match:declined_by_peer',
+  MATCH_FIND_ANOTHER_READY: 'match:find_another_ready',
 
   // webrtc signaling events
   WEBRTC_OFFER: 'webrtc:offer',

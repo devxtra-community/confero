@@ -29,6 +29,7 @@ import {
 import BannerCropModal from '@/components/BannerCropModal';
 import AvatarEditModal from '@/components/AvatarEditModal';
 import Link from 'next/link';
+import axios from 'axios';
 
 export interface Skill {
   key: string;
@@ -105,15 +106,14 @@ export default function ProfilePage({ user }: ProfilePageProps) {
       const { uploadUrl, key } = data;
 
       // 2. upload directly to R2
-      const uploadRes = await fetch(uploadUrl, {
-        method: 'PUT',
+      const uploadRes = await axios.put(uploadUrl, file, {
         headers: {
           'Content-Type': file.type,
         },
-        body: file,
+        withCredentials: false,
       });
 
-      if (!uploadRes.ok) {
+      if (uploadRes.status !== 200) {
         throw new Error('Direct upload failed');
       }
 
@@ -157,15 +157,14 @@ export default function ProfilePage({ user }: ProfilePageProps) {
       const { uploadUrl, key } = data;
 
       // 2. upload directly to R2
-      const uploadRes = await fetch(uploadUrl, {
-        method: 'PUT',
+      const uploadRes = await axios.put(uploadUrl, file, {
         headers: {
           'Content-Type': file.type,
         },
-        body: file,
+        withCredentials: false,
       });
 
-      if (!uploadRes.ok) {
+      if (uploadRes.status !== 200) {
         throw new Error('Direct upload failed');
       }
 
