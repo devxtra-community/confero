@@ -41,7 +41,6 @@ export function LoginRight() {
       router.push(target);
 
       console.log('after navigating');
-
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         toast.error(err.response?.data?.message ?? 'Login failed');

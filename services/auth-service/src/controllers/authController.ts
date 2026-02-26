@@ -4,7 +4,7 @@ import { googleAuthService } from '../services/googleAuth.service.js';
 import { logger } from '../config/logger.js';
 import { AppError } from '../middlewares/errorHandller.js';
 
-const isProduction = process.env.NODE_ENV === 'production';
+// const isProduction = process.env.NODE_ENV === 'production';
 
 export const register = async (req: Request, res: Response) => {
   const { email, password, fullName } = req.body;
@@ -57,18 +57,18 @@ export const login = async (req: Request, res: Response) => {
   logger.info('Login Succesfull');
 
   res.cookie('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    // httpOnly: true,
+    // secure: isProduction,
+    // sameSite: isProduction ? 'none' : 'lax',
+    // path: '/',
+    maxAge: 7 * 24 * 60 * 60 * 1000, 
   });
 
   res.cookie('accessToken', accessToken, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    path: '/',
+    // httpOnly: true,
+    // secure: isProduction,
+    // sameSite: isProduction ? 'none' : 'lax',
+    // path: '/',
     maxAge: 24 * 60 * 60 * 1000,
   });
 
@@ -105,18 +105,18 @@ export const googleLogin = async (req: Request, res: Response) => {
   logger.info('Google login successful');
 
   res.cookie('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    // httpOnly: true,
+    // secure: isProduction,
+    // sameSite: isProduction ? 'none' : 'lax',
+    // path: '/',
+    maxAge: 7 * 24 * 60 * 60 * 1000, 
   });
 
   res.cookie('accessToken', accessToken, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    path: '/',
+    // httpOnly: true,
+    // secure: isProduction,
+    // sameSite: isProduction ? 'none' : 'lax',
+    // path: '/',
     maxAge: 24 * 60 * 60 * 1000,
   });
 
@@ -132,17 +132,17 @@ export const logout = async (req: Request, res: Response) => {
   await authService.logoutUser(refreshToken);
 
   res.clearCookie('refreshToken', {
-    httpOnly: true,
-    sameSite: isProduction ? 'none' : 'lax',
-    secure: isProduction,
-    path: '/',
+    // httpOnly: true,
+    // sameSite: isProduction ? 'none' : 'lax',
+    // secure: isProduction,
+    // path: '/',
   });
 
   res.clearCookie('accessToken', {
-    httpOnly: true,
-    sameSite: isProduction ? 'none' : 'lax',
-    secure: isProduction,
-    path: '/',
+    // httpOnly: true,
+    // sameSite: isProduction ? 'none' : 'lax',
+    // secure: isProduction,
+    // path: '/',
   });
 
   res.status(200).json({
@@ -160,10 +160,10 @@ export const refresh = async (req: Request, res: Response) => {
   const newAccessToken = await authService.refreshAccessToken(refreshToken);
 
   res.cookie('accessToken', newAccessToken, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    path: '/',
+    // httpOnly: true,
+    // secure: isProduction,
+    // sameSite: isProduction ? 'none' : 'lax',
+    // path: '/',
   });
 
   res.status(200).json({
