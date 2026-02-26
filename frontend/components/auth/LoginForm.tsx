@@ -35,10 +35,9 @@ export function LoginRight() {
 
       console.log('target route:', target);
 
-      
       console.log('prefetch success');
 
-      router.push(target)
+      router.push(target);
 
       console.log('after navigating');
     } catch (err: unknown) {
