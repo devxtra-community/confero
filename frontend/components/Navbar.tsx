@@ -29,7 +29,7 @@ export default function Navbar() {
       >
         <div className="flex items-center justify-between gap-6">
           <div className="flex items-center gap-6 font-sans">
-            <Image src='/af5.svg' width={30} height={30} alt='logo' />
+            <Image src="/af5.svg" width={30} height={30} alt="logo" />
             {/* <h1 className="text-white text-lg sm:text-xl -ml-7">onferoo</h1> */}
 
             <div className="hidden md:flex items-center justify-around gap-6 text-md cursor-pointer">
