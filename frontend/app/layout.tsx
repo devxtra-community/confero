@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Confero  ',
+  title: 'Conferoo  ',
   description: 'Live-communication platform ',
 };
 

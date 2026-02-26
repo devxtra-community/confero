@@ -38,7 +38,7 @@ export function LoginRight() {
       router.prefetch(target);
       console.log('prefetch success');
 
-      router.push(target);
+      window.location.href = target;
 
       console.log('after navigating');
     } catch (err: unknown) {
@@ -51,6 +51,7 @@ export function LoginRight() {
       setLoading(false);
     }
   };
+  
   // FORGOT PASSWORD
   const handleForgotPassword = async () => {
     try {

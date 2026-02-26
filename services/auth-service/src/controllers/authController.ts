@@ -61,7 +61,7 @@ export const login = async (req: Request, res: Response) => {
     // secure: isProduction,
     // sameSite: isProduction ? 'none' : 'lax',
     // path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000, 
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
   res.cookie('accessToken', accessToken, {
@@ -109,7 +109,7 @@ export const googleLogin = async (req: Request, res: Response) => {
     // secure: isProduction,
     // sameSite: isProduction ? 'none' : 'lax',
     // path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000, 
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
   res.cookie('accessToken', accessToken, {
