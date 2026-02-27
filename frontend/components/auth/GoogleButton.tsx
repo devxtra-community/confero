@@ -19,18 +19,20 @@ export default function GoogleButton() {
           }
 
           try {
-            await axiosInstance.post('/auth/google', {
+            const res = await axiosInstance.post('/auth/google', {
               idToken,
             });
 
-            const meRes = await axiosInstance.get('/users/me');
-            const user = meRes.data.user;
+            const role = res.data.role;
+            console.log(role);
+            const target = role === 'admin' ? '/admin' : '/home';
+            console.log('navigating navigating');
+            router.replace(target);
+            setTimeout(() => {
+              router.refresh();
+            }, 50);
 
-            if (user.role === 'admin') {
-              router.replace('/admin');
-            } else {
-              router.replace('/home');
-            }
+            console.log('after navigating');
           } catch (error) {
             console.error('Google auth API failed', error);
             router.replace('/login');

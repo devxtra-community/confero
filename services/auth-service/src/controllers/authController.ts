@@ -9,6 +9,15 @@ import { redis } from '../config/redis.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+const cookieOptions = (maxAge: number) => ({
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
+  path: '/',
+  maxAge,
+  ...(isProduction && { domain: '.conferoo.in' }),
+});
+
 export const register = async (req: Request, res: Response) => {
   const { email, password, fullName } = req.body;
   const verificationToken = await authService.registerUser(
@@ -120,7 +129,7 @@ export const resendOtp = async (req: Request, res: Response) => {
 export const googleLogin = async (req: Request, res: Response) => {
   const { idToken } = req.body;
 
-  const { accessToken, refreshToken } =
+  const { accessToken, refreshToken, role } =
     await googleAuthService.authenticate(idToken);
 
   logger.info('Google login successful');
@@ -146,6 +155,7 @@ export const googleLogin = async (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: 'Google login successfully completed',
+    role,
   });
 };
 
@@ -208,17 +218,16 @@ export const logout = async (req: Request, res: Response) => {
 
   await authService.logoutUser(refreshToken);
 
-  res.clearCookie('refreshToken', {
+  const clearOptions = {
     httpOnly: true,
-    sameSite: 'lax',
     secure: isProduction,
-  });
+    sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
+    path: '/',
+    ...(isProduction && { domain: '.conferoo.in' }),
+  };
 
-  res.clearCookie('accessToken', {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: isProduction,
-  });
+  res.clearCookie('refreshToken', clearOptions);
+  res.clearCookie('accessToken', clearOptions);
 
   res.status(200).json({
     success: true,
@@ -234,11 +243,7 @@ export const refresh = async (req: Request, res: Response) => {
 
   const newAccessToken = await authService.refreshAccessToken(refreshToken);
 
-  res.cookie('accessToken', newAccessToken, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: 'lax',
-  });
+  res.cookie('accessToken', newAccessToken, cookieOptions(24 * 60 * 60 * 1000));
 
   res.status(200).json({
     message: 'refresh succesfully',

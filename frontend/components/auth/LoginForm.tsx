@@ -42,12 +42,21 @@ export function LoginRight() {
     setLoading(true);
 
     try {
-      await axiosInstance.post('/auth/login', { email, password });
+      const res = await axiosInstance.post('/auth/login', {
+        email,
+        password,
+      });
 
-      const meRes = await axiosInstance.get('/users/me');
-      const user = meRes.data.user;
+      const role = res.data.role;
+      const target = role === 'admin' ? '/admin' : '/home';
 
-      router.replace(user.role === 'admin' ? '/admin' : '/home');
+      console.log('target route:', target);
+
+      console.log('prefetch success');
+
+      router.push(target);
+
+      console.log('after navigating');
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         // ── Single-device block — API returned 409 ───────────────────────

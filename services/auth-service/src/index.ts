@@ -9,9 +9,22 @@ import { startRabbitConsumer } from './config/rabbitConsumer.js';
 
 dotenv.config();
 
-app.listen(process.env.PORT, async () => {
-  await connection();
-  logger.info(`Backend running on http://localhost:${process.env.PORT}`);
-  await loadBansIntoRedis();
-  await startRabbitConsumer();
-});
+const start = async () => {
+  try {
+    await connection();
+    logger.info('Database connected');
+
+    await loadBansIntoRedis();
+    logger.info('Redis initialized');
+
+    await startRabbitConsumer();
+    logger.info('RabbitMQ connected');
+
+    app.listen(process.env.PORT, () => {});
+  } catch (err) {
+    logger.error('Startup failed:', err);
+    process.exit(1);
+  }
+};
+
+start();

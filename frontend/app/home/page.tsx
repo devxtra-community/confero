@@ -70,6 +70,7 @@ export default function FindMatchPage() {
       try {
         const res = await axiosInstance.get(`/users/peer/${peerId}`);
         setPeerProfile(res.data);
+        console.log(res);
       } catch {
         toast.warning('Failed to fetch user profile details');
       }
