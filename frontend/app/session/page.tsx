@@ -23,7 +23,11 @@ import {
 } from 'lucide-react';
 
 type PermissionState = 'idle' | 'requesting' | 'granted' | 'denied';
-type CallEndReason = 'USER_ENDED' | 'DISCONNECTED' | 'ICE_FAILED' | 'TIME_LIMIT';
+type CallEndReason =
+  | 'USER_ENDED'
+  | 'DISCONNECTED'
+  | 'ICE_FAILED'
+  | 'TIME_LIMIT';
 
 // ── What the OTHER person sees (server-pushed call:end) ───────────────────
 const PEER_END_CONFIG: Record<
@@ -135,7 +139,10 @@ function VideoCallInner() {
     setFinalDuration(callDurationRef.current);
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     localStreamRef.current = null;
-    socket.emit('call:end', { callId: callIdRef.current, reason: 'TIME_LIMIT' });
+    socket.emit('call:end', {
+      callId: callIdRef.current,
+      reason: 'TIME_LIMIT',
+    });
     cleanup();
     setCallEndReason('TIME_LIMIT');
     setCallEnded(true);
@@ -612,13 +619,23 @@ function VideoCallInner() {
               <div
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all duration-500"
                 style={{
-                  background: callDuration >= 120 ? 'rgba(220,38,38,0.2)' : 'rgba(0,0,0,0.45)',
+                  background:
+                    callDuration >= 120
+                      ? 'rgba(220,38,38,0.2)'
+                      : 'rgba(0,0,0,0.45)',
                   backdropFilter: 'blur(8px)',
-                  border: callDuration >= 120 ? '1px solid rgba(220,38,38,0.3)' : '1px solid transparent',
+                  border:
+                    callDuration >= 120
+                      ? '1px solid rgba(220,38,38,0.3)'
+                      : '1px solid transparent',
                 }}
               >
-                <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${callDuration >= 120 ? 'bg-red-400' : 'bg-red-500'}`} />
-                <span className={`text-xs font-mono tracking-widest transition-colors duration-500 ${callDuration >= 120 ? 'text-red-300' : 'text-white'}`}>
+                <span
+                  className={`w-1.5 h-1.5 rounded-full animate-pulse ${callDuration >= 120 ? 'bg-red-400' : 'bg-red-500'}`}
+                />
+                <span
+                  className={`text-xs font-mono tracking-widest transition-colors duration-500 ${callDuration >= 120 ? 'text-red-300' : 'text-white'}`}
+                >
                   {fmt(callDuration)}
                 </span>
               </div>
@@ -950,9 +967,14 @@ function VideoCallInner() {
                   className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ background: 'rgba(255,255,255,0.06)' }}
                 >
-                  <Users className="w-3.5 h-3.5 text-white/50" strokeWidth={1.5} />
+                  <Users
+                    className="w-3.5 h-3.5 text-white/50"
+                    strokeWidth={1.5}
+                  />
                 </div>
-                <span className="text-white/70 text-sm font-medium">How matching works</span>
+                <span className="text-white/70 text-sm font-medium">
+                  How matching works
+                </span>
               </div>
               <div className="space-y-2.5 pl-9">
                 {[
@@ -965,7 +987,9 @@ function VideoCallInner() {
                     <span className="text-white/20 text-xs font-mono mt-0.5 flex-shrink-0">
                       {String(i + 1).padStart(2, '0')}
                     </span>
-                    <p className="text-white/40 text-xs leading-relaxed">{rule}</p>
+                    <p className="text-white/40 text-xs leading-relaxed">
+                      {rule}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -981,9 +1005,14 @@ function VideoCallInner() {
                   className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ background: 'rgba(255,255,255,0.06)' }}
                 >
-                  <Zap className="w-3.5 h-3.5 text-white/50" strokeWidth={1.5} />
+                  <Zap
+                    className="w-3.5 h-3.5 text-white/50"
+                    strokeWidth={1.5}
+                  />
                 </div>
-                <span className="text-white/70 text-sm font-medium">Get matched faster</span>
+                <span className="text-white/70 text-sm font-medium">
+                  Get matched faster
+                </span>
               </div>
               <div className="space-y-2 pl-9">
                 <p className="text-white/40 text-xs leading-relaxed">
@@ -998,7 +1027,9 @@ function VideoCallInner() {
                   ].map((tip, i) => (
                     <div key={i} className="flex items-start gap-2">
                       <span className="w-1 h-1 rounded-full bg-white/20 mt-1.5 flex-shrink-0" />
-                      <p className="text-white/35 text-xs leading-relaxed">{tip}</p>
+                      <p className="text-white/35 text-xs leading-relaxed">
+                        {tip}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -1015,9 +1046,14 @@ function VideoCallInner() {
                   className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ background: 'rgba(255,255,255,0.06)' }}
                 >
-                  <Flag className="w-3.5 h-3.5 text-white/50" strokeWidth={1.5} />
+                  <Flag
+                    className="w-3.5 h-3.5 text-white/50"
+                    strokeWidth={1.5}
+                  />
                 </div>
-                <span className="text-white/70 text-sm font-medium">Report a user</span>
+                <span className="text-white/70 text-sm font-medium">
+                  Report a user
+                </span>
               </div>
               <div className="space-y-2 pl-9">
                 <p className="text-white/40 text-xs leading-relaxed">
@@ -1051,9 +1087,14 @@ function VideoCallInner() {
                   className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ background: 'rgba(255,255,255,0.06)' }}
                 >
-                  <Shield className="w-3.5 h-3.5 text-white/50" strokeWidth={1.5} />
+                  <Shield
+                    className="w-3.5 h-3.5 text-white/50"
+                    strokeWidth={1.5}
+                  />
                 </div>
-                <span className="text-white/70 text-sm font-medium">Community guidelines</span>
+                <span className="text-white/70 text-sm font-medium">
+                  Community guidelines
+                </span>
               </div>
               <div className="space-y-2 pl-9">
                 {[
@@ -1065,7 +1106,9 @@ function VideoCallInner() {
                 ].map((rule, i) => (
                   <div key={i} className="flex items-start gap-2">
                     <span className="w-1 h-1 rounded-full bg-white/20 mt-1.5 flex-shrink-0" />
-                    <p className="text-white/35 text-xs leading-relaxed">{rule}</p>
+                    <p className="text-white/35 text-xs leading-relaxed">
+                      {rule}
+                    </p>
                   </div>
                 ))}
               </div>

@@ -47,25 +47,28 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
       // ── 3-minute time limit (backend enforcement) ─────────────────────
       // Frontend also fires at 180s for instant UI. Backend is the source
       // of truth — handles crashes, disconnects, and tab closures.
-      setTimeout(() => {
-        const active = callService.get(callId);
-        if (!active || active.state === 'ENDED') return; // already ended
+      setTimeout(
+        () => {
+          const active = callService.get(callId);
+          if (!active || active.state === 'ENDED') return; // already ended
 
-        callService.update(callId, 'ENDED');
+          callService.update(callId, 'ENDED');
 
-        publishEvent('session.ended', {
-          sessionId: callId,
-          endedAt: new Date(),
-          reason: 'TIME_LIMIT',
-        }).catch(console.error);
+          publishEvent('session.ended', {
+            sessionId: callId,
+            endedAt: new Date(),
+            reason: 'TIME_LIMIT',
+          }).catch(console.error);
 
-        io.to(active.from).to(active.to).emit(SOCKET_EVENTS.CALL_END, {
-          callId,
-          reason: 'TIME_LIMIT',
-        });
+          io.to(active.from).to(active.to).emit(SOCKET_EVENTS.CALL_END, {
+            callId,
+            reason: 'TIME_LIMIT',
+          });
 
-        callService.remove(callId);
-      }, 3 * 60 * 1000); // 3 minutes
+          callService.remove(callId);
+        },
+        3 * 60 * 1000
+      ); // 3 minutes
     }
   });
 
