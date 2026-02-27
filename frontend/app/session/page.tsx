@@ -9,31 +9,55 @@ import {
   Video,
   VideoOff,
   Phone,
-  Settings,
   MessageSquare,
+  PhoneOff,
+  WifiOff,
+  AlertTriangle,
+  Home,
+  Info,
+  Flag,
+  Zap,
+  Shield,
+  Users,
 } from 'lucide-react';
 
 type PermissionState = 'idle' | 'requesting' | 'granted' | 'denied';
+type CallEndReason = 'USER_ENDED' | 'DISCONNECTED' | 'ICE_FAILED';
 
-// ── Inner component that uses useSearchParams ──────────────────────────────
+// ── What the OTHER person sees (server-pushed call:end) ───────────────────
+const PEER_END_CONFIG: Record<
+  CallEndReason,
+  { title: string; message: string; icon: React.ReactNode }
+> = {
+  USER_ENDED: {
+    title: 'The call has ended',
+    message: 'The other person left the call.',
+    icon: null,
+  },
+  DISCONNECTED: {
+    title: 'Connection lost',
+    message: 'The other person lost their connection.',
+    icon: null,
+  },
+  ICE_FAILED: {
+    title: 'Connection failed',
+    message: 'The connection could not be established.',
+    icon: null,
+  },
+};
+
 function VideoCallInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Read directly from URL — never from props
   const callId = searchParams.get('callId') ?? '';
   const peerId = searchParams.get('peerId') ?? '';
 
-  // Keep latest values in refs so async callbacks always see current value
   const callIdRef = useRef<string>(callId);
   const peerUserIdRef = useRef<string>(peerId);
 
-  useEffect(() => {
-    callIdRef.current = callId;
-  }, [callId]);
-  useEffect(() => {
-    peerUserIdRef.current = peerId;
-  }, [peerId]);
+  useEffect(() => { callIdRef.current = callId; }, [callId]);
+  useEffect(() => { peerUserIdRef.current = peerId; }, [peerId]);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -43,27 +67,39 @@ function VideoCallInner() {
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const tracksAddedRef = useRef(false);
   const isCallActiveRef = useRef(false);
-  const sessionStartedRef = useRef(false); // guard against StrictMode double-fire
+  const sessionStartedRef = useRef(false);
+
+  // ── Guard: once endCall() fires, ignore any incoming call:end from server ─
+  // Without this, User A emits call:end → server echoes it back to User A →
+  // onCallEnd fires → overwrites the "You left" screen with "call ended".
+  const selfEndedRef = useRef(false);
+  // Captures callDuration before cleanup() resets it to 0
+  // so the ended screen can display the real call length
+  const finalDurationRef = useRef(0);
 
   const [status, setStatus] = useState('Initializing...');
   const [iceState, setIceState] = useState('new');
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  // Info panel — rules, report, skills tip, guidelines
+  const [showInfo, setShowInfo] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [isCallStarted, setIsCallStarted] = useState(false);
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
-  const [permissionState, setPermissionState] =
-    useState<PermissionState>('idle');
+  const [permissionState, setPermissionState] = useState<PermissionState>('idle');
   const [waitingForPeer, setWaitingForPeer] = useState(false);
-
+  const [isDuplicateTab, setIsDuplicateTab] = useState(false);
   const iceServersRef = useRef<RTCIceServer[] | null>(null);
 
-  // ── Duplicate tab guard ──────────────────────────────────────────────────
-  const [isDuplicateTab, setIsDuplicateTab] = useState(false);
-  // ────────────────────────────────────────────────────────────────────────
+  // ── Call ended state ──────────────────────────────────────────────────────
+  // callEnded + callEndReason: for the OTHER person's ended screen.
+  // selfLeft: for the self-initiated "You left" brief screen.
+  const [callEnded, setCallEnded] = useState(false);
+  const [callEndReason, setCallEndReason] = useState<CallEndReason>('USER_ENDED');
+  const [selfLeft, setSelfLeft] = useState(false);
 
-  // ── Timer ────────────────────────────────────────────────────────────────
+  // ── Timer ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isCallStarted) return;
     const t = setInterval(() => setCallDuration(p => p + 1), 1000);
@@ -77,18 +113,14 @@ function VideoCallInner() {
     return [h, m, sec].map(n => String(n).padStart(2, '0')).join(':');
   };
 
-  // ── Camera ───────────────────────────────────────────────────────────────
+  // ── Camera ────────────────────────────────────────────────────────────────
   const requestCamera = useCallback(async () => {
     if (localStreamRef.current) return localStreamRef.current;
     setPermissionState('requesting');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true },
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user',
-        },
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
       });
       localStreamRef.current = stream;
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
@@ -102,7 +134,7 @@ function VideoCallInner() {
     }
   }, []);
 
-  // ── Cleanup ──────────────────────────────────────────────────────────────
+  // ── Cleanup ───────────────────────────────────────────────────────────────
   const cleanup = useCallback(() => {
     isCallActiveRef.current = false;
     pcRef.current?.close();
@@ -115,12 +147,9 @@ function VideoCallInner() {
     setWaitingForPeer(false);
   }, []);
 
-  // ── PeerConnection ───────────────────────────────────────────────────────
+  // ── PeerConnection ────────────────────────────────────────────────────────
   const createPC = useCallback((iceServers: RTCIceServer[]) => {
-    console.log('CREATING PC WITH ICE:', iceServers);
-    const pc = new RTCPeerConnection({
-      iceServers,
-    });
+    const pc = new RTCPeerConnection({ iceServers });
 
     pc.onicecandidate = e => {
       if (!e.candidate) return;
@@ -166,13 +195,11 @@ function VideoCallInner() {
 
   const addTracks = useCallback((pc: RTCPeerConnection) => {
     if (tracksAddedRef.current || !localStreamRef.current) return;
-    localStreamRef.current
-      .getTracks()
-      .forEach(t => pc.addTrack(t, localStreamRef.current!));
+    localStreamRef.current.getTracks().forEach(t => pc.addTrack(t, localStreamRef.current!));
     tracksAddedRef.current = true;
   }, []);
 
-  // ── Main session effect ──────────────────────────────────────────────────
+  // ── Main session effect ───────────────────────────────────────────────────
   useEffect(() => {
     if (!callId || !peerId) return;
     if (sessionStartedRef.current) return;
@@ -180,21 +207,15 @@ function VideoCallInner() {
 
     const startSession = async () => {
       try {
-        console.log('[session] Starting — callId:', callId, 'peerId:', peerId);
         await requestCamera();
         isCallActiveRef.current = true;
 
         const emitReady = () => {
-          console.log(
-            '[session] Emitting peer:ready — callId:',
-            callIdRef.current
-          );
           socket.emit('peer:ready', { callId: callIdRef.current });
           setWaitingForPeer(true);
           setStatus('Waiting for peer camera...');
         };
 
-        // ── Use connectSocket() so ALREADY_CONNECTED is caught here too ──
         try {
           await connectSocket();
           emitReady();
@@ -202,14 +223,12 @@ function VideoCallInner() {
           const error = err as Error;
           if (error.message === 'ALREADY_CONNECTED') {
             setIsDuplicateTab(true);
-            // Stop camera — we won't be using it
             localStreamRef.current?.getTracks().forEach(t => t.stop());
             localStreamRef.current = null;
             return;
           }
           throw err;
         }
-        // ────────────────────────────────────────────────────────────────
       } catch {
         setStatus('Camera denied — cannot join call');
       }
@@ -217,7 +236,6 @@ function VideoCallInner() {
 
     startSession();
 
-    // ── Socket event handlers ────────────────────────────────────────────
     const onCallStart = async ({
       callId: cId,
       peerUserId: peer,
@@ -229,10 +247,6 @@ function VideoCallInner() {
       shouldCreateOffer: boolean;
       iceServers: RTCIceServer[];
     }) => {
-      console.log(
-        '[session] call:start — shouldCreateOffer:',
-        shouldCreateOffer
-      );
       isCallActiveRef.current = true;
       callIdRef.current = cId;
       peerUserIdRef.current = peer;
@@ -268,19 +282,12 @@ function VideoCallInner() {
       offer: RTCSessionDescriptionInit;
       from: string;
     }) => {
-      console.log('[session] webrtc:offer from', from);
       try {
-        if (!iceServersRef.current) {
-          console.error('ICE servers not initialized');
-          return;
-        }
-
+        if (!iceServersRef.current) return;
         const pc = getOrCreatePC(iceServersRef.current);
         addTracks(pc);
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
-        pendingIceRef.current.forEach(c =>
-          pc.addIceCandidate(new RTCIceCandidate(c))
-        );
+        pendingIceRef.current.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)));
         pendingIceRef.current = [];
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
@@ -294,17 +301,10 @@ function VideoCallInner() {
       }
     };
 
-    const onAnswer = async ({
-      answer,
-    }: {
-      answer: RTCSessionDescriptionInit;
-    }) => {
-      console.log('[session] webrtc:answer received');
+    const onAnswer = async ({ answer }: { answer: RTCSessionDescriptionInit }) => {
       try {
         if (!pcRef.current) return;
-        await pcRef.current.setRemoteDescription(
-          new RTCSessionDescription(answer)
-        );
+        await pcRef.current.setRemoteDescription(new RTCSessionDescription(answer));
         pendingIceRef.current.forEach(c =>
           pcRef.current?.addIceCandidate(new RTCIceCandidate(c))
         );
@@ -316,17 +316,24 @@ function VideoCallInner() {
 
     const onIce = ({ candidate }: { candidate: RTCIceCandidateInit }) => {
       if (pcRef.current?.remoteDescription?.type) {
-        pcRef.current
-          .addIceCandidate(new RTCIceCandidate(candidate))
-          .catch(() => {});
+        pcRef.current.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
       } else {
         pendingIceRef.current.push(candidate);
       }
     };
 
-    const onCallEnd = () => {
-      console.log('[session] call:end');
+    // ── call:end from server ──────────────────────────────────────────────
+    // Fires when the OTHER person ends/drops — OR echoed back to self.
+    // selfEndedRef.current guard prevents this from overwriting the
+    // "You left" screen when User A's own emit bounces back from server.
+    const onCallEnd = ({ reason }: { reason: CallEndReason }) => {
+      if (selfEndedRef.current) return; // self already handled this — ignore echo
+      finalDurationRef.current = callDuration; // capture before cleanup resets it
+      localStreamRef.current?.getTracks().forEach(t => t.stop());
+      localStreamRef.current = null;
       cleanup();
+      setCallEndReason(reason ?? 'USER_ENDED');
+      setCallEnded(true);
     };
 
     socket.on('call:start', onCallStart);
@@ -349,7 +356,7 @@ function VideoCallInner() {
     };
   }, [callId, peerId, requestCamera, getOrCreatePC, addTracks, cleanup]);
 
-  // ── Controls ─────────────────────────────────────────────────────────────
+  // ── Controls ──────────────────────────────────────────────────────────────
   const toggleMute = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
     if (track) {
@@ -366,152 +373,239 @@ function VideoCallInner() {
     }
   };
 
+  // ── endCall — self-initiated ──────────────────────────────────────────────
+  // Sets selfEndedRef BEFORE emitting so the echo from server is ignored.
+  // Shows "You left the call" briefly then redirects to /home.
   const endCall = () => {
+    selfEndedRef.current = true; // guard must be set BEFORE emit
+    finalDurationRef.current = callDuration; // capture before cleanup resets it
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     localStreamRef.current = null;
-    socket.emit('call:end', {
-      callId: callIdRef.current,
-      reason: 'USER_ENDED',
-    });
+    socket.emit('call:end', { callId: callIdRef.current, reason: 'USER_ENDED' });
     cleanup();
-    setTimeout(() => router.push('/home'), 500);
+    setSelfLeft(true);
+    setTimeout(() => router.push('/home'), 2000);
   };
 
-  // ── Duplicate tab screen ──────────────────────────────────────────────────
-  if (isDuplicateTab) {
+  // ── Screens ───────────────────────────────────────────────────────────────
+
+  // "You left the call" — 2s then auto-redirects
+  if (selfLeft) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-gray-900 px-4">
-        <div className="max-w-md w-full bg-gray-800 rounded-2xl shadow-xl p-8 text-center space-y-6">
-          <div className="w-16 h-16 mx-auto bg-amber-900/40 rounded-full flex items-center justify-center">
-            <svg
-              className="w-8 h-8 text-amber-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
-              />
-            </svg>
+      <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0b]">
+        <style>{`
+          @keyframes shrink { from { width: 100%; } to { width: 0%; } }
+          .bar-shrink { animation: shrink 2s linear forwards; }
+        `}</style>
+        <div className="text-center space-y-7">
+          <div className="w-16 h-16 mx-auto rounded-full border border-white/10 flex items-center justify-center">
+            <PhoneOff className="w-7 h-7 text-white/30" strokeWidth={1.5} />
           </div>
-
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-white">
-              Session Already Active
-            </h2>
-            <p className="text-gray-400 text-sm leading-relaxed">
-              You already have an active session open in another tab. Only one
-              tab can be connected at a time to prevent disrupting your ongoing
-              call.
-            </p>
-            <p className="text-gray-500 text-xs pt-1">
-              If your other tab is closed or crashed, please wait a moment and
-              then refresh this page.
-            </p>
+          <div className="space-y-1.5">
+            <p className="text-white text-xl font-light tracking-tight">You left the call</p>
+            <p className="text-white/30 text-sm font-mono">Returning to home</p>
           </div>
-
-          <button
-            onClick={() => {
-              socket.disconnect();
-              window.close();
-              // Fallback: window.close() is blocked when tab was manually opened
-              setTimeout(() => router.push('/login'), 300);
-            }}
-            className="w-full py-3 px-6 bg-red-600 hover:bg-red-700 text-white rounded-full font-semibold transition-all hover:scale-105"
-          >
-            Close This Tab
-          </button>
+          <div className="w-40 h-px bg-white/10 mx-auto overflow-hidden rounded-full">
+            <div className="h-full bg-white/40 rounded-full bar-shrink" />
+          </div>
         </div>
       </div>
     );
   }
 
-  // ── Denied screen ─────────────────────────────────────────────────────────
-  if (permissionState === 'denied') {
+  // "The call has ended / Connection lost" — shown to the OTHER person
+  if (callEnded) {
+    const config = PEER_END_CONFIG[callEndReason];
+    const iconEl =
+      callEndReason === 'USER_ENDED'   ? <PhoneOff className="w-8 h-8 text-white/40" strokeWidth={1.5} /> :
+      callEndReason === 'DISCONNECTED' ? <WifiOff className="w-8 h-8 text-white/40" strokeWidth={1.5} /> :
+                                         <AlertTriangle className="w-8 h-8 text-white/40" strokeWidth={1.5} />;
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-gray-900">
-        <div className="text-center">
-          <VideoOff className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-white text-xl font-semibold mb-2">
-            Camera Access Denied
-          </h2>
-          <p className="text-gray-400 mb-4">
-            Allow camera access in browser settings and refresh.
-          </p>
+      <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0b] px-4">
+        <div className="w-full max-w-xs text-center space-y-8">
+          {/* Icon ring */}
+          <div className="flex justify-center">
+            <div className="w-20 h-20 rounded-full border border-white/8 flex items-center justify-center">
+              {iconEl}
+            </div>
+          </div>
+
+          {/* Text */}
+          <div className="space-y-2">
+            <h2 className="text-white text-2xl font-light tracking-tight">{config.title}</h2>
+            <p className="text-white/35 text-sm leading-relaxed">{config.message}</p>
+            <p className="text-white/20 text-xs font-mono pt-1">{fmt(finalDurationRef.current)}</p>
+          </div>
+
+          {/* Divider */}
+          <div className="w-full h-px bg-white/8" />
+
+          {/* Action */}
           <button
             onClick={() => router.push('/home')}
-            className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg"
+            className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-full border border-white/12 text-white/70 text-sm font-light tracking-wide hover:border-white/25 hover:text-white transition-all duration-300"
           >
-            Go Back
+            <Home className="w-4 h-4 group-hover:translate-x-[-2px] transition-transform duration-300" />
+            Go to Home
           </button>
         </div>
       </div>
     );
   }
 
-  // ── Main UI ───────────────────────────────────────────────────────────────
+  // Duplicate tab screen
+  if (isDuplicateTab) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0b] px-4">
+        <div className="w-full max-w-sm text-center space-y-8">
+          <div className="w-16 h-16 mx-auto rounded-full border border-white/8 flex items-center justify-center">
+            <svg className="w-7 h-7 text-white/30" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round"
+                d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+          </div>
+          <div className="space-y-2">
+            <p className="text-white text-xl font-light tracking-tight">Session already active</p>
+            <p className="text-white/35 text-sm leading-relaxed">
+              Another tab is connected. Only one tab can be active at a time.
+            </p>
+            <p className="text-white/20 text-xs pt-1">
+              If that tab is closed or crashed, refresh this page.
+            </p>
+          </div>
+          <div className="w-full h-px bg-white/8" />
+          <button
+            onClick={() => { socket.disconnect(); window.close(); setTimeout(() => router.push('/login'), 300); }}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/12 text-white/70 text-sm font-light hover:border-white/25 hover:text-white transition-all duration-300"
+          >
+            Close this tab
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Denied screen
+  if (permissionState === 'denied') {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0b]">
+        <div className="text-center space-y-8 px-4">
+          <div className="w-16 h-16 mx-auto rounded-full border border-white/8 flex items-center justify-center">
+            <VideoOff className="w-7 h-7 text-white/30" strokeWidth={1.5} />
+          </div>
+          <div className="space-y-2">
+            <p className="text-white text-xl font-light tracking-tight">Camera access denied</p>
+            <p className="text-white/35 text-sm">Allow camera access in browser settings and refresh.</p>
+          </div>
+          <div className="w-full h-px bg-white/8 max-w-xs mx-auto" />
+          <button
+            onClick={() => router.push('/home')}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/12 text-white/70 text-sm font-light hover:border-white/25 hover:text-white transition-all duration-300"
+          >
+            Go back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Main call UI ──────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen w-full flex overflow-hidden">
-      <main className="flex-1 flex flex-col relative">
-        <header className="h-14 px-6 bg-background flex items-center justify-between">
+    <div
+      className="h-screen w-full flex overflow-hidden"
+      style={{ background: '#0a0a0b' }}
+    >
+      <style>{`
+        @keyframes breathe {
+          0%, 100% { opacity: 0.15; transform: scale(1); }
+          50% { opacity: 0.35; transform: scale(1.08); }
+        }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .animate-breathe { animation: breathe 3s ease-in-out infinite; }
+        .animate-fade-up { animation: fadeUp 0.4s ease forwards; }
+      `}</style>
+
+      <main className="flex-1 flex flex-col relative h-full">
+
+        {/* ── Top bar ── */}
+        <header className="absolute top-0 left-0 right-0 z-20 h-14 px-5 flex items-center justify-between">
+          {/* Left: live indicator */}
           <div className="flex items-center gap-2">
-            {isCallStarted && (
-              <>
-                <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                <span className="text-primary text-sm">
-                  REC {fmt(callDuration)}
+            {isCallStarted ? (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)' }}>
+                <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                <span className="text-white text-xs font-mono tracking-widest">
+                  {fmt(callDuration)}
                 </span>
-              </>
+              </div>
+            ) : (
+              <span className="text-white/35 text-xs font-mono tracking-widest uppercase px-2.5 py-1 rounded-full" style={{ background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(8px)' }}>
+                {status}
+              </span>
             )}
           </div>
-          <h1 className="text-primary font-medium text-sm lg:text-base">
-            Video Call – {status}
-          </h1>
-          <span className="hidden md:inline-block bg-primary px-3 py-1 rounded text-xs text-white">
-            ICE: {iceState}
-          </span>
+
+          {/* Right: ICE badge — only in dev, subtle */}
+          <span className="text-white/15 text-xs font-mono">{iceState}</span>
         </header>
 
-        <section className="flex-1 relative">
-          {/* Remote video — full screen */}
+        {/* ── Video area ── */}
+        {/*
+          h-full is critical: section must have explicit height so absolute
+          children (controls, local video) are positioned within the viewport.
+          Without it, section collapses to 0 and controls overflow below screen.
+          Layout mirrors Google Meet: remote video fills section, controls float
+          over video at bottom, local video sits just above controls on the right.
+        */}
+        <section className="flex-1 relative h-full overflow-hidden">
+
+          {/* Remote video — fills entire section */}
           <video
             ref={remoteVideoRef}
             autoPlay
             playsInline
-            className="w-full h-full object-cover scale-x-[-1]"
+            className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
           />
 
-          {/* Waiting overlay */}
+          {/* Waiting overlay — sits over remote video until peer connects */}
           {!hasRemoteVideo && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
-              <div className="text-center">
-                <div className="w-32 h-32 mx-auto bg-gray-700 rounded-full flex items-center justify-center mb-4">
-                  <span className="text-white text-4xl">👤</span>
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0a0b] z-10">
+              <div className="relative w-28 h-28 flex items-center justify-center mb-8">
+                <div className="absolute inset-0 rounded-full border border-white/20 animate-breathe" />
+                <div className="absolute inset-3 rounded-full border border-white/10 animate-breathe" style={{ animationDelay: '0.6s' }} />
+                <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+                  <Video className="w-4 h-4 text-white/25" strokeWidth={1.5} />
                 </div>
-                <p className="text-white text-lg font-medium">
-                  {permissionState === 'requesting' &&
-                    'Waiting for camera permission...'}
-                  {permissionState === 'granted' &&
-                    waitingForPeer &&
-                    'Your camera is ready! Waiting for partner...'}
+              </div>
+              <div className="text-center space-y-1.5 animate-fade-up">
+                <p className="text-white/60 text-sm font-light tracking-wide">
+                  {permissionState === 'requesting' && 'Requesting camera access…'}
+                  {permissionState === 'granted' && waitingForPeer && 'Waiting for your partner…'}
                   {permissionState === 'granted' && !waitingForPeer && status}
                 </p>
                 {waitingForPeer && (
-                  <div className="mt-3 flex justify-center gap-1">
-                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0ms]" />
-                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:150ms]" />
-                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:300ms]" />
-                  </div>
+                  <p className="text-white/20 text-xs font-mono">connecting</p>
                 )}
               </div>
             </div>
           )}
 
-          {/* Local video — bottom right corner */}
-          <div className="absolute bottom-10 right-3 lg:w-80 h-45 sm:w-60 sm:h-40 rounded-xl overflow-hidden border border-gray-700 shadow-2xl">
+          {/*
+            ── Responsive layout ────────────────────────────────────────────
+            Mobile  : local video = small PiP top-right corner (z-30)
+                      controls   = centered pill fixed at bottom
+            Desktop : local video = bottom-right corner, PiP above controls
+                      controls   = centered pill at bottom
+          */}
+
+          {/* Local video PiP — top-right on mobile, bottom-right on sm+ */}
+          <div
+            className="absolute top-16 right-3 sm:bottom-20 sm:top-auto sm:right-4 z-30 w-38 sm:w-44 md:w-52 xl:w-72 rounded-xl overflow-hidden"
+            style={{ border: '1px solid rgba(255,255,255,0.1)', aspectRatio: '16/9' }}
+          >
             <video
               ref={localVideoRef}
               autoPlay
@@ -520,110 +614,311 @@ function VideoCallInner() {
               className="w-full h-full object-cover scale-x-[-1]"
             />
             <span
-              className={`absolute bottom-2 right-2 w-3 h-3 rounded-full border-2 border-white
-              ${permissionState === 'granted' ? 'bg-green-500' : 'bg-gray-500'}`}
+              className={`absolute bottom-1.5 right-1.5 w-1.5 h-1.5 rounded-full border border-black/20
+                ${permissionState === 'granted' ? 'bg-emerald-400' : 'bg-white/20'}`}
             />
-            {permissionState === 'granted' && (
-              <span className="absolute bottom-2 left-2 text-white text-xs bg-black/50 px-1.5 py-0.5 rounded">
-                You
-              </span>
-            )}
+            <span className="absolute bottom-1.5 left-2 text-white/40 text-[9px] font-mono leading-none">you</span>
           </div>
 
-          {/* Controls */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-gray-800/80 backdrop-blur px-6 py-3 rounded-full">
-            <button
-              onClick={toggleMute}
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition
-                ${isMuted ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+          {/* Gradient scrim — ensures controls always readable over any video */}
+          <div
+            className="absolute bottom-0 left-0 right-0 h-36 z-20 pointer-events-none"
+            style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%)' }}
+          />
+
+          {/* Controls bar — centered, always within viewport */}
+          <div className="absolute bottom-5 left-0 right-0 z-30 flex justify-center px-4">
+            <div
+              className="flex items-center gap-1.5 sm:gap-2.5 px-3 sm:px-5 py-2.5 rounded-full"
+              style={{
+                background: 'rgba(12,12,13,0.82)',
+                border: '1px solid rgba(255,255,255,0.09)',
+                backdropFilter: 'blur(24px)',
+                WebkitBackdropFilter: 'blur(24px)',
+              }}
             >
-              {isMuted ? (
-                <MicOff className="text-white" />
-              ) : (
-                <Mic className="text-white" />
-              )}
-            </button>
-            <button
-              onClick={toggleVideo}
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition
-                ${isVideoOff ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}
-            >
-              {isVideoOff ? (
-                <VideoOff className="text-white" />
-              ) : (
-                <Video className="text-white" />
-              )}
-            </button>
-            <button
-              onClick={endCall}
-              className="w-12 h-12 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center"
-            >
-              <Phone className="text-white rotate-135" />
-            </button>
-            <button
-              onClick={() => setShowChat(!showChat)}
-              className="w-11 h-11 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center"
-            >
-              <MessageSquare className="text-white" />
-            </button>
-            <button className="w-11 h-11 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center">
-              <Settings className="text-white" />
-            </button>
+              {/* Mute */}
+              <button
+                onClick={toggleMute}
+                title={isMuted ? 'Unmute' : 'Mute'}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95
+                  ${isMuted ? 'text-red-400' : 'text-white/55 hover:text-white'}`}
+              >
+                {isMuted
+                  ? <MicOff className="w-[17px] h-[17px]" strokeWidth={1.5} />
+                  : <Mic className="w-[17px] h-[17px]" strokeWidth={1.5} />}
+              </button>
+
+              {/* Camera toggle */}
+              <button
+                onClick={toggleVideo}
+                title={isVideoOff ? 'Turn on camera' : 'Turn off camera'}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95
+                  ${isVideoOff ? 'text-red-400' : 'text-white/55 hover:text-white'}`}
+              >
+                {isVideoOff
+                  ? <VideoOff className="w-[17px] h-[17px]" strokeWidth={1.5} />
+                  : <Video className="w-[17px] h-[17px]" strokeWidth={1.5} />}
+              </button>
+
+              {/* Divider */}
+              <div className="w-px h-4 mx-0.5" style={{ background: 'rgba(255,255,255,0.1)' }} />
+
+              {/* End call */}
+              <button
+                onClick={endCall}
+                title="End call"
+                className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-150 hover:scale-105 active:scale-90"
+                style={{ background: '#dc2626' }}
+              >
+                <Phone className="w-[17px] h-[17px] text-white rotate-[135deg]" strokeWidth={2} />
+              </button>
+
+              {/* Divider */}
+              <div className="w-px h-4 mx-0.5" style={{ background: 'rgba(255,255,255,0.1)' }} />
+
+              {/* Chat */}
+              <button
+                onClick={() => { setShowChat(!showChat); setShowInfo(false); }}
+                title="Chat"
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95
+                  ${showChat ? 'text-white' : 'text-white/55 hover:text-white'}`}
+              >
+                <MessageSquare className="w-[17px] h-[17px]" strokeWidth={1.5} />
+              </button>
+
+              {/* Info — opens rules/report/guidelines panel */}
+              {/* Settings removed: had no functionality — zero onClick handler.
+                  Replaced with Info which opens the rules & report slide-in panel. */}
+              <button
+                onClick={() => { setShowInfo(!showInfo); setShowChat(false); }}
+                title="Info & Report"
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95
+                  ${showInfo ? 'text-white' : 'text-white/55 hover:text-white'}`}
+              >
+                <Info className="w-[17px] h-[17px]" strokeWidth={1.5} />
+              </button>
+            </div>
           </div>
         </section>
       </main>
 
+      {/* ── Chat panel ── */}
       {showChat && (
-        <aside className="fixed inset-0 z-50 lg:static lg:inset-auto w-full lg:w-96 bg-gray-800 flex flex-col">
-          <header className="h-14 px-4 bg-gray-700 flex items-center justify-between">
-            <h2 className="text-white font-medium">Messages</h2>
+        <aside
+          className="fixed inset-0 z-50 lg:static lg:inset-auto w-full lg:w-80 flex flex-col"
+          style={{
+            background: '#0f0f10',
+            borderLeft: '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          <header
+            className="h-14 px-5 flex items-center justify-between"
+            style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+          >
+            <span className="text-white/60 text-sm font-light tracking-wide">Messages</span>
             <button
               onClick={() => setShowChat(false)}
-              className="text-gray-300 hover:text-white text-lg"
+              className="text-white/25 hover:text-white/60 transition-colors text-lg leading-none"
             >
               ✕
             </button>
           </header>
+
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             <div className="flex gap-3">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-xs text-white">
+              <div
+                className="w-7 h-7 rounded-full flex items-center justify-center text-xs text-white/50 flex-shrink-0"
+                style={{ border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)' }}
+              >
                 P
               </div>
-              <div>
-                <p className="text-gray-400 text-xs">Peer</p>
-                <div className="bg-gray-700 text-sm text-white p-3 rounded-lg">
+              <div className="space-y-1">
+                <p className="text-white/25 text-xs font-mono">peer</p>
+                <div
+                  className="text-white/60 text-sm leading-relaxed px-3 py-2 rounded-xl"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)' }}
+                >
                   Hey, how is the connection?
                 </div>
               </div>
             </div>
           </div>
-          <footer className="p-4 bg-gray-700">
+
+          <footer
+            className="p-4"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+          >
             <div className="flex gap-2">
               <input
-                placeholder="Write message..."
-                className="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg outline-none"
+                placeholder="Message…"
+                className="flex-1 bg-transparent text-white/70 text-sm px-3 py-2.5 rounded-xl outline-none placeholder:text-white/20"
+                style={{ border: '1px solid rgba(255,255,255,0.1)' }}
               />
-              <button className="bg-blue-600 hover:bg-blue-700 px-4 rounded-lg text-white">
+              <button
+                className="px-4 py-2.5 rounded-xl text-white/60 text-sm font-light transition-all hover:text-white"
+                style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+              >
                 Send
               </button>
             </div>
           </footer>
         </aside>
       )}
+
+      {/* ── Info panel ── */}
+      {/* Slide-in from right, same structure as chat panel.
+          Contains: match rules, skills tip, report user, community guidelines.
+          All content is dummy — replace with your real project details.
+          showInfo and showChat are mutually exclusive (each closes the other). */}
+      {showInfo && (
+        <aside
+          className="fixed inset-0 z-50 lg:static lg:inset-auto w-full lg:w-80 flex flex-col overflow-hidden"
+          style={{
+            background: '#0f0f10',
+            borderLeft: '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          {/* Header */}
+          <header
+            className="h-14 px-5 flex items-center justify-between flex-shrink-0"
+            style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+          >
+            <span className="text-white/60 text-sm font-light tracking-wide">Info & Guidelines</span>
+            <button
+              onClick={() => setShowInfo(false)}
+              className="text-white/25 hover:text-white/60 transition-colors text-lg leading-none"
+            >
+              ✕
+            </button>
+          </header>
+
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto">
+
+            {/* ── Section 1: How matching works ── */}
+            <div className="px-5 pt-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                     style={{ background: 'rgba(255,255,255,0.06)' }}>
+                  <Users className="w-3.5 h-3.5 text-white/50" strokeWidth={1.5} />
+                </div>
+                <span className="text-white/70 text-sm font-medium">How matching works</span>
+              </div>
+              <div className="space-y-2.5 pl-9">
+                {[
+                  'You are matched with someone who shares at least one skill with you.',
+                  'Matches are made in real time — the more skills you add, the faster you connect.',
+                  'Both users must accept the match before the call starts.',
+                  'You can find another match at any time from the home screen.',
+                ].map((rule, i) => (
+                  <div key={i} className="flex gap-2.5">
+                    <span className="text-white/20 text-xs font-mono mt-0.5 flex-shrink-0">{String(i + 1).padStart(2, '0')}</span>
+                    <p className="text-white/40 text-xs leading-relaxed">{rule}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Section 2: Get matched faster ── */}
+            <div className="px-5 pt-4 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                     style={{ background: 'rgba(255,255,255,0.06)' }}>
+                  <Zap className="w-3.5 h-3.5 text-white/50" strokeWidth={1.5} />
+                </div>
+                <span className="text-white/70 text-sm font-medium">Get matched faster</span>
+              </div>
+              <div className="space-y-2 pl-9">
+                <p className="text-white/40 text-xs leading-relaxed">
+                  Users with more skills in their profile appear in more match queues — increasing your chance of a faster connection.
+                </p>
+                <div className="mt-3 space-y-1.5">
+                  {[
+                    'Add skills that reflect your real expertise',
+                    'Include both broad and niche skills',
+                    'Update your profile regularly',
+                  ].map((tip, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <span className="w-1 h-1 rounded-full bg-white/20 mt-1.5 flex-shrink-0" />
+                      <p className="text-white/35 text-xs leading-relaxed">{tip}</p>
+                    </div>
+                  ))}
+                </div>
+
+              </div>
+            </div>
+
+            {/* ── Section 3: Report a user ── */}
+            <div className="px-5 pt-4 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                     style={{ background: 'rgba(255,255,255,0.06)' }}>
+                  <Flag className="w-3.5 h-3.5 text-white/50" strokeWidth={1.5} />
+                </div>
+                <span className="text-white/70 text-sm font-medium">Report a user</span>
+              </div>
+              <div className="space-y-2 pl-9">
+                <p className="text-white/40 text-xs leading-relaxed">
+                  If someone is behaving inappropriately, you can report them. All reports are reviewed by our team.
+                </p>
+                <div className="mt-3 space-y-1.5">
+                  {[
+                    'Harassment or abusive language',
+                    'Inappropriate or explicit content',
+                    'Spam or promotional content',
+                    'Impersonation or fake identity',
+                  ].map((reason, i) => (
+                    <div key={i} className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg cursor-pointer transition-all hover:bg-white/4"
+                         style={{ border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <span className="w-1 h-1 rounded-full bg-white/20 flex-shrink-0" />
+                      <p className="text-white/35 text-xs flex-1">{reason}</p>
+                    </div>
+                  ))}
+                </div>
+
+              </div>
+            </div>
+
+            {/* ── Section 4: Community guidelines ── */}
+            <div className="px-5 pt-4 pb-6">
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                     style={{ background: 'rgba(255,255,255,0.06)' }}>
+                  <Shield className="w-3.5 h-3.5 text-white/50" strokeWidth={1.5} />
+                </div>
+                <span className="text-white/70 text-sm font-medium">Community guidelines</span>
+              </div>
+              <div className="space-y-2 pl-9">
+                {[
+                  'Be respectful — treat every person the way you want to be treated.',
+                  'No harassment, hate speech, or discriminatory language of any kind.',
+                  'Keep conversations relevant and constructive.',
+                  'Protect your privacy — avoid sharing personal contact details.',
+                  'Violations may result in permanent removal from the platform.',
+                ].map((rule, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="w-1 h-1 rounded-full bg-white/20 mt-1.5 flex-shrink-0" />
+                    <p className="text-white/35 text-xs leading-relaxed">{rule}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </aside>
+      )}
     </div>
   );
 }
 
-// ── Outer page wraps inner in Suspense (required for useSearchParams in Next.js) ──
 export default function SessionPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-900">
-          <p className="text-white">Loading session...</p>
-        </div>
-      }
-    >
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0b]">
+        <p className="text-white/30 text-sm font-mono">Loading…</p>
+      </div>
+    }>
       <VideoCallInner />
     </Suspense>
   );
