@@ -9,7 +9,8 @@ export const reportService = {
   reportUser: async (
     reportedUserId: string,
     reporterId: string,
-    reason: string
+    reason: string,
+    description: string
   ) => {
     if (reportedUserId === reporterId) {
       throw new AppError('cannot report yourself', 403);
@@ -33,6 +34,7 @@ export const reportService = {
       reportedUserId,
       reportedBy: reporterId,
       reason,
+      description,
     });
 
     const reportCount =

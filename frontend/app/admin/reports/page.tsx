@@ -26,6 +26,7 @@ interface ReportedUser {
   username: string;
   reportedBy: Reporter;
   reason: string;
+  description: string;
   reportedAt: string;
   witnesses: Reporter[];
 }
@@ -34,6 +35,7 @@ interface BackendReport {
   _id: string;
   reason: string;
   createdAt: string;
+  description: string;
 
   reportedUserId?: {
     _id: string;
@@ -100,6 +102,7 @@ export default function ReportedUsersPage() {
             name: r.reportedBy?.fullName || 'Unknown',
           },
           reason: r.reason,
+          description: r.description,
           reportedAt: new Date(r.createdAt).toLocaleDateString(),
         }));
 
@@ -196,6 +199,9 @@ export default function ReportedUsersPage() {
                       </div>
                       <p className="text-sm text-foreground/60 leading-relaxed">
                         {report.reason}
+                      </p>
+                      <p className="text-sm text-foreground/60 leading-relaxed">
+                        {report.description}
                       </p>
                     </div>
                   </div>

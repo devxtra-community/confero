@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const protectedRoutes = ['/profile', '/home', '/session', '/admin'];
+const protectedRoutes = ['/profile', '/home', '/session', '/admin', '/report'];
 
 export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
@@ -23,6 +23,7 @@ export function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     '/profile/:path*',
+    '/report/:path*',
     '/home/:path*',
     '/admin/:path*',
     '/session/:path*',

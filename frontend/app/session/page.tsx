@@ -20,6 +20,7 @@ import {
   Shield,
   Users,
 } from 'lucide-react';
+import Link from 'next/link';
 
 type PermissionState = 'idle' | 'requesting' | 'granted' | 'denied';
 type CallEndReason = 'USER_ENDED' | 'DISCONNECTED' | 'ICE_FAILED';
@@ -195,7 +196,7 @@ function VideoCallInner() {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStreamRef.current;
         setHasRemoteVideo(true);
-        remoteVideoRef.current.play().catch(() => { });
+        remoteVideoRef.current.play().catch(() => {});
       }
     };
 
@@ -348,7 +349,7 @@ function VideoCallInner() {
       if (pcRef.current?.remoteDescription?.type) {
         pcRef.current
           .addIceCandidate(new RTCIceCandidate(candidate))
-          .catch(() => { });
+          .catch(() => {});
       } else {
         pendingIceRef.current.push(candidate);
       }
@@ -419,7 +420,7 @@ function VideoCallInner() {
     });
     cleanup();
     setSelfLeft(true);
-    setTimeout(() => router.push('/home'), 2000);
+    // setTimeout(() => router.push('/home'), 2000);
   };
 
   // ── Screens ───────────────────────────────────────────────────────────────
@@ -436,14 +437,21 @@ function VideoCallInner() {
           <div className="w-16 h-16 mx-auto rounded-full border border-white/10 flex items-center justify-center">
             <PhoneOff className="w-7 h-7 text-white/30" strokeWidth={1.5} />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-3">
             <p className="text-white text-xl font-light tracking-tight">
               You left the call
             </p>
-            <p className="text-white/30 text-sm font-mono">Returning to home</p>
-          </div>
-          <div className="w-40 h-px bg-white/10 mx-auto overflow-hidden rounded-full">
-            <div className="h-full bg-white/40 rounded-full bar-shrink" />
+            <div className="flex flex-col">
+              <button className="text-white/30 bg-glass/40 rounded-2xl text-sm px-4 py-2 font-mono mb-4 cursor-pointer hover:scale-105 hover:text-white/60">
+                Returning to home
+              </button>
+              <Link
+                href={`/report?userId=${peerId}`}
+                className="text-white/40 text-xs font-mono hover:text-white/70 transition-colors underline underline-offset-4"
+              >
+                Report User
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -495,6 +503,14 @@ function VideoCallInner() {
             <Home className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-300" />
             Go to Home
           </button>
+          <div className="-mt-6">
+            <Link
+              href={`/report?userId=${peerId}`}
+              className="text-white/40 text-xs font-mono hover:text-white/70 transition-colors underline underline-offset-4"
+            >
+              Report User
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -790,10 +806,7 @@ function VideoCallInner() {
                 className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95
                   ${showChat ? 'text-white' : 'text-white/55 hover:text-white'}`}
               >
-                <MessageSquare
-                  className="w-4.25 h-4.25"
-                  strokeWidth={1.5}
-                />
+                <MessageSquare className="w-4.25 h-4.25" strokeWidth={1.5} />
               </button>
 
               {/* Info — opens rules/report/guidelines panel */}
