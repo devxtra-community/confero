@@ -1,24 +1,24 @@
 'use client';
-
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { TriangleAlert } from 'lucide-react';
 
 export default function ForbiddenPage() {
   const router = useRouter();
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 40%, #f0fdf4 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: "'DM Sans', system-ui, sans-serif",
-      padding: '24px',
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        background:
+          'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 40%, #f0fdf4 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: "'DM Sans', system-ui, sans-serif",
+        padding: '24px',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap');
 
@@ -175,19 +175,23 @@ export default function ForbiddenPage() {
       <div className="forbidden-bg-blob-1" />
       <div className="forbidden-bg-blob-2" />
 
-      <div style={{
-        textAlign: 'center',
-        maxWidth: '520px',
-        width: '100%',
-        position: 'relative',
-        zIndex: 1,
-      }}>
-
+      <div
+        style={{
+          textAlign: 'center',
+          maxWidth: '520px',
+          width: '100%',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
         {/* Hero 403 */}
         <span className="hero-403">403</span>
 
         {/* Content block */}
-        <div className="forbidden-content" style={{ marginTop: '8px', marginBottom: '36px' }}>
+        <div
+          className="forbidden-content"
+          style={{ marginTop: '8px', marginBottom: '36px' }}
+        >
           {/* Badge */}
           <div style={{ marginBottom: '20px' }}>
             <span className="error-badge">
@@ -197,38 +201,48 @@ export default function ForbiddenPage() {
           </div>
 
           {/* Heading */}
-          <h1 style={{
-            fontSize: 'clamp(26px, 5vw, 34px)',
-            fontWeight: 700,
-            color: '#111827',
-            letterSpacing: '-0.03em',
-            lineHeight: 1.2,
-            margin: '0 0 14px 0',
-          }}>
-            You don&apos;t have permission<br />for this page
+          <h1
+            style={{
+              fontSize: 'clamp(26px, 5vw, 34px)',
+              fontWeight: 700,
+              color: '#111827',
+              letterSpacing: '-0.03em',
+              lineHeight: 1.2,
+              margin: '0 0 14px 0',
+            }}
+          >
+            You don&apos;t have permission
+            <br />
+            for this page
           </h1>
 
           {/* Subtext */}
-          <p style={{
-            fontSize: '15px',
-            color: '#6b7280',
-            lineHeight: 1.65,
-            margin: 0,
-            maxWidth: '380px',
-            marginLeft: 'auto',
-            marginRight: 'auto',
-          }}>
-            This area is restricted. If you believe this is a mistake, contact your administrator or head back to safety.
+          <p
+            style={{
+              fontSize: '15px',
+              color: '#6b7280',
+              lineHeight: 1.65,
+              margin: 0,
+              maxWidth: '380px',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+            }}
+          >
+            This area is restricted. If you believe this is a mistake, contact
+            your administrator or head back to safety.
           </p>
         </div>
 
         {/* Action buttons */}
-        <div className="forbidden-actions" style={{
-          display: 'flex',
-          gap: '12px',
-          justifyContent: 'center',
-          flexWrap: 'wrap',
-        }}>
+        <div
+          className="forbidden-actions"
+          style={{
+            display: 'flex',
+            gap: '12px',
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
           <button className="btn-primary" onClick={() => router.push('/home')}>
             ← Go Home
           </button>
@@ -236,7 +250,6 @@ export default function ForbiddenPage() {
             Go Back
           </button>
         </div>
-
       </div>
     </div>
   );
