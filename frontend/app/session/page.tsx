@@ -56,8 +56,12 @@ function VideoCallInner() {
   const callIdRef = useRef<string>(callId);
   const peerUserIdRef = useRef<string>(peerId);
 
-  useEffect(() => { callIdRef.current = callId; }, [callId]);
-  useEffect(() => { peerUserIdRef.current = peerId; }, [peerId]);
+  useEffect(() => {
+    callIdRef.current = callId;
+  }, [callId]);
+  useEffect(() => {
+    peerUserIdRef.current = peerId;
+  }, [peerId]);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -76,6 +80,9 @@ function VideoCallInner() {
   // Captures callDuration before cleanup() resets it to 0
   // so the ended screen can display the real call length
   const finalDurationRef = useRef(0);
+  // Live mirror of callDuration state — always current inside any closure.
+  // State closures go stale inside useEffect; refs never do.
+  const callDurationRef = useRef(0);
 
   const [status, setStatus] = useState('Initializing...');
   const [iceState, setIceState] = useState('new');
@@ -87,7 +94,8 @@ function VideoCallInner() {
   const [callDuration, setCallDuration] = useState(0);
   const [isCallStarted, setIsCallStarted] = useState(false);
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
-  const [permissionState, setPermissionState] = useState<PermissionState>('idle');
+  const [permissionState, setPermissionState] =
+    useState<PermissionState>('idle');
   const [waitingForPeer, setWaitingForPeer] = useState(false);
   const [isDuplicateTab, setIsDuplicateTab] = useState(false);
   const iceServersRef = useRef<RTCIceServer[] | null>(null);
@@ -96,13 +104,21 @@ function VideoCallInner() {
   // callEnded + callEndReason: for the OTHER person's ended screen.
   // selfLeft: for the self-initiated "You left" brief screen.
   const [callEnded, setCallEnded] = useState(false);
-  const [callEndReason, setCallEndReason] = useState<CallEndReason>('USER_ENDED');
+  const [callEndReason, setCallEndReason] =
+    useState<CallEndReason>('USER_ENDED');
   const [selfLeft, setSelfLeft] = useState(false);
+  const [finalDuration, setFinalDuration] = useState(0);
 
   // ── Timer ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isCallStarted) return;
-    const t = setInterval(() => setCallDuration(p => p + 1), 1000);
+    const t = setInterval(() => {
+      setCallDuration(p => {
+        const next = p + 1;
+        callDurationRef.current = next; // keep ref in sync every tick
+        return next;
+      });
+    }, 1000);
     return () => clearInterval(t);
   }, [isCallStarted]);
 
@@ -120,7 +136,11 @@ function VideoCallInner() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true },
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user',
+        },
       });
       localStreamRef.current = stream;
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
@@ -195,7 +215,9 @@ function VideoCallInner() {
 
   const addTracks = useCallback((pc: RTCPeerConnection) => {
     if (tracksAddedRef.current || !localStreamRef.current) return;
-    localStreamRef.current.getTracks().forEach(t => pc.addTrack(t, localStreamRef.current!));
+    localStreamRef.current
+      .getTracks()
+      .forEach(t => pc.addTrack(t, localStreamRef.current!));
     tracksAddedRef.current = true;
   }, []);
 
@@ -287,7 +309,9 @@ function VideoCallInner() {
         const pc = getOrCreatePC(iceServersRef.current);
         addTracks(pc);
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
-        pendingIceRef.current.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)));
+        pendingIceRef.current.forEach(c =>
+          pc.addIceCandidate(new RTCIceCandidate(c))
+        );
         pendingIceRef.current = [];
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
@@ -301,10 +325,16 @@ function VideoCallInner() {
       }
     };
 
-    const onAnswer = async ({ answer }: { answer: RTCSessionDescriptionInit }) => {
+    const onAnswer = async ({
+      answer,
+    }: {
+      answer: RTCSessionDescriptionInit;
+    }) => {
       try {
         if (!pcRef.current) return;
-        await pcRef.current.setRemoteDescription(new RTCSessionDescription(answer));
+        await pcRef.current.setRemoteDescription(
+          new RTCSessionDescription(answer)
+        );
         pendingIceRef.current.forEach(c =>
           pcRef.current?.addIceCandidate(new RTCIceCandidate(c))
         );
@@ -316,7 +346,9 @@ function VideoCallInner() {
 
     const onIce = ({ candidate }: { candidate: RTCIceCandidateInit }) => {
       if (pcRef.current?.remoteDescription?.type) {
-        pcRef.current.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
+        pcRef.current
+          .addIceCandidate(new RTCIceCandidate(candidate))
+          .catch(() => {});
       } else {
         pendingIceRef.current.push(candidate);
       }
@@ -328,7 +360,7 @@ function VideoCallInner() {
     // "You left" screen when User A's own emit bounces back from server.
     const onCallEnd = ({ reason }: { reason: CallEndReason }) => {
       if (selfEndedRef.current) return; // self already handled this — ignore echo
-      finalDurationRef.current = callDuration; // capture before cleanup resets it
+      setFinalDuration(callDurationRef.current); // snapshot before cleanup resets to 0
       localStreamRef.current?.getTracks().forEach(t => t.stop());
       localStreamRef.current = null;
       cleanup();
@@ -378,10 +410,13 @@ function VideoCallInner() {
   // Shows "You left the call" briefly then redirects to /home.
   const endCall = () => {
     selfEndedRef.current = true; // guard must be set BEFORE emit
-    finalDurationRef.current = callDuration; // capture before cleanup resets it
+    finalDurationRef.current = callDurationRef.current; // ref always current — no stale closure
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     localStreamRef.current = null;
-    socket.emit('call:end', { callId: callIdRef.current, reason: 'USER_ENDED' });
+    socket.emit('call:end', {
+      callId: callIdRef.current,
+      reason: 'USER_ENDED',
+    });
     cleanup();
     setSelfLeft(true);
     setTimeout(() => router.push('/home'), 2000);
@@ -402,7 +437,9 @@ function VideoCallInner() {
             <PhoneOff className="w-7 h-7 text-white/30" strokeWidth={1.5} />
           </div>
           <div className="space-y-1.5">
-            <p className="text-white text-xl font-light tracking-tight">You left the call</p>
+            <p className="text-white text-xl font-light tracking-tight">
+              You left the call
+            </p>
             <p className="text-white/30 text-sm font-mono">Returning to home</p>
           </div>
           <div className="w-40 h-px bg-white/10 mx-auto overflow-hidden rounded-full">
@@ -417,9 +454,13 @@ function VideoCallInner() {
   if (callEnded) {
     const config = PEER_END_CONFIG[callEndReason];
     const iconEl =
-      callEndReason === 'USER_ENDED'   ? <PhoneOff className="w-8 h-8 text-white/40" strokeWidth={1.5} /> :
-      callEndReason === 'DISCONNECTED' ? <WifiOff className="w-8 h-8 text-white/40" strokeWidth={1.5} /> :
-                                         <AlertTriangle className="w-8 h-8 text-white/40" strokeWidth={1.5} />;
+      callEndReason === 'USER_ENDED' ? (
+        <PhoneOff className="w-8 h-8 text-white/40" strokeWidth={1.5} />
+      ) : callEndReason === 'DISCONNECTED' ? (
+        <WifiOff className="w-8 h-8 text-white/40" strokeWidth={1.5} />
+      ) : (
+        <AlertTriangle className="w-8 h-8 text-white/40" strokeWidth={1.5} />
+      );
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0b] px-4">
         <div className="w-full max-w-xs text-center space-y-8">
@@ -432,9 +473,15 @@ function VideoCallInner() {
 
           {/* Text */}
           <div className="space-y-2">
-            <h2 className="text-white text-2xl font-light tracking-tight">{config.title}</h2>
-            <p className="text-white/35 text-sm leading-relaxed">{config.message}</p>
-            <p className="text-white/20 text-xs font-mono pt-1">{fmt(finalDurationRef.current)}</p>
+            <h2 className="text-white text-2xl font-light tracking-tight">
+              {config.title}
+            </h2>
+            <p className="text-white/35 text-sm leading-relaxed">
+              {config.message}
+            </p>
+            <p className="text-white/20 text-xs font-mono pt-1">
+              {fmt(finalDuration)}
+            </p>
           </div>
 
           {/* Divider */}
@@ -459,13 +506,24 @@ function VideoCallInner() {
       <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0b] px-4">
         <div className="w-full max-w-sm text-center space-y-8">
           <div className="w-16 h-16 mx-auto rounded-full border border-white/8 flex items-center justify-center">
-            <svg className="w-7 h-7 text-white/30" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round"
-                d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            <svg
+              className="w-7 h-7 text-white/30"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+              />
             </svg>
           </div>
           <div className="space-y-2">
-            <p className="text-white text-xl font-light tracking-tight">Session already active</p>
+            <p className="text-white text-xl font-light tracking-tight">
+              Session already active
+            </p>
             <p className="text-white/35 text-sm leading-relaxed">
               Another tab is connected. Only one tab can be active at a time.
             </p>
@@ -475,7 +533,11 @@ function VideoCallInner() {
           </div>
           <div className="w-full h-px bg-white/8" />
           <button
-            onClick={() => { socket.disconnect(); window.close(); setTimeout(() => router.push('/login'), 300); }}
+            onClick={() => {
+              socket.disconnect();
+              window.close();
+              setTimeout(() => router.push('/login'), 300);
+            }}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/12 text-white/70 text-sm font-light hover:border-white/25 hover:text-white transition-all duration-300"
           >
             Close this tab
@@ -494,8 +556,12 @@ function VideoCallInner() {
             <VideoOff className="w-7 h-7 text-white/30" strokeWidth={1.5} />
           </div>
           <div className="space-y-2">
-            <p className="text-white text-xl font-light tracking-tight">Camera access denied</p>
-            <p className="text-white/35 text-sm">Allow camera access in browser settings and refresh.</p>
+            <p className="text-white text-xl font-light tracking-tight">
+              Camera access denied
+            </p>
+            <p className="text-white/35 text-sm">
+              Allow camera access in browser settings and refresh.
+            </p>
           </div>
           <div className="w-full h-px bg-white/8 max-w-xs mx-auto" />
           <button
@@ -529,20 +595,31 @@ function VideoCallInner() {
       `}</style>
 
       <main className="flex-1 flex flex-col relative h-full">
-
         {/* ── Top bar ── */}
         <header className="absolute top-0 left-0 right-0 z-20 h-14 px-5 flex items-center justify-between">
           {/* Left: live indicator */}
           <div className="flex items-center gap-2">
             {isCallStarted ? (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)' }}>
+              <div
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                style={{
+                  background: 'rgba(0,0,0,0.45)',
+                  backdropFilter: 'blur(8px)',
+                }}
+              >
                 <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
                 <span className="text-white text-xs font-mono tracking-widest">
                   {fmt(callDuration)}
                 </span>
               </div>
             ) : (
-              <span className="text-white/35 text-xs font-mono tracking-widest uppercase px-2.5 py-1 rounded-full" style={{ background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(8px)' }}>
+              <span
+                className="text-white/35 text-xs font-mono tracking-widest uppercase px-2.5 py-1 rounded-full"
+                style={{
+                  background: 'rgba(0,0,0,0.35)',
+                  backdropFilter: 'blur(8px)',
+                }}
+              >
                 {status}
               </span>
             )}
@@ -561,7 +638,6 @@ function VideoCallInner() {
           over video at bottom, local video sits just above controls on the right.
         */}
         <section className="flex-1 relative h-full overflow-hidden">
-
           {/* Remote video — fills entire section */}
           <video
             ref={remoteVideoRef}
@@ -575,15 +651,21 @@ function VideoCallInner() {
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0a0b] z-10">
               <div className="relative w-28 h-28 flex items-center justify-center mb-8">
                 <div className="absolute inset-0 rounded-full border border-white/20 animate-breathe" />
-                <div className="absolute inset-3 rounded-full border border-white/10 animate-breathe" style={{ animationDelay: '0.6s' }} />
+                <div
+                  className="absolute inset-3 rounded-full border border-white/10 animate-breathe"
+                  style={{ animationDelay: '0.6s' }}
+                />
                 <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
                   <Video className="w-4 h-4 text-white/25" strokeWidth={1.5} />
                 </div>
               </div>
               <div className="text-center space-y-1.5 animate-fade-up">
                 <p className="text-white/60 text-sm font-light tracking-wide">
-                  {permissionState === 'requesting' && 'Requesting camera access…'}
-                  {permissionState === 'granted' && waitingForPeer && 'Waiting for your partner…'}
+                  {permissionState === 'requesting' &&
+                    'Requesting camera access…'}
+                  {permissionState === 'granted' &&
+                    waitingForPeer &&
+                    'Waiting for your partner…'}
                   {permissionState === 'granted' && !waitingForPeer && status}
                 </p>
                 {waitingForPeer && (
@@ -603,8 +685,11 @@ function VideoCallInner() {
 
           {/* Local video PiP — top-right on mobile, bottom-right on sm+ */}
           <div
-            className="absolute top-16 right-3 sm:bottom-20 sm:top-auto sm:right-4 z-30 w-38 sm:w-44 md:w-52 xl:w-72 rounded-xl overflow-hidden"
-            style={{ border: '1px solid rgba(255,255,255,0.1)', aspectRatio: '16/9' }}
+            className="absolute top-16 right-3 sm:bottom-20 sm:top-auto sm:right-4 z-30 w-34 sm:w-44 md:w-52 xl:w-72 rounded-xl overflow-hidden"
+            style={{
+              border: '1px solid rgba(255,255,255,0.1)',
+              aspectRatio: '16/9',
+            }}
           >
             <video
               ref={localVideoRef}
@@ -617,13 +702,18 @@ function VideoCallInner() {
               className={`absolute bottom-1.5 right-1.5 w-1.5 h-1.5 rounded-full border border-black/20
                 ${permissionState === 'granted' ? 'bg-emerald-400' : 'bg-white/20'}`}
             />
-            <span className="absolute bottom-1.5 left-2 text-white/40 text-[9px] font-mono leading-none">you</span>
+            <span className="absolute bottom-1.5 left-2 text-white/40 text-[9px] font-mono leading-none">
+              you
+            </span>
           </div>
 
           {/* Gradient scrim — ensures controls always readable over any video */}
           <div
             className="absolute bottom-0 left-0 right-0 h-36 z-20 pointer-events-none"
-            style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%)' }}
+            style={{
+              background:
+                'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%)',
+            }}
           />
 
           {/* Controls bar — centered, always within viewport */}
@@ -644,9 +734,11 @@ function VideoCallInner() {
                 className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95
                   ${isMuted ? 'text-red-400' : 'text-white/55 hover:text-white'}`}
               >
-                {isMuted
-                  ? <MicOff className="w-[17px] h-[17px]" strokeWidth={1.5} />
-                  : <Mic className="w-[17px] h-[17px]" strokeWidth={1.5} />}
+                {isMuted ? (
+                  <MicOff className="w-[17px] h-[17px]" strokeWidth={1.5} />
+                ) : (
+                  <Mic className="w-[17px] h-[17px]" strokeWidth={1.5} />
+                )}
               </button>
 
               {/* Camera toggle */}
@@ -656,13 +748,18 @@ function VideoCallInner() {
                 className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95
                   ${isVideoOff ? 'text-red-400' : 'text-white/55 hover:text-white'}`}
               >
-                {isVideoOff
-                  ? <VideoOff className="w-[17px] h-[17px]" strokeWidth={1.5} />
-                  : <Video className="w-[17px] h-[17px]" strokeWidth={1.5} />}
+                {isVideoOff ? (
+                  <VideoOff className="w-[17px] h-[17px]" strokeWidth={1.5} />
+                ) : (
+                  <Video className="w-[17px] h-[17px]" strokeWidth={1.5} />
+                )}
               </button>
 
               {/* Divider */}
-              <div className="w-px h-4 mx-0.5" style={{ background: 'rgba(255,255,255,0.1)' }} />
+              <div
+                className="w-px h-4 mx-0.5"
+                style={{ background: 'rgba(255,255,255,0.1)' }}
+              />
 
               {/* End call */}
               <button
@@ -671,27 +768,42 @@ function VideoCallInner() {
                 className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-150 hover:scale-105 active:scale-90"
                 style={{ background: '#dc2626' }}
               >
-                <Phone className="w-[17px] h-[17px] text-white rotate-[135deg]" strokeWidth={2} />
+                <Phone
+                  className="w-[17px] h-[17px] text-white rotate-[135deg]"
+                  strokeWidth={2}
+                />
               </button>
 
               {/* Divider */}
-              <div className="w-px h-4 mx-0.5" style={{ background: 'rgba(255,255,255,0.1)' }} />
+              <div
+                className="w-px h-4 mx-0.5"
+                style={{ background: 'rgba(255,255,255,0.1)' }}
+              />
 
               {/* Chat */}
               <button
-                onClick={() => { setShowChat(!showChat); setShowInfo(false); }}
+                onClick={() => {
+                  setShowChat(!showChat);
+                  setShowInfo(false);
+                }}
                 title="Chat"
                 className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95
                   ${showChat ? 'text-white' : 'text-white/55 hover:text-white'}`}
               >
-                <MessageSquare className="w-[17px] h-[17px]" strokeWidth={1.5} />
+                <MessageSquare
+                  className="w-[17px] h-[17px]"
+                  strokeWidth={1.5}
+                />
               </button>
 
               {/* Info — opens rules/report/guidelines panel */}
               {/* Settings removed: had no functionality — zero onClick handler.
                   Replaced with Info which opens the rules & report slide-in panel. */}
               <button
-                onClick={() => { setShowInfo(!showInfo); setShowChat(false); }}
+                onClick={() => {
+                  setShowInfo(!showInfo);
+                  setShowChat(false);
+                }}
                 title="Info & Report"
                 className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95
                   ${showInfo ? 'text-white' : 'text-white/55 hover:text-white'}`}
@@ -716,7 +828,9 @@ function VideoCallInner() {
             className="h-14 px-5 flex items-center justify-between"
             style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
           >
-            <span className="text-white/60 text-sm font-light tracking-wide">Messages</span>
+            <span className="text-white/60 text-sm font-light tracking-wide">
+              Messages
+            </span>
             <button
               onClick={() => setShowChat(false)}
               className="text-white/25 hover:text-white/60 transition-colors text-lg leading-none"
@@ -729,7 +843,10 @@ function VideoCallInner() {
             <div className="flex gap-3">
               <div
                 className="w-7 h-7 rounded-full flex items-center justify-center text-xs text-white/50 flex-shrink-0"
-                style={{ border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)' }}
+                style={{
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'rgba(255,255,255,0.04)',
+                }}
               >
                 P
               </div>
@@ -737,7 +854,10 @@ function VideoCallInner() {
                 <p className="text-white/25 text-xs font-mono">peer</p>
                 <div
                   className="text-white/60 text-sm leading-relaxed px-3 py-2 rounded-xl"
-                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)' }}
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                  }}
                 >
                   Hey, how is the connection?
                 </div>
@@ -755,12 +875,34 @@ function VideoCallInner() {
                 className="flex-1 bg-transparent text-white/70 text-sm px-3 py-2.5 rounded-xl outline-none placeholder:text-white/20"
                 style={{ border: '1px solid rgba(255,255,255,0.1)' }}
               />
-              <button
-                className="px-4 py-2.5 rounded-xl text-white/60 text-sm font-light transition-all hover:text-white"
-                style={{ border: '1px solid rgba(255,255,255,0.1)' }}
-              >
-                Send
-              </button>
+              <div className="relative group">
+                <button
+                  disabled
+                  className="px-4 py-2.5 rounded-xl text-white/20 text-sm font-light cursor-not-allowed"
+                  style={{ border: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  Send
+                </button>
+                {/* Tooltip */}
+                <div
+                  className="absolute bottom-full right-0 mb-2 w-48 px-3 py-2 rounded-xl text-white/50 text-xs font-light leading-relaxed pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  style={{
+                    background: '#1a1a1b',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  }}
+                >
+                  We&apos;re working on adding this feature — sorry for the
+                  inconvenience.
+                  <span
+                    className="absolute bottom-[-5px] right-5 w-2.5 h-2.5 rotate-45"
+                    style={{
+                      background: '#1a1a1b',
+                      borderRight: '1px solid rgba(255,255,255,0.08)',
+                      borderBottom: '1px solid rgba(255,255,255,0.08)',
+                    }}
+                  />
+                </div>
+              </div>
             </div>
           </footer>
         </aside>
@@ -784,7 +926,9 @@ function VideoCallInner() {
             className="h-14 px-5 flex items-center justify-between flex-shrink-0"
             style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
           >
-            <span className="text-white/60 text-sm font-light tracking-wide">Info & Guidelines</span>
+            <span className="text-white/60 text-sm font-light tracking-wide">
+              Info & Guidelines
+            </span>
             <button
               onClick={() => setShowInfo(false)}
               className="text-white/25 hover:text-white/60 transition-colors text-lg leading-none"
@@ -794,16 +938,25 @@ function VideoCallInner() {
           </header>
 
           {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto">
-
+          <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {/* ── Section 1: How matching works ── */}
-            <div className="px-5 pt-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <div
+              className="px-5 pt-5 pb-4"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+            >
               <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                     style={{ background: 'rgba(255,255,255,0.06)' }}>
-                  <Users className="w-3.5 h-3.5 text-white/50" strokeWidth={1.5} />
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(255,255,255,0.06)' }}
+                >
+                  <Users
+                    className="w-3.5 h-3.5 text-white/50"
+                    strokeWidth={1.5}
+                  />
                 </div>
-                <span className="text-white/70 text-sm font-medium">How matching works</span>
+                <span className="text-white/70 text-sm font-medium">
+                  How matching works
+                </span>
               </div>
               <div className="space-y-2.5 pl-9">
                 {[
@@ -813,25 +966,40 @@ function VideoCallInner() {
                   'You can find another match at any time from the home screen.',
                 ].map((rule, i) => (
                   <div key={i} className="flex gap-2.5">
-                    <span className="text-white/20 text-xs font-mono mt-0.5 flex-shrink-0">{String(i + 1).padStart(2, '0')}</span>
-                    <p className="text-white/40 text-xs leading-relaxed">{rule}</p>
+                    <span className="text-white/20 text-xs font-mono mt-0.5 flex-shrink-0">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <p className="text-white/40 text-xs leading-relaxed">
+                      {rule}
+                    </p>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* ── Section 2: Get matched faster ── */}
-            <div className="px-5 pt-4 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <div
+              className="px-5 pt-4 pb-4"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+            >
               <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                     style={{ background: 'rgba(255,255,255,0.06)' }}>
-                  <Zap className="w-3.5 h-3.5 text-white/50" strokeWidth={1.5} />
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(255,255,255,0.06)' }}
+                >
+                  <Zap
+                    className="w-3.5 h-3.5 text-white/50"
+                    strokeWidth={1.5}
+                  />
                 </div>
-                <span className="text-white/70 text-sm font-medium">Get matched faster</span>
+                <span className="text-white/70 text-sm font-medium">
+                  Get matched faster
+                </span>
               </div>
               <div className="space-y-2 pl-9">
                 <p className="text-white/40 text-xs leading-relaxed">
-                  Users with more skills in their profile appear in more match queues — increasing your chance of a faster connection.
+                  Users with more skills in their profile appear in more match
+                  queues — increasing your chance of a faster connection.
                 </p>
                 <div className="mt-3 space-y-1.5">
                   {[
@@ -841,26 +1009,38 @@ function VideoCallInner() {
                   ].map((tip, i) => (
                     <div key={i} className="flex items-start gap-2">
                       <span className="w-1 h-1 rounded-full bg-white/20 mt-1.5 flex-shrink-0" />
-                      <p className="text-white/35 text-xs leading-relaxed">{tip}</p>
+                      <p className="text-white/35 text-xs leading-relaxed">
+                        {tip}
+                      </p>
                     </div>
                   ))}
                 </div>
-
               </div>
             </div>
 
             {/* ── Section 3: Report a user ── */}
-            <div className="px-5 pt-4 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <div
+              className="px-5 pt-4 pb-4"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+            >
               <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                     style={{ background: 'rgba(255,255,255,0.06)' }}>
-                  <Flag className="w-3.5 h-3.5 text-white/50" strokeWidth={1.5} />
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(255,255,255,0.06)' }}
+                >
+                  <Flag
+                    className="w-3.5 h-3.5 text-white/50"
+                    strokeWidth={1.5}
+                  />
                 </div>
-                <span className="text-white/70 text-sm font-medium">Report a user</span>
+                <span className="text-white/70 text-sm font-medium">
+                  Report a user
+                </span>
               </div>
               <div className="space-y-2 pl-9">
                 <p className="text-white/40 text-xs leading-relaxed">
-                  If someone is behaving inappropriately, you can report them. All reports are reviewed by our team.
+                  If someone is behaving inappropriately, you can report them.
+                  All reports are reviewed by our team.
                 </p>
                 <div className="mt-3 space-y-1.5">
                   {[
@@ -869,25 +1049,34 @@ function VideoCallInner() {
                     'Spam or promotional content',
                     'Impersonation or fake identity',
                   ].map((reason, i) => (
-                    <div key={i} className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg cursor-pointer transition-all hover:bg-white/4"
-                         style={{ border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div
+                      key={i}
+                      className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg cursor-pointer transition-all hover:bg-white/4"
+                      style={{ border: '1px solid rgba(255,255,255,0.05)' }}
+                    >
                       <span className="w-1 h-1 rounded-full bg-white/20 flex-shrink-0" />
                       <p className="text-white/35 text-xs flex-1">{reason}</p>
                     </div>
                   ))}
                 </div>
-
               </div>
             </div>
 
             {/* ── Section 4: Community guidelines ── */}
             <div className="px-5 pt-4 pb-6">
               <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                     style={{ background: 'rgba(255,255,255,0.06)' }}>
-                  <Shield className="w-3.5 h-3.5 text-white/50" strokeWidth={1.5} />
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(255,255,255,0.06)' }}
+                >
+                  <Shield
+                    className="w-3.5 h-3.5 text-white/50"
+                    strokeWidth={1.5}
+                  />
                 </div>
-                <span className="text-white/70 text-sm font-medium">Community guidelines</span>
+                <span className="text-white/70 text-sm font-medium">
+                  Community guidelines
+                </span>
               </div>
               <div className="space-y-2 pl-9">
                 {[
@@ -899,12 +1088,13 @@ function VideoCallInner() {
                 ].map((rule, i) => (
                   <div key={i} className="flex items-start gap-2">
                     <span className="w-1 h-1 rounded-full bg-white/20 mt-1.5 flex-shrink-0" />
-                    <p className="text-white/35 text-xs leading-relaxed">{rule}</p>
+                    <p className="text-white/35 text-xs leading-relaxed">
+                      {rule}
+                    </p>
                   </div>
                 ))}
               </div>
             </div>
-
           </div>
         </aside>
       )}
@@ -914,11 +1104,13 @@ function VideoCallInner() {
 
 export default function SessionPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0b]">
-        <p className="text-white/30 text-sm font-mono">Loading…</p>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#0a0a0b]">
+          <p className="text-white/30 text-sm font-mono">Loading…</p>
+        </div>
+      }
+    >
       <VideoCallInner />
     </Suspense>
   );
