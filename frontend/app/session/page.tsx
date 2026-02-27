@@ -19,10 +19,11 @@ import {
   Zap,
   Shield,
   Users,
+  Clock,
 } from 'lucide-react';
 
 type PermissionState = 'idle' | 'requesting' | 'granted' | 'denied';
-type CallEndReason = 'USER_ENDED' | 'DISCONNECTED' | 'ICE_FAILED';
+type CallEndReason = 'USER_ENDED' | 'DISCONNECTED' | 'ICE_FAILED' | 'TIME_LIMIT';
 
 // ── What the OTHER person sees (server-pushed call:end) ───────────────────
 const PEER_END_CONFIG: Record<
@@ -42,6 +43,11 @@ const PEER_END_CONFIG: Record<
   ICE_FAILED: {
     title: 'Connection failed',
     message: 'The connection could not be established.',
+    icon: null,
+  },
+  TIME_LIMIT: {
+    title: 'Time limit reached',
+    message: 'The 3-minute call limit has been reached.',
     icon: null,
   },
 };
@@ -89,7 +95,6 @@ function VideoCallInner() {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  // Info panel — rules, report, skills tip, guidelines
   const [showInfo, setShowInfo] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [isCallStarted, setIsCallStarted] = useState(false);
@@ -115,12 +120,26 @@ function VideoCallInner() {
     const t = setInterval(() => {
       setCallDuration(p => {
         const next = p + 1;
-        callDurationRef.current = next; // keep ref in sync every tick
+        callDurationRef.current = next;
         return next;
       });
     }, 1000);
     return () => clearInterval(t);
   }, [isCallStarted]);
+
+  // ── Time limit enforcement (frontend) ────────────────────────────────────
+  // Backend also enforces at 3 min. Frontend fires first for instant UI.
+  useEffect(() => {
+    if (!isCallStarted || callDuration < 180) return;
+    selfEndedRef.current = true;
+    setFinalDuration(callDurationRef.current);
+    localStreamRef.current?.getTracks().forEach(t => t.stop());
+    localStreamRef.current = null;
+    socket.emit('call:end', { callId: callIdRef.current, reason: 'TIME_LIMIT' });
+    cleanup();
+    setCallEndReason('TIME_LIMIT');
+    setCallEnded(true);
+  }, [callDuration, isCallStarted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fmt = (s: number) => {
     const h = Math.floor(s / 3600),
@@ -360,7 +379,7 @@ function VideoCallInner() {
     // "You left" screen when User A's own emit bounces back from server.
     const onCallEnd = ({ reason }: { reason: CallEndReason }) => {
       if (selfEndedRef.current) return; // self already handled this — ignore echo
-      setFinalDuration(callDurationRef.current); // snapshot before cleanup resets to 0
+      setFinalDuration(callDurationRef.current);
       localStreamRef.current?.getTracks().forEach(t => t.stop());
       localStreamRef.current = null;
       cleanup();
@@ -410,7 +429,7 @@ function VideoCallInner() {
   // Shows "You left the call" briefly then redirects to /home.
   const endCall = () => {
     selfEndedRef.current = true; // guard must be set BEFORE emit
-    finalDurationRef.current = callDurationRef.current; // ref always current — no stale closure
+    finalDurationRef.current = callDurationRef.current;
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     localStreamRef.current = null;
     socket.emit('call:end', {
@@ -424,7 +443,6 @@ function VideoCallInner() {
 
   // ── Screens ───────────────────────────────────────────────────────────────
 
-  // "You left the call" — 2s then auto-redirects
   if (selfLeft) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0b]">
@@ -450,7 +468,6 @@ function VideoCallInner() {
     );
   }
 
-  // "The call has ended / Connection lost" — shown to the OTHER person
   if (callEnded) {
     const config = PEER_END_CONFIG[callEndReason];
     const iconEl =
@@ -458,20 +475,19 @@ function VideoCallInner() {
         <PhoneOff className="w-8 h-8 text-white/40" strokeWidth={1.5} />
       ) : callEndReason === 'DISCONNECTED' ? (
         <WifiOff className="w-8 h-8 text-white/40" strokeWidth={1.5} />
+      ) : callEndReason === 'TIME_LIMIT' ? (
+        <Clock className="w-8 h-8 text-white/40" strokeWidth={1.5} />
       ) : (
         <AlertTriangle className="w-8 h-8 text-white/40" strokeWidth={1.5} />
       );
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0b] px-4">
         <div className="w-full max-w-xs text-center space-y-8">
-          {/* Icon ring */}
           <div className="flex justify-center">
             <div className="w-20 h-20 rounded-full border border-white/8 flex items-center justify-center">
               {iconEl}
             </div>
           </div>
-
-          {/* Text */}
           <div className="space-y-2">
             <h2 className="text-white text-2xl font-light tracking-tight">
               {config.title}
@@ -483,11 +499,7 @@ function VideoCallInner() {
               {fmt(finalDuration)}
             </p>
           </div>
-
-          {/* Divider */}
           <div className="w-full h-px bg-white/8" />
-
-          {/* Action */}
           <button
             onClick={() => router.push('/home')}
             className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-full border border-white/12 text-white/70 text-sm font-light tracking-wide hover:border-white/25 hover:text-white transition-all duration-300"
@@ -500,7 +512,6 @@ function VideoCallInner() {
     );
   }
 
-  // Duplicate tab screen
   if (isDuplicateTab) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0b] px-4">
@@ -547,7 +558,6 @@ function VideoCallInner() {
     );
   }
 
-  // Denied screen
   if (permissionState === 'denied') {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0b]">
@@ -597,18 +607,18 @@ function VideoCallInner() {
       <main className="flex-1 flex flex-col relative h-full">
         {/* ── Top bar ── */}
         <header className="absolute top-0 left-0 right-0 z-20 h-14 px-5 flex items-center justify-between">
-          {/* Left: live indicator */}
           <div className="flex items-center gap-2">
             {isCallStarted ? (
               <div
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all duration-500"
                 style={{
-                  background: 'rgba(0,0,0,0.45)',
+                  background: callDuration >= 120 ? 'rgba(220,38,38,0.2)' : 'rgba(0,0,0,0.45)',
                   backdropFilter: 'blur(8px)',
+                  border: callDuration >= 120 ? '1px solid rgba(220,38,38,0.3)' : '1px solid transparent',
                 }}
               >
-                <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                <span className="text-white text-xs font-mono tracking-widest">
+                <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${callDuration >= 120 ? 'bg-red-400' : 'bg-red-500'}`} />
+                <span className={`text-xs font-mono tracking-widest transition-colors duration-500 ${callDuration >= 120 ? 'text-red-300' : 'text-white'}`}>
                   {fmt(callDuration)}
                 </span>
               </div>
@@ -624,8 +634,6 @@ function VideoCallInner() {
               </span>
             )}
           </div>
-
-          {/* Right: ICE badge — only in dev, subtle */}
           <span className="text-white/15 text-xs font-mono">{iceState}</span>
         </header>
 
@@ -646,7 +654,6 @@ function VideoCallInner() {
             className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
           />
 
-          {/* Waiting overlay — sits over remote video until peer connects */}
           {!hasRemoteVideo && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0a0b] z-10">
               <div className="relative w-28 h-28 flex items-center justify-center mb-8">
@@ -707,7 +714,6 @@ function VideoCallInner() {
             </span>
           </div>
 
-          {/* Gradient scrim — ensures controls always readable over any video */}
           <div
             className="absolute bottom-0 left-0 right-0 h-36 z-20 pointer-events-none"
             style={{
@@ -716,7 +722,7 @@ function VideoCallInner() {
             }}
           />
 
-          {/* Controls bar — centered, always within viewport */}
+          {/* Controls bar */}
           <div className="absolute bottom-5 left-0 right-0 z-30 flex justify-center px-4">
             <div
               className="flex items-center gap-1.5 sm:gap-2.5 px-3 sm:px-5 py-2.5 rounded-full"
@@ -755,7 +761,6 @@ function VideoCallInner() {
                 )}
               </button>
 
-              {/* Divider */}
               <div
                 className="w-px h-4 mx-0.5"
                 style={{ background: 'rgba(255,255,255,0.1)' }}
@@ -774,7 +779,6 @@ function VideoCallInner() {
                 />
               </button>
 
-              {/* Divider */}
               <div
                 className="w-px h-4 mx-0.5"
                 style={{ background: 'rgba(255,255,255,0.1)' }}
@@ -883,7 +887,6 @@ function VideoCallInner() {
                 >
                   Send
                 </button>
-                {/* Tooltip */}
                 <div
                   className="absolute bottom-full right-0 mb-2 w-48 px-3 py-2 rounded-xl text-white/50 text-xs font-light leading-relaxed pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                   style={{
@@ -921,7 +924,6 @@ function VideoCallInner() {
             borderLeft: '1px solid rgba(255,255,255,0.06)',
           }}
         >
-          {/* Header */}
           <header
             className="h-14 px-5 flex items-center justify-between flex-shrink-0"
             style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
@@ -937,9 +939,8 @@ function VideoCallInner() {
             </button>
           </header>
 
-          {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            {/* ── Section 1: How matching works ── */}
+            {/* Section 1: How matching works */}
             <div
               className="px-5 pt-5 pb-4"
               style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
@@ -949,14 +950,9 @@ function VideoCallInner() {
                   className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ background: 'rgba(255,255,255,0.06)' }}
                 >
-                  <Users
-                    className="w-3.5 h-3.5 text-white/50"
-                    strokeWidth={1.5}
-                  />
+                  <Users className="w-3.5 h-3.5 text-white/50" strokeWidth={1.5} />
                 </div>
-                <span className="text-white/70 text-sm font-medium">
-                  How matching works
-                </span>
+                <span className="text-white/70 text-sm font-medium">How matching works</span>
               </div>
               <div className="space-y-2.5 pl-9">
                 {[
@@ -969,15 +965,13 @@ function VideoCallInner() {
                     <span className="text-white/20 text-xs font-mono mt-0.5 flex-shrink-0">
                       {String(i + 1).padStart(2, '0')}
                     </span>
-                    <p className="text-white/40 text-xs leading-relaxed">
-                      {rule}
-                    </p>
+                    <p className="text-white/40 text-xs leading-relaxed">{rule}</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* ── Section 2: Get matched faster ── */}
+            {/* Section 2: Get matched faster */}
             <div
               className="px-5 pt-4 pb-4"
               style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
@@ -987,14 +981,9 @@ function VideoCallInner() {
                   className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ background: 'rgba(255,255,255,0.06)' }}
                 >
-                  <Zap
-                    className="w-3.5 h-3.5 text-white/50"
-                    strokeWidth={1.5}
-                  />
+                  <Zap className="w-3.5 h-3.5 text-white/50" strokeWidth={1.5} />
                 </div>
-                <span className="text-white/70 text-sm font-medium">
-                  Get matched faster
-                </span>
+                <span className="text-white/70 text-sm font-medium">Get matched faster</span>
               </div>
               <div className="space-y-2 pl-9">
                 <p className="text-white/40 text-xs leading-relaxed">
@@ -1009,16 +998,14 @@ function VideoCallInner() {
                   ].map((tip, i) => (
                     <div key={i} className="flex items-start gap-2">
                       <span className="w-1 h-1 rounded-full bg-white/20 mt-1.5 flex-shrink-0" />
-                      <p className="text-white/35 text-xs leading-relaxed">
-                        {tip}
-                      </p>
+                      <p className="text-white/35 text-xs leading-relaxed">{tip}</p>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* ── Section 3: Report a user ── */}
+            {/* Section 3: Report a user */}
             <div
               className="px-5 pt-4 pb-4"
               style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
@@ -1028,14 +1015,9 @@ function VideoCallInner() {
                   className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ background: 'rgba(255,255,255,0.06)' }}
                 >
-                  <Flag
-                    className="w-3.5 h-3.5 text-white/50"
-                    strokeWidth={1.5}
-                  />
+                  <Flag className="w-3.5 h-3.5 text-white/50" strokeWidth={1.5} />
                 </div>
-                <span className="text-white/70 text-sm font-medium">
-                  Report a user
-                </span>
+                <span className="text-white/70 text-sm font-medium">Report a user</span>
               </div>
               <div className="space-y-2 pl-9">
                 <p className="text-white/40 text-xs leading-relaxed">
@@ -1062,21 +1044,16 @@ function VideoCallInner() {
               </div>
             </div>
 
-            {/* ── Section 4: Community guidelines ── */}
+            {/* Section 4: Community guidelines */}
             <div className="px-5 pt-4 pb-6">
               <div className="flex items-center gap-2.5 mb-3">
                 <div
                   className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ background: 'rgba(255,255,255,0.06)' }}
                 >
-                  <Shield
-                    className="w-3.5 h-3.5 text-white/50"
-                    strokeWidth={1.5}
-                  />
+                  <Shield className="w-3.5 h-3.5 text-white/50" strokeWidth={1.5} />
                 </div>
-                <span className="text-white/70 text-sm font-medium">
-                  Community guidelines
-                </span>
+                <span className="text-white/70 text-sm font-medium">Community guidelines</span>
               </div>
               <div className="space-y-2 pl-9">
                 {[
@@ -1088,9 +1065,7 @@ function VideoCallInner() {
                 ].map((rule, i) => (
                   <div key={i} className="flex items-start gap-2">
                     <span className="w-1 h-1 rounded-full bg-white/20 mt-1.5 flex-shrink-0" />
-                    <p className="text-white/35 text-xs leading-relaxed">
-                      {rule}
-                    </p>
+                    <p className="text-white/35 text-xs leading-relaxed">{rule}</p>
                   </div>
                 ))}
               </div>

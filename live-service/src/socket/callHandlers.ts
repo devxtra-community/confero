@@ -6,22 +6,17 @@ import { webRTCService } from '../service/webrtcService';
 
 export const registerCallHandlers = (socket: Socket, io: Server) => {
   // ── peer:ready: fired by both users once their camera is on ──────────────
-  // Call record already exists (created in matchingHandlers when match was found)
-  // When BOTH users are ready → fire call:start to both → WebRTC begins
   socket.on(SOCKET_EVENTS.PEER_READY, ({ callId }) => {
     const userId = socket.data.user.userId;
     const call = callService.get(callId);
 
-    // Guard: call must exist and be in INITIATING state
     if (!call || call.state !== 'INITIATING') return;
 
-    // Mark this user ready
     callService.markReady(callId, userId);
 
     const updated = callService.get(callId);
     if (!updated) return;
 
-    // Both ready → start WebRTC signaling
     if (updated.fromReady && updated.toReady) {
       callService.update(callId, 'CONNECTING');
 
@@ -35,7 +30,6 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
       const iceServersFrom = webRTCService.getIceServers(updated.from, callId);
       const iceServersTo = webRTCService.getIceServers(updated.to, callId);
 
-      // userA (from) creates offer
       io.to(updated.from).emit(SOCKET_EVENTS.CALL_START, {
         callId,
         peerUserId: updated.to,
@@ -43,17 +37,39 @@ export const registerCallHandlers = (socket: Socket, io: Server) => {
         iceServers: iceServersFrom,
       });
 
-      // userB waits
       io.to(updated.to).emit(SOCKET_EVENTS.CALL_START, {
         callId,
         peerUserId: updated.from,
         shouldCreateOffer: false,
         iceServers: iceServersTo,
       });
+
+      // ── 3-minute time limit (backend enforcement) ─────────────────────
+      // Frontend also fires at 180s for instant UI. Backend is the source
+      // of truth — handles crashes, disconnects, and tab closures.
+      setTimeout(() => {
+        const active = callService.get(callId);
+        if (!active || active.state === 'ENDED') return; // already ended
+
+        callService.update(callId, 'ENDED');
+
+        publishEvent('session.ended', {
+          sessionId: callId,
+          endedAt: new Date(),
+          reason: 'TIME_LIMIT',
+        }).catch(console.error);
+
+        io.to(active.from).to(active.to).emit(SOCKET_EVENTS.CALL_END, {
+          callId,
+          reason: 'TIME_LIMIT',
+        });
+
+        callService.remove(callId);
+      }, 3 * 60 * 1000); // 3 minutes
     }
   });
 
-  // ── WebRTC signaling — completely unchanged ──────────────────────────────
+  // ── WebRTC signaling ─────────────────────────────────────────────────────
   socket.on(SOCKET_EVENTS.WEBRTC_OFFER, ({ callId, offer, to }) => {
     const call = callService.get(callId);
     if (!call) return;
