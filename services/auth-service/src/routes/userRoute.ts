@@ -12,6 +12,7 @@ import {
   completeAvatarUpload,
   getBannerUploadUrl,
   completeBannerUpload,
+  getCallCount, 
 } from '../controllers/userController.js';
 
 import { verifyAccessToken } from '../middlewares/verifyToken.js';
@@ -23,6 +24,7 @@ const router = Router();
 router.post('/me/skills', verifyAccessToken, addSkill);
 router.delete('/me/skills/:key', verifyAccessToken, removeSkill);
 router.get('/me', verifyAccessToken, currentUser);
+router.get('/me/call-count', verifyAccessToken, getCallCount);
 router.patch('/update-profile', verifyAccessToken, updateProfile);
 
 router.get('/peer/:userId', verifyAccessToken, getPublicProfile);

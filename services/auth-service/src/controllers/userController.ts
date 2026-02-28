@@ -3,6 +3,7 @@ import { userRepository } from '../repositories/userRepository.js';
 import { userService } from '../services/userService.js';
 import { getPublicUrlForKey } from '../utils/r2Upload.js';
 import { reportService } from '../services/reportService.js';
+import { SessionModel } from '../models/sessionModel.js';
 
 export const currentUser = async (req: Request, res: Response) => {
   try {
@@ -316,4 +317,19 @@ export const reportUser = async (req: Request, res: Response) => {
   await reportService.reportUser(reportedUserId, userId, reason);
 
   res.json({ success: true });
+};
+
+export const getCallCount = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const count = await SessionModel.countDocuments({
+      $or: [{ userA: userId }, { userB: userId }],
+    });
+
+    return res.status(200).json({ count });
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to fetch call count', err });
+  }
 };
