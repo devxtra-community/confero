@@ -12,7 +12,7 @@ import {
   completeAvatarUpload,
   getBannerUploadUrl,
   completeBannerUpload,
-  getCallCount, 
+  getCallCount,
 } from '../controllers/userController.js';
 
 import { verifyAccessToken } from '../middlewares/verifyToken.js';

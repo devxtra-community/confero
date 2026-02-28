@@ -4,7 +4,7 @@ import { userProxy } from '../proxies/userProxy.js';
 const userRouter = Router();
 
 userRouter.get('/me', userProxy);
-userRouter.get('/me/call-count', userProxy); 
+userRouter.get('/me/call-count', userProxy);
 userRouter.patch('/update-profile', userProxy);
 
 userRouter.post('/me/skills', userProxy);
