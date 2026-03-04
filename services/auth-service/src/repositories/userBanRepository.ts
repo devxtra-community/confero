@@ -21,15 +21,11 @@ export const userBanRepository = {
     });
   },
 
-  deactivate: (userId: string) => {
+  deactivate: async (userId: string) => {
     return UserBanModel.findOneAndUpdate(
-      {
-        userId: userId,
-        active: true,
-      },
-      {
-        active: false,
-      }
+      { userId, active: true },
+      { $set: { active: false } },
+      { new: true }
     );
   },
 

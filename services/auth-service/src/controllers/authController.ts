@@ -9,14 +9,14 @@ import { redis } from '../config/redis.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-const cookieOptions = (maxAge: number) => ({
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
-  path: '/',
-  maxAge,
-  ...(isProduction && { domain: '.conferoo.in' }),
-});
+// const cookieOptions = (maxAge: number) => ({
+//   httpOnly: true,
+//   secure: isProduction,
+//   sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
+//   path: '/',
+//   maxAge,
+//   ...(isProduction && { domain: '.conferoo.in' }),
+// });
 
 export const register = async (req: Request, res: Response) => {
   const { email, password, fullName } = req.body;
@@ -243,7 +243,14 @@ export const refresh = async (req: Request, res: Response) => {
 
   const newAccessToken = await authService.refreshAccessToken(refreshToken);
 
-  res.cookie('accessToken', newAccessToken, cookieOptions(24 * 60 * 60 * 1000));
+  res.cookie('accessToken', newAccessToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: 'lax',
+    domain: 'localhost',
+    path: '/',
+    maxAge: 24 * 60 * 60 * 1000,
+  });
 
   res.status(200).json({
     message: 'refresh succesfully',

@@ -10,6 +10,7 @@ import {
   verifyOtp,
 } from '../controllers/authController.js';
 import { googleLogin } from '../controllers/authController.js';
+import { verifyAccessToken } from '../middlewares/verifyToken.js';
 
 const authRouter = Router();
 
@@ -22,7 +23,7 @@ authRouter.post('/google', googleLogin);
 authRouter.post('/forgot-password', forgotPassword);
 authRouter.post('/reset-password', resetPassword);
 
-authRouter.post('/logout', logout);
+authRouter.post('/logout', verifyAccessToken, logout);
 
 authRouter.post('/refresh', refresh);
 

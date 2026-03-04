@@ -14,6 +14,7 @@ export default function Profile() {
     const fetchUser = async () => {
       try {
         const res = await axiosInstance.get('/users/me');
+        console.log(res);
         setUser(res.data.user);
       } catch (e) {
         console.error(e);

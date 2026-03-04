@@ -26,6 +26,18 @@ axiosInstance.interceptors.response.use(
     console.log('STATUS:', status);
     console.log('URL:', url);
 
+    if (
+      status === 403 &&
+      error.response?.data &&
+      (error.response.data as { message?: string }).message === 'ACCOUNT_BANNED'
+    ) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?banned=true';
+      }
+
+      return Promise.reject(error);
+    }
+
     const isAuthEndpoint =
       url.includes('/auth/login') ||
       url.includes('/auth/register') ||

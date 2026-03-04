@@ -7,7 +7,7 @@ import {
   LockKeyholeOpen,
   MonitorX,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import GoogleButton from './GoogleButton';
 import Link from 'next/link';
 import { axiosInstance } from '@/lib/axiosInstance';
@@ -36,6 +36,15 @@ export function LoginRight() {
   const [forceLoading, setForceLoading] = useState(false);
 
   const router = useRouter();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const banned = params.get('banned');
+
+    if (banned) {
+      toast.warning('Your account has been banned.');
+    }
+  }, []);
 
   // LOGIN
   const handleLogin = async () => {

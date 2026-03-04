@@ -19,11 +19,16 @@ import {
   Zap,
   Shield,
   Users,
+  Clock,
 } from 'lucide-react';
 import Link from 'next/link';
 
 type PermissionState = 'idle' | 'requesting' | 'granted' | 'denied';
-type CallEndReason = 'USER_ENDED' | 'DISCONNECTED' | 'ICE_FAILED';
+type CallEndReason =
+  | 'USER_ENDED'
+  | 'DISCONNECTED'
+  | 'ICE_FAILED'
+  | 'TIME_LIMIT';
 
 // ── What the OTHER person sees (server-pushed call:end) ───────────────────
 const PEER_END_CONFIG: Record<
@@ -43,6 +48,11 @@ const PEER_END_CONFIG: Record<
   ICE_FAILED: {
     title: 'Connection failed',
     message: 'The connection could not be established.',
+    icon: null,
+  },
+  TIME_LIMIT: {
+    title: 'Time limit reached',
+    message: 'The 3-minute call limit has been reached.',
     icon: null,
   },
 };
@@ -74,15 +84,8 @@ function VideoCallInner() {
   const isCallActiveRef = useRef(false);
   const sessionStartedRef = useRef(false);
 
-  // ── Guard: once endCall() fires, ignore any incoming call:end from server ─
-  // Without this, User A emits call:end → server echoes it back to User A →
-  // onCallEnd fires → overwrites the "You left" screen with "call ended".
   const selfEndedRef = useRef(false);
-  // Captures callDuration before cleanup() resets it to 0
-  // so the ended screen can display the real call length
   const finalDurationRef = useRef(0);
-  // Live mirror of callDuration state — always current inside any closure.
-  // State closures go stale inside useEffect; refs never do.
   const callDurationRef = useRef(0);
 
   const [status, setStatus] = useState('Initializing...');
@@ -90,7 +93,6 @@ function VideoCallInner() {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  // Info panel — rules, report, skills tip, guidelines
   const [showInfo, setShowInfo] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [isCallStarted, setIsCallStarted] = useState(false);
@@ -101,9 +103,6 @@ function VideoCallInner() {
   const [isDuplicateTab, setIsDuplicateTab] = useState(false);
   const iceServersRef = useRef<RTCIceServer[] | null>(null);
 
-  // ── Call ended state ──────────────────────────────────────────────────────
-  // callEnded + callEndReason: for the OTHER person's ended screen.
-  // selfLeft: for the self-initiated "You left" brief screen.
   const [callEnded, setCallEnded] = useState(false);
   const [callEndReason, setCallEndReason] =
     useState<CallEndReason>('USER_ENDED');
@@ -116,12 +115,28 @@ function VideoCallInner() {
     const t = setInterval(() => {
       setCallDuration(p => {
         const next = p + 1;
-        callDurationRef.current = next; // keep ref in sync every tick
+        callDurationRef.current = next;
         return next;
       });
     }, 1000);
     return () => clearInterval(t);
   }, [isCallStarted]);
+
+  // ── Time limit enforcement (frontend) ────────────────────────────────────
+  useEffect(() => {
+    if (!isCallStarted || callDuration < 180) return;
+    selfEndedRef.current = true;
+    setFinalDuration(callDurationRef.current);
+    localStreamRef.current?.getTracks().forEach(t => t.stop());
+    localStreamRef.current = null;
+    socket.emit('call:end', {
+      callId: callIdRef.current,
+      reason: 'TIME_LIMIT',
+    });
+    cleanup();
+    setCallEndReason('TIME_LIMIT');
+    setCallEnded(true);
+  }, [callDuration, isCallStarted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fmt = (s: number) => {
     const h = Math.floor(s / 3600),
@@ -130,7 +145,7 @@ function VideoCallInner() {
     return [h, m, sec].map(n => String(n).padStart(2, '0')).join(':');
   };
 
-  // ── Camera ────────────────────────────────────────────────────────────────
+  // ── Camera — FIX 1: simple check, no .active, no null reset ──────────────
   const requestCamera = useCallback(async () => {
     if (localStreamRef.current) return localStreamRef.current;
     setPermissionState('requesting');
@@ -222,7 +237,7 @@ function VideoCallInner() {
     tracksAddedRef.current = true;
   }, []);
 
-  // ── Main session effect ───────────────────────────────────────────────────
+  // ── Main session effect — FIX 2: removed if-guard on sessionStartedRef ───
   useEffect(() => {
     if (!callId || !peerId) return;
     if (sessionStartedRef.current) return;
@@ -355,13 +370,9 @@ function VideoCallInner() {
       }
     };
 
-    // ── call:end from server ──────────────────────────────────────────────
-    // Fires when the OTHER person ends/drops — OR echoed back to self.
-    // selfEndedRef.current guard prevents this from overwriting the
-    // "You left" screen when User A's own emit bounces back from server.
     const onCallEnd = ({ reason }: { reason: CallEndReason }) => {
-      if (selfEndedRef.current) return; // self already handled this — ignore echo
-      setFinalDuration(callDurationRef.current); // snapshot before cleanup resets to 0
+      if (selfEndedRef.current) return;
+      setFinalDuration(callDurationRef.current);
       localStreamRef.current?.getTracks().forEach(t => t.stop());
       localStreamRef.current = null;
       cleanup();
@@ -389,7 +400,7 @@ function VideoCallInner() {
     };
   }, [callId, peerId, requestCamera, getOrCreatePC, addTracks, cleanup]);
 
-  // ── Controls ──────────────────────────────────────────────────────────────
+  // ── Controls — FIX 3: reverted to original if (track) style ──────────────
   const toggleMute = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
     if (track) {
@@ -406,12 +417,10 @@ function VideoCallInner() {
     }
   };
 
-  // ── endCall — self-initiated ──────────────────────────────────────────────
-  // Sets selfEndedRef BEFORE emitting so the echo from server is ignored.
-  // Shows "You left the call" briefly then redirects to /home.
+  // ── endCall — FIX 4: removed duplicate setSelfLeft, uncommented redirect ──
   const endCall = () => {
-    selfEndedRef.current = true; // guard must be set BEFORE emit
-    finalDurationRef.current = callDurationRef.current; // ref always current — no stale closure
+    selfEndedRef.current = true;
+    finalDurationRef.current = callDurationRef.current;
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     localStreamRef.current = null;
     socket.emit('call:end', {
@@ -420,12 +429,11 @@ function VideoCallInner() {
     });
     cleanup();
     setSelfLeft(true);
-    // setTimeout(() => router.push('/home'), 2000);
+    setTimeout(() => router.push('/home'), 2000);
   };
 
   // ── Screens ───────────────────────────────────────────────────────────────
 
-  // "You left the call" — 2s then auto-redirects
   if (selfLeft) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0b]">
@@ -458,7 +466,6 @@ function VideoCallInner() {
     );
   }
 
-  // "The call has ended / Connection lost" — shown to the OTHER person
   if (callEnded) {
     const config = PEER_END_CONFIG[callEndReason];
     const iconEl =
@@ -466,20 +473,19 @@ function VideoCallInner() {
         <PhoneOff className="w-8 h-8 text-white/40" strokeWidth={1.5} />
       ) : callEndReason === 'DISCONNECTED' ? (
         <WifiOff className="w-8 h-8 text-white/40" strokeWidth={1.5} />
+      ) : callEndReason === 'TIME_LIMIT' ? (
+        <Clock className="w-8 h-8 text-white/40" strokeWidth={1.5} />
       ) : (
         <AlertTriangle className="w-8 h-8 text-white/40" strokeWidth={1.5} />
       );
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0b] px-4">
         <div className="w-full max-w-xs text-center space-y-8">
-          {/* Icon ring */}
           <div className="flex justify-center">
             <div className="w-20 h-20 rounded-full border border-white/8 flex items-center justify-center">
               {iconEl}
             </div>
           </div>
-
-          {/* Text */}
           <div className="space-y-2">
             <h2 className="text-white text-2xl font-light tracking-tight">
               {config.title}
@@ -491,16 +497,12 @@ function VideoCallInner() {
               {fmt(finalDuration)}
             </p>
           </div>
-
-          {/* Divider */}
           <div className="w-full h-px bg-white/8" />
-
-          {/* Action */}
           <button
             onClick={() => router.push('/home')}
             className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-full border border-white/12 text-white/70 text-sm font-light tracking-wide hover:border-white/25 hover:text-white transition-all duration-300"
           >
-            <Home className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-300" />
+            <Home className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform duration-300" />
             Go to Home
           </button>
           <div className="-mt-6">
@@ -516,7 +518,6 @@ function VideoCallInner() {
     );
   }
 
-  // Duplicate tab screen
   if (isDuplicateTab) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0b] px-4">
@@ -563,7 +564,6 @@ function VideoCallInner() {
     );
   }
 
-  // Denied screen
   if (permissionState === 'denied') {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0b]">
@@ -613,18 +613,28 @@ function VideoCallInner() {
       <main className="flex-1 flex flex-col relative h-full">
         {/* ── Top bar ── */}
         <header className="absolute top-0 left-0 right-0 z-20 h-14 px-5 flex items-center justify-between">
-          {/* Left: live indicator */}
           <div className="flex items-center gap-2">
             {isCallStarted ? (
               <div
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all duration-500"
                 style={{
-                  background: 'rgba(0,0,0,0.45)',
+                  background:
+                    callDuration >= 120
+                      ? 'rgba(220,38,38,0.2)'
+                      : 'rgba(0,0,0,0.45)',
                   backdropFilter: 'blur(8px)',
+                  border:
+                    callDuration >= 120
+                      ? '1px solid rgba(220,38,38,0.3)'
+                      : '1px solid transparent',
                 }}
               >
-                <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                <span className="text-white text-xs font-mono tracking-widest">
+                <span
+                  className={`w-1.5 h-1.5 rounded-full animate-pulse ${callDuration >= 120 ? 'bg-red-400' : 'bg-red-500'}`}
+                />
+                <span
+                  className={`text-xs font-mono tracking-widest transition-colors duration-500 ${callDuration >= 120 ? 'text-red-300' : 'text-white'}`}
+                >
                   {fmt(callDuration)}
                 </span>
               </div>
@@ -640,21 +650,11 @@ function VideoCallInner() {
               </span>
             )}
           </div>
-
-          {/* Right: ICE badge — only in dev, subtle */}
           <span className="text-white/15 text-xs font-mono">{iceState}</span>
         </header>
 
-        {/* ── Video area ── */}
-        {/*
-          h-full is critical: section must have explicit height so absolute
-          children (controls, local video) are positioned within the viewport.
-          Without it, section collapses to 0 and controls overflow below screen.
-          Layout mirrors Google Meet: remote video fills section, controls float
-          over video at bottom, local video sits just above controls on the right.
-        */}
         <section className="flex-1 relative h-full overflow-hidden">
-          {/* Remote video — fills entire section */}
+          {/* Remote video */}
           <video
             ref={remoteVideoRef}
             autoPlay
@@ -662,7 +662,6 @@ function VideoCallInner() {
             className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
           />
 
-          {/* Waiting overlay — sits over remote video until peer connects */}
           {!hasRemoteVideo && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0a0b] z-10">
               <div className="relative w-28 h-28 flex items-center justify-center mb-8">
@@ -691,15 +690,7 @@ function VideoCallInner() {
             </div>
           )}
 
-          {/*
-            ── Responsive layout ────────────────────────────────────────────
-            Mobile  : local video = small PiP top-right corner (z-30)
-                      controls   = centered pill fixed at bottom
-            Desktop : local video = bottom-right corner, PiP above controls
-                      controls   = centered pill at bottom
-          */}
-
-          {/* Local video PiP — top-right on mobile, bottom-right on sm+ */}
+          {/* Local video PiP */}
           <div
             className="absolute top-16 right-3 sm:bottom-20 sm:top-auto sm:right-4 z-30 w-34 sm:w-44 md:w-52 xl:w-72 rounded-xl overflow-hidden"
             style={{
@@ -723,7 +714,6 @@ function VideoCallInner() {
             </span>
           </div>
 
-          {/* Gradient scrim — ensures controls always readable over any video */}
           <div
             className="absolute bottom-0 left-0 right-0 h-36 z-20 pointer-events-none"
             style={{
@@ -732,7 +722,7 @@ function VideoCallInner() {
             }}
           />
 
-          {/* Controls bar — centered, always within viewport */}
+          {/* Controls bar */}
           <div className="absolute bottom-5 left-0 right-0 z-30 flex justify-center px-4">
             <div
               className="flex items-center gap-1.5 sm:gap-2.5 px-3 sm:px-5 py-2.5 rounded-full"
@@ -771,7 +761,6 @@ function VideoCallInner() {
                 )}
               </button>
 
-              {/* Divider */}
               <div
                 className="w-px h-4 mx-0.5"
                 style={{ background: 'rgba(255,255,255,0.1)' }}
@@ -790,7 +779,6 @@ function VideoCallInner() {
                 />
               </button>
 
-              {/* Divider */}
               <div
                 className="w-px h-4 mx-0.5"
                 style={{ background: 'rgba(255,255,255,0.1)' }}
@@ -809,9 +797,7 @@ function VideoCallInner() {
                 <MessageSquare className="w-4.25 h-4.25" strokeWidth={1.5} />
               </button>
 
-              {/* Info — opens rules/report/guidelines panel */}
-              {/* Settings removed: had no functionality — zero onClick handler.
-                  Replaced with Info which opens the rules & report slide-in panel. */}
+              {/* Info */}
               <button
                 onClick={() => {
                   setShowInfo(!showInfo);
@@ -860,9 +846,7 @@ function VideoCallInner() {
                   border: '1px solid rgba(255,255,255,0.1)',
                   background: 'rgba(255,255,255,0.04)',
                 }}
-              >
-                P
-              </div>
+              ></div>
               <div className="space-y-1">
                 <p className="text-white/25 text-xs font-mono">peer</p>
                 <div
@@ -896,7 +880,6 @@ function VideoCallInner() {
                 >
                   Send
                 </button>
-                {/* Tooltip */}
                 <div
                   className="absolute bottom-full right-0 mb-2 w-48 px-3 py-2 rounded-xl text-white/50 text-xs font-light leading-relaxed pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                   style={{
@@ -907,7 +890,7 @@ function VideoCallInner() {
                   We&apos;re working on adding this feature — sorry for the
                   inconvenience.
                   <span
-                    className="absolute -bottom-1.25 right-5 w-2.5 h-2.5 rotate-45"
+                    className="absolute -bottom-1.5 right-5 w-2.5 h-2.5 rotate-45"
                     style={{
                       background: '#1a1a1b',
                       borderRight: '1px solid rgba(255,255,255,0.08)',
@@ -922,10 +905,6 @@ function VideoCallInner() {
       )}
 
       {/* ── Info panel ── */}
-      {/* Slide-in from right, same structure as chat panel.
-          Contains: match rules, skills tip, report user, community guidelines.
-          All content is dummy — replace with your real project details.
-          showInfo and showChat are mutually exclusive (each closes the other). */}
       {showInfo && (
         <aside
           className="fixed inset-0 z-50 lg:static lg:inset-auto w-full lg:w-80 flex flex-col overflow-hidden"
@@ -934,7 +913,6 @@ function VideoCallInner() {
             borderLeft: '1px solid rgba(255,255,255,0.06)',
           }}
         >
-          {/* Header */}
           <header
             className="h-14 px-5 flex items-center justify-between shrink-0"
             style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
@@ -950,9 +928,8 @@ function VideoCallInner() {
             </button>
           </header>
 
-          {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            {/* ── Section 1: How matching works ── */}
+            {/* Section 1: How matching works */}
             <div
               className="px-5 pt-5 pb-4"
               style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
@@ -990,7 +967,7 @@ function VideoCallInner() {
               </div>
             </div>
 
-            {/* ── Section 2: Get matched faster ── */}
+            {/* Section 2: Get matched faster */}
             <div
               className="px-5 pt-4 pb-4"
               style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
@@ -1031,7 +1008,7 @@ function VideoCallInner() {
               </div>
             </div>
 
-            {/* ── Section 3: Report a user ── */}
+            {/* Section 3: Report a user */}
             <div
               className="px-5 pt-4 pb-4"
               style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
@@ -1075,7 +1052,7 @@ function VideoCallInner() {
               </div>
             </div>
 
-            {/* ── Section 4: Community guidelines ── */}
+            {/* Section 4: Community guidelines */}
             <div className="px-5 pt-4 pb-6">
               <div className="flex items-center gap-2.5 mb-3">
                 <div

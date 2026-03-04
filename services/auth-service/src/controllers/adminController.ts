@@ -21,7 +21,8 @@ export const adminProfile = async (req: Request, res: Response) => {
 export const banUser = async (req: Request, res: Response) => {
   const { userId, reason, expiresAt } = req.body;
 
-  await banService.banUser(userId, reason, expiresAt);
+  const expiresDate = new Date(expiresAt);
+  await banService.banUser(userId, reason, expiresDate);
 
   res.json({
     message: 'User banned successfully',

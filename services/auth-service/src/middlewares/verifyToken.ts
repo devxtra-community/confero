@@ -34,11 +34,11 @@ export const verifyAccessToken = async (
   try {
     const payload = jwt.verify(token, env.JWT_SECRET) as TokenPayload;
     const userId = payload.sub as string;
-    // check if expired
-    const isBanned = (await redis.sismember('banned_users', userId)) === 1;
+
+    const isBanned = await redis.exists(`banned:${userId}`);
 
     if (isBanned) {
-      throw new AppError('Account banned', 403);
+      throw new AppError('ACCOUNT_BANNED', 403);
     }
 
     req.user = {
@@ -48,7 +48,8 @@ export const verifyAccessToken = async (
     };
 
     next();
-  } catch {
-    throw new AppError(' or expired token', 401);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    throw new AppError('Invalid or expired token', 401);
   }
 };

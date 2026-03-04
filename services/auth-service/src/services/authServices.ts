@@ -15,6 +15,7 @@ import {
 } from '../utils/jwtService.js';
 import { generateResetToken } from '../utils/resetToken.js';
 import { env } from '../config/env.js';
+import { redis } from '../config/redis.js';
 
 export const authService = {
   registerUser: async (email: string, password: string, fullName: string) => {
@@ -88,19 +89,25 @@ export const authService = {
     const user = await userRepository.findByEmail(email);
 
     if (!user || !user.password) {
-      throw new AppError('User not found', 401);
+      throw new AppError('Invalid credentials', 401);
     }
 
     if (!user.emailVerified) {
       throw new AppError('Email not verified', 403);
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
-      throw new AppError('Incorrect Password', 401);
+    const userId = user._id.toString();
+
+    const isBanned = await redis.exists(`banned:${userId}`);
+
+    if (isBanned) {
+      throw new AppError('ACCOUNT_BANNED', 404);
     }
 
-    const userId = user._id.toString();
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      throw new AppError('Invalid credentials', 401);
+    }
 
     const accessToken = generateAccessToken(userId, user.email, user.role);
     const refreshToken = generateRefreshToken();
@@ -114,8 +121,6 @@ export const authService = {
 
     await userRepository.updateLastLogin(userId);
 
-    // userId added to return so authController can check Redis
-    // and return it to frontend for force logout use
     return {
       accessToken,
       refreshToken,
