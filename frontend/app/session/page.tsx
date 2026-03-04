@@ -211,7 +211,7 @@ function VideoCallInner() {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStreamRef.current;
         setHasRemoteVideo(true);
-        remoteVideoRef.current.play().catch(() => {});
+        remoteVideoRef.current.play().catch(() => { });
       }
     };
 
@@ -364,7 +364,7 @@ function VideoCallInner() {
       if (pcRef.current?.remoteDescription?.type) {
         pcRef.current
           .addIceCandidate(new RTCIceCandidate(candidate))
-          .catch(() => {});
+          .catch(() => { });
       } else {
         pendingIceRef.current.push(candidate);
       }
@@ -429,7 +429,6 @@ function VideoCallInner() {
     });
     cleanup();
     setSelfLeft(true);
-    setTimeout(() => router.push('/home'), 2000);
   };
 
   // ── Screens ───────────────────────────────────────────────────────────────
@@ -450,9 +449,11 @@ function VideoCallInner() {
               You left the call
             </p>
             <div className="flex flex-col">
-              <button className="text-white/30 bg-glass/40 rounded-2xl text-sm px-4 py-2 font-mono mb-4 cursor-pointer hover:scale-105 hover:text-white/60">
-                Returning to home
-              </button>
+              <Link href='/home'>
+                <button className="text-white/30 bg-glass/40 rounded-2xl text-sm px-4 py-2 font-mono mb-4 cursor-pointer hover:scale-105 hover:text-white/60">
+                  Return to home
+                </button>
+              </Link>
               <Link
                 href={`/report?userId=${peerId}`}
                 className="text-white/40 text-xs font-mono hover:text-white/70 transition-colors underline underline-offset-4"
