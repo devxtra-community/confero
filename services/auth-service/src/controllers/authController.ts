@@ -3,20 +3,20 @@ import { authService } from '../services/authServices.js';
 import { googleAuthService } from '../services/googleAuth.service.js';
 import { logger } from '../config/logger.js';
 import { AppError } from '../middlewares/errorHandller.js';
-import { authSessionRepository } from '../repositories/authSessionRepository.js';
-import { hashRefreshToken } from '../utils/jwtService.js';
 import { redis } from '../config/redis.js';
+import { hashRefreshToken } from '../utils/jwtService.js';
+import { authSessionRepository } from '../repositories/authSessionRepository.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-// const cookieOptions = (maxAge: number) => ({
-//   httpOnly: true,
-//   secure: isProduction,
-//   sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
-//   path: '/',
-//   maxAge,
-//   ...(isProduction && { domain: '.conferoo.in' }),
-// });
+const cookieOptions = (maxAge: number) => ({
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
+  path: '/',
+  maxAge,
+  ...(isProduction && { domain: '.conferoo.in' }),
+});
 
 export const register = async (req: Request, res: Response) => {
   const { email, password, fullName } = req.body;
@@ -64,12 +64,6 @@ export const login = async (req: Request, res: Response) => {
   const { accessToken, refreshToken, role, userId } =
     await authService.loginUser(email, password);
 
-  // ── Single-device login block ─────────────────────────────────────────────
-  // Check if this user already has an active socket (online:{userId} exists).
-  // Both services share the same Redis instance so this check is reliable.
-  // If online → reject with 409 and return userId so frontend can force logout.
-  // The user must force-logout the other device before they can log in here.
-  // ─────────────────────────────────────────────────────────────────────────
   const alreadyOnline = await redis.exists(`online:${userId}`);
   if (alreadyOnline) {
     logger.info(`Login blocked — user ${userId} already online`);
@@ -83,29 +77,17 @@ export const login = async (req: Request, res: Response) => {
 
   logger.info('Login Succesfull');
 
-  res.cookie('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: 'lax',
-    domain: 'localhost',
-    path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-
-  res.cookie('accessToken', accessToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: 'lax',
-    domain: 'localhost',
-    path: '/',
-    maxAge: 24 * 60 * 60 * 1000,
-  });
+  res.cookie(
+    'refreshToken',
+    refreshToken,
+    cookieOptions(7 * 24 * 60 * 60 * 1000)
+  );
+  res.cookie('accessToken', accessToken, cookieOptions(24 * 60 * 60 * 1000));
 
   res.status(200).json({
     message: 'Login Successfully Completed',
     success: true,
     role,
-    userId,
   });
 };
 
@@ -129,28 +111,28 @@ export const resendOtp = async (req: Request, res: Response) => {
 export const googleLogin = async (req: Request, res: Response) => {
   const { idToken } = req.body;
 
-  const { accessToken, refreshToken, role } =
+  const { accessToken, refreshToken, role, userId } =
     await googleAuthService.authenticate(idToken);
+
+  const alreadyOnline = await redis.exists(`online:${userId}`);
+  if (alreadyOnline) {
+    logger.info(`Login blocked — user ${userId} already online`);
+    return res.status(409).json({
+      success: false,
+      message: 'You are already logged in on another device or tab.',
+      code: 'ALREADY_LOGGED_IN',
+      userId,
+    });
+  }
 
   logger.info('Google login successful');
 
-  res.cookie('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: 'lax',
-    domain: 'localhost',
-    path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-
-  res.cookie('accessToken', accessToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: 'lax',
-    domain: 'localhost',
-    path: '/',
-    maxAge: 24 * 60 * 60 * 1000,
-  });
+  res.cookie(
+    'refreshToken',
+    refreshToken,
+    cookieOptions(7 * 24 * 60 * 60 * 1000)
+  );
+  res.cookie('accessToken', accessToken, cookieOptions(24 * 60 * 60 * 1000));
 
   res.status(200).json({
     success: true,
@@ -243,14 +225,7 @@ export const refresh = async (req: Request, res: Response) => {
 
   const newAccessToken = await authService.refreshAccessToken(refreshToken);
 
-  res.cookie('accessToken', newAccessToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: 'lax',
-    domain: 'localhost',
-    path: '/',
-    maxAge: 24 * 60 * 60 * 1000,
-  });
+  res.cookie('accessToken', newAccessToken, cookieOptions(24 * 60 * 60 * 1000));
 
   res.status(200).json({
     message: 'refresh succesfully',
