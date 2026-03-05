@@ -211,7 +211,7 @@ function VideoCallInner() {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStreamRef.current;
         setHasRemoteVideo(true);
-        remoteVideoRef.current.play().catch(() => { });
+        remoteVideoRef.current.play().catch(() => {});
       }
     };
 
@@ -364,7 +364,7 @@ function VideoCallInner() {
       if (pcRef.current?.remoteDescription?.type) {
         pcRef.current
           .addIceCandidate(new RTCIceCandidate(candidate))
-          .catch(() => { });
+          .catch(() => {});
       } else {
         pendingIceRef.current.push(candidate);
       }
@@ -449,7 +449,7 @@ function VideoCallInner() {
               You left the call
             </p>
             <div className="flex flex-col">
-              <Link href='/home'>
+              <Link href="/home">
                 <button className="text-white/30 bg-glass/40 rounded-2xl text-sm px-4 py-2 font-mono mb-4 cursor-pointer hover:scale-105 hover:text-white/60">
                   Return to home
                 </button>
