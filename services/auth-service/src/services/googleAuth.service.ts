@@ -68,7 +68,7 @@ export const googleAuthService = {
       accessToken,
       refreshToken,
       role: user.role,
-      userId
+      userId,
     };
   },
 };

@@ -11,6 +11,6 @@ server.on('upgrade', (req, socket, head) => {
   }
 });
 
-app.listen(process.env.PORT, () => {
+server.listen(process.env.PORT, () => {
   console.log(`API Gateway running on ${process.env.GATEWAY_URL}`);
 });
