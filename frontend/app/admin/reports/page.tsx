@@ -329,10 +329,11 @@ export default function ReportedUsersPage() {
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${currentPage === 1
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                currentPage === 1
                   ? 'text-gray-300 cursor-not-allowed'
                   : 'text-foreground/60 hover:bg-gray-100'
-                }`}
+              }`}
             >
               Previous
             </button>
@@ -346,10 +347,11 @@ export default function ReportedUsersPage() {
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
-                  className={`w-10 h-10 rounded-lg font-medium text-sm transition-all ${currentPage === page
+                  className={`w-10 h-10 rounded-lg font-medium text-sm transition-all ${
+                    currentPage === page
                       ? 'bg-linear-to-r from-primary to-favor text-background'
                       : 'text-foreground/60 hover:bg-gray-100'
-                    }`}
+                  }`}
                 >
                   {page}
                 </button>
@@ -361,10 +363,11 @@ export default function ReportedUsersPage() {
                 setCurrentPage(Math.min(pagination.totalPages, currentPage + 1))
               }
               disabled={currentPage === pagination.totalPages}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${currentPage === pagination.totalPages
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                currentPage === pagination.totalPages
                   ? 'text-gray-300 cursor-not-allowed'
                   : 'text-foreground/60 hover:bg-gray-100'
-                }`}
+              }`}
             >
               Next
             </button>
