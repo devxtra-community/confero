@@ -21,6 +21,7 @@ import {
   Users,
   Clock,
 } from 'lucide-react';
+import Link from 'next/link';
 
 type PermissionState = 'idle' | 'requesting' | 'granted' | 'denied';
 type CallEndReason =
@@ -445,10 +446,7 @@ function VideoCallInner() {
     });
     cleanup();
     setSelfLeft(true);
-    setTimeout(() => router.push('/home'), 2000);
   };
-
-  // ── Screens ───────────────────────────────────────────────────────────────
 
   if (selfLeft) {
     return (
@@ -511,14 +509,21 @@ function VideoCallInner() {
             onClick={() => router.push('/home')}
             className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-full border border-white/12 text-white/70 text-sm font-light tracking-wide hover:border-white/25 hover:text-white transition-all duration-300"
           >
-            <Home className="w-4 h-4 group-hover:translate-x-[-2px] transition-transform duration-300" />
+            <Home className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform duration-300" />
             Go to Home
           </button>
+          <div className="-mt-6">
+            <Link
+              href={`/report?userId=${peerId}`}
+              className="text-white/40 text-xs font-mono hover:text-white/70 transition-colors underline underline-offset-4"
+            >
+              Report User
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
-
   if (isDuplicateTab) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0b] px-4">
@@ -654,7 +659,6 @@ function VideoCallInner() {
           <span className="text-white/15 text-xs font-mono">{iceState}</span>
         </header>
 
-       
         <section className="flex-1 relative h-full overflow-hidden">
           <video
             ref={remoteVideoRef}
