@@ -211,7 +211,7 @@ function VideoCallInner() {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStreamRef.current;
         setHasRemoteVideo(true);
-        remoteVideoRef.current.play().catch(() => { });
+        remoteVideoRef.current.play().catch(() => {});
       }
     };
 
@@ -364,7 +364,7 @@ function VideoCallInner() {
       if (pcRef.current?.remoteDescription?.type) {
         pcRef.current
           .addIceCandidate(new RTCIceCandidate(candidate))
-          .catch(() => { });
+          .catch(() => {});
       } else {
         pendingIceRef.current.push(candidate);
       }
