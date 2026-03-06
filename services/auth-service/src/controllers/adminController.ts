@@ -63,7 +63,7 @@ export const unbanUser = async (req: Request, res: Response) => {
 
 export const getReportedUsers = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
-  const limit = Number(req.query.limit) || 6;
+  const limit = Number(req.query.limit) || 4;
   const result = await reportService.getReportedUsers(page, limit);
 
   res.json({
@@ -75,7 +75,7 @@ export const getReportedUsers = async (req: Request, res: Response) => {
 
 export const getSessionHistory = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
-  const limit = Number(req.query.limit) || 6;
+  const limit = Number(req.query.limit) || 10;
 
   const { data, total } = await sessionService.getSessions(page, limit);
 

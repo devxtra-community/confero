@@ -23,6 +23,7 @@ interface Reporter {
 
 interface ReportedUser {
   id: string;
+  userId: string;
   username: string;
   reportedBy: Reporter;
   reason: string;
@@ -36,28 +37,38 @@ interface BackendReport {
   reason: string;
   createdAt: string;
   description: string;
-
   reportedUserId?: {
     _id: string;
     fullName: string;
   };
-
   reportedBy?: {
     _id: string;
     fullName: string;
   };
 }
 
+interface Pagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export default function ReportedUsersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [reports, setReports] = useState<ReportedUser[]>([]);
-
+  const [pagination, setPagination] = useState<Pagination>({
+    total: 0,
+    page: 1,
+    limit: 4,
+    totalPages: 1,
+  });
   const [openBanModal, setOpenBanModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [reason, setReason] = useState<string>('');
-
-  const totalPages = 3;
+  const [pageCache, setPageCache] = useState<Record<number, ReportedUser[]>>({});
+  const [loading, setLoading] = useState(false);
 
   const filteredUsers = reports.filter(
     user =>
@@ -83,19 +94,29 @@ export default function ReportedUsersPage() {
       'from-yellow-400 to-orange-500',
       'from-pink-400 to-rose-500',
     ];
-    const index = parseInt(id.replace(/\D/g, '')) % colors.length;
+    const index = parseInt(id.replace(/\D/g, '') || '0') % colors.length;
     return colors[index];
   };
 
   useEffect(() => {
+    // ✅ If cached, load instantly with no spinner
+    if (pageCache[currentPage]) {
+      setReports(pageCache[currentPage]);
+      return;
+    }
+
     const fetchReports = async () => {
+      setLoading(true);
       try {
         const res = await axiosInstance.get(
-          `/admin/reported-users?page=${currentPage}&limit=5`
+          `/admin/reported-users?page=${currentPage}&limit=4`
         );
 
-        const formatted = res.data.data.map((r: BackendReport) => ({
-          id: r.reportedUserId?._id,
+        const formatted: ReportedUser[] = (
+          res.data.data as BackendReport[]
+        ).map(r => ({
+          id: r._id,
+          userId: r.reportedUserId?._id || '',
           username: r.reportedUserId?.fullName || 'Unknown',
           reportedBy: {
             id: r.reportedBy?._id || '',
@@ -104,9 +125,12 @@ export default function ReportedUsersPage() {
           reason: r.reason,
           description: r.description,
           reportedAt: new Date(r.createdAt).toLocaleDateString(),
+          witnesses: [],
         }));
 
+        setPageCache(prev => ({ ...prev, [currentPage]: formatted }));
         setReports(formatted);
+        setPagination(res.data.pagination);
       } catch (error: unknown) {
         if (axios.isAxiosError(error)) {
           toast.error(
@@ -115,15 +139,41 @@ export default function ReportedUsersPage() {
         } else {
           toast.error('Unexpected error');
         }
+      } finally {
+        // ✅ Always turn off spinner whether success or error
+        setLoading(false);
       }
     };
 
     fetchReports();
   }, [currentPage]);
 
+  const getPageNumbers = () => {
+    const total = pagination.totalPages;
+    const current = currentPage;
+
+    if (total <= 5) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+
+    const pages: (number | '...')[] = [1];
+    if (current > 3) pages.push('...');
+
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+
+    return pages;
+  };
+
   return (
     <div className="min-h-screen bg-linear-to-br from-foreground-50 via-background to-foreground-50">
       <div className="p-4 sm:p-6 lg:p-8">
+
+        {/* Header */}
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -152,167 +202,185 @@ export default function ReportedUsersPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {filteredUsers.map((report, index) => (
-            <div
-              key={report.id}
-              className="bg-background rounded-2xl shadow-sm border border-foreground/10 p-5 sm:p-6 hover:shadow-xl transition-all duration-300 group relative overflow-hidden"
-              style={{
-                animationDelay: `${index * 50}ms`,
-                animationFillMode: 'backwards',
-              }}
-            >
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-              <div className="relative space-y-4">
-                <div className="flex items-start justify-between pb-4 border-b border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-linear-to-br from-red-400 to-orange-500 flex items-center justify-center text-background font-bold ">
-                      {getInitials(report.username)}
-                    </div>
-                    <div>
-                      <h3 className="text-lg sm:text-xl font-bold text-gray-900">
-                        {report.username}
-                      </h3>
-                      <div className="flex items-center gap-1 text-xs font-mono text-red-600 mt-0.5">
-                        <AlertTriangle size={12} />
-                        <span className="font-medium">Reported User</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                    <MoreVertical size={18} className="text-gray-400" />
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={`w-9 h-9 rounded-full bg-linear-to-br ${getAvatarColor(report.reportedBy.id)} flex items-center justify-center text-background text-sm font-semibold shadow-sm`}
-                    >
-                      {getInitials(report.reportedBy.name)}
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-semibold text-gray-900 mb-1">
-                        Reported by,
-                      </div>
-                      <p className="text-sm text-foreground/60 leading-relaxed">
-                        {report.reason}
-                      </p>
-                      <p className="text-sm text-foreground/60 leading-relaxed">
-                        {report.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-2">
-                    <Calendar size={14} className="text-red-500" />
-                    <span className="text-sm font-mono text-red-600">
-                      Reported At: {report.reportedAt}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    onClick={() => {
-                      setSelectedUser(report.id);
-                      setOpenBanModal(true);
-                      setReason(report.reason);
-                    }}
-                  >
-                    Ban
-                  </Button>
-                  <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-background border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-all duration-200 shadow-sm hover:">
-                    <Eye size={16} />
-                    <span className="hidden sm:inline">View</span>
-                  </button>
-                  <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-background border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-all duration-200 shadow-sm hover:">
-                    <Mail size={16} />
-                    <span className="hidden sm:inline">Contact</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {selectedUser && (
-            <BanUserDialog
-              open={openBanModal}
-              onOpenChange={setOpenBanModal}
-              userId={selectedUser}
-              reason={reason}
-              onBanSuccess={userId => {
-                setReports(prev => prev.filter(r => r.id !== userId));
-              }}
-            />
-          )}
-        </div>
-
-        {filteredUsers.length === 0 && (
-          <div className="bg-background rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
-            <div className="max-w-md mx-auto space-y-4">
-              <div className="w-20 h-20 mx-auto bg-linear-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
-                <AlertTriangle className="text-gray-400" size={32} />
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  No reported users found
-                </h3>
-                <p className="text-base text-gray-500">
-                  {searchQuery
-                    ? `No results for "${searchQuery}"`
-                    : 'There are no reported users at the moment.'}
-                </p>
-              </div>
-            </div>
+        {/* ✅ Loading spinner */}
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
+        ) : (
+          <>
+            {/* Cards grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              {filteredUsers.map((report, index) => (
+                <div
+                  key={report.id}
+                  className="bg-background rounded-2xl shadow-sm border border-foreground/10 p-5 sm:p-6 hover:shadow-xl transition-all duration-300 group relative overflow-hidden"
+                  style={{
+                    animationDelay: `${index * 50}ms`,
+                    animationFillMode: 'backwards',
+                  }}
+                >
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+                  <div className="relative space-y-4">
+                    <div className="flex items-start justify-between pb-4 border-b border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-linear-to-br from-red-400 to-orange-500 flex items-center justify-center text-background font-bold">
+                          {getInitials(report.username)}
+                        </div>
+                        <div>
+                          <h3 className="text-lg sm:text-xl font-bold text-gray-900">
+                            {report.username}
+                          </h3>
+                          <div className="flex items-center gap-1 text-xs font-mono text-red-600 mt-0.5">
+                            <AlertTriangle size={12} />
+                            <span className="font-medium">Reported User</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <MoreVertical size={18} className="text-gray-400" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`w-9 h-9 rounded-full bg-linear-to-br ${getAvatarColor(report.reportedBy.id)} flex items-center justify-center text-background text-sm font-semibold shadow-sm`}
+                        >
+                          {getInitials(report.reportedBy.name)}
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-semibold text-gray-900 mb-1">
+                            Reported by {report.reportedBy.name}
+                          </div>
+                          <p className="text-sm text-foreground/60 leading-relaxed">
+                            {report.reason}
+                          </p>
+                          <p className="text-sm text-foreground/60 leading-relaxed">
+                            {report.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-2">
+                        <Calendar size={14} className="text-red-500" />
+                        <span className="text-sm font-mono text-red-600">
+                          Reported At: {report.reportedAt}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        onClick={() => {
+                          setSelectedUser(report.userId);
+                          setOpenBanModal(true);
+                          setReason(report.reason);
+                        }}
+                      >
+                        Ban
+                      </Button>
+                      <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-background border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-all duration-200 shadow-sm">
+                        <Eye size={16} />
+                        <span className="hidden sm:inline">View</span>
+                      </button>
+                      <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-background border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-all duration-200 shadow-sm">
+                        <Mail size={16} />
+                        <span className="hidden sm:inline">Contact</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Empty state */}
+            {filteredUsers.length === 0 && (
+              <div className="bg-background rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+                <div className="max-w-md mx-auto space-y-4">
+                  <div className="w-20 h-20 mx-auto bg-linear-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+                    <AlertTriangle className="text-gray-400" size={32} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      No reported users found
+                    </h3>
+                    <p className="text-base text-gray-500">
+                      {searchQuery
+                        ? `No results for "${searchQuery}"`
+                        : 'There are no reported users at the moment.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
-        {filteredUsers.length > 0 && (
+        {/* Ban dialog */}
+        {selectedUser && (
+          <BanUserDialog
+            open={openBanModal}
+            onOpenChange={setOpenBanModal}
+            userId={selectedUser}
+            reason={reason}
+            onBanSuccess={userId => {
+              setReports(prev => prev.filter(r => r.userId !== userId));
+              setPageCache({});
+            }}
+          />
+        )}
+
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
           <div className="flex items-center justify-center gap-2 mt-8">
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                currentPage === 1
-                  ? 'text-gray-300 cursor-not-allowed'
-                  : 'text-foreground/60 hover:bg-gray-100'
-              }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${currentPage === 1
+                ? 'text-gray-300 cursor-not-allowed'
+                : 'text-foreground/60 hover:bg-gray-100'
+                }`}
             >
               Previous
             </button>
 
-            {[1, 2, 3].map(page => (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`w-10 h-10 rounded-lg font-medium text-sm transition-all ${
-                  currentPage === page
-                    ? ' bg-linear-to-r from-primary to-favor text-background '
+            {getPageNumbers().map((page, idx) =>
+              page === '...' ? (
+                <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">
+                  ...
+                </span>
+              ) : (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-10 h-10 rounded-lg font-medium text-sm transition-all ${currentPage === page
+                    ? 'bg-linear-to-r from-primary to-favor text-background'
                     : 'text-foreground/60 hover:bg-gray-100'
-                }`}
-              >
-                {page}
-              </button>
-            ))}
+                    }`}
+                >
+                  {page}
+                </button>
+              )
+            )}
 
             <button
               onClick={() =>
-                setCurrentPage(Math.min(totalPages, currentPage + 1))
+                setCurrentPage(Math.min(pagination.totalPages, currentPage + 1))
               }
-              disabled={currentPage === totalPages}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                currentPage === totalPages
-                  ? 'text-gray-300 cursor-not-allowed'
-                  : 'text-foreground/60 hover:bg-gray-100'
-              }`}
+              disabled={currentPage === pagination.totalPages}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${currentPage === pagination.totalPages
+                ? 'text-gray-300 cursor-not-allowed'
+                : 'text-foreground/60 hover:bg-gray-100'
+                }`}
             >
               Next
             </button>
           </div>
         )}
+
       </div>
     </div>
   );

@@ -101,7 +101,7 @@ export const authService = {
     const isBanned = await redis.exists(`banned:${userId}`);
 
     if (isBanned) {
-      throw new AppError('ACCOUNT_BANNED', 403);
+      throw new AppError('ACCOUNT_BANNED', 404);
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
