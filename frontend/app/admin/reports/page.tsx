@@ -99,7 +99,6 @@ export default function ReportedUsersPage() {
   };
 
   useEffect(() => {
-
     if (pageCache.current[currentPage]) {
       setReports(pageCache.current[currentPage]);
       return;
@@ -139,7 +138,6 @@ export default function ReportedUsersPage() {
           toast.error('Unexpected error');
         }
       } finally {
-        // ✅ Always turn off spinner whether success or error
         setLoading(false);
       }
     };
@@ -171,7 +169,6 @@ export default function ReportedUsersPage() {
   return (
     <div className="min-h-screen bg-linear-to-br from-foreground-50 via-background to-foreground-50">
       <div className="p-4 sm:p-6 lg:p-8">
-        {/* Header */}
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -200,14 +197,12 @@ export default function ReportedUsersPage() {
           </div>
         </div>
 
-        {/* ✅ Loading spinner */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
           <>
-            {/* Cards grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {filteredUsers.map((report, index) => (
                 <div
@@ -294,7 +289,6 @@ export default function ReportedUsersPage() {
               ))}
             </div>
 
-            {/* Empty state */}
             {filteredUsers.length === 0 && (
               <div className="bg-background rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
                 <div className="max-w-md mx-auto space-y-4">
@@ -317,7 +311,6 @@ export default function ReportedUsersPage() {
           </>
         )}
 
-        {/* Ban dialog */}
         {selectedUser && (
           <BanUserDialog
             open={openBanModal}
@@ -331,15 +324,14 @@ export default function ReportedUsersPage() {
           />
         )}
 
-        {/* Pagination */}
         {pagination.totalPages > 1 && (
           <div className="flex items-center justify-center gap-2 mt-8">
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${currentPage === 1
-                ? 'text-gray-300 cursor-not-allowed'
-                : 'text-foreground/60 hover:bg-gray-100'
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : 'text-foreground/60 hover:bg-gray-100'
                 }`}
             >
               Previous
@@ -355,8 +347,8 @@ export default function ReportedUsersPage() {
                   key={page}
                   onClick={() => setCurrentPage(page)}
                   className={`w-10 h-10 rounded-lg font-medium text-sm transition-all ${currentPage === page
-                    ? 'bg-linear-to-r from-primary to-favor text-background'
-                    : 'text-foreground/60 hover:bg-gray-100'
+                      ? 'bg-linear-to-r from-primary to-favor text-background'
+                      : 'text-foreground/60 hover:bg-gray-100'
                     }`}
                 >
                   {page}
@@ -370,8 +362,8 @@ export default function ReportedUsersPage() {
               }
               disabled={currentPage === pagination.totalPages}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${currentPage === pagination.totalPages
-                ? 'text-gray-300 cursor-not-allowed'
-                : 'text-foreground/60 hover:bg-gray-100'
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : 'text-foreground/60 hover:bg-gray-100'
                 }`}
             >
               Next

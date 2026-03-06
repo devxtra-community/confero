@@ -50,12 +50,12 @@ const LIMIT = 10;
 const formatDateTime = (date?: string | null) =>
   date
     ? new Date(date).toLocaleString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
     : 'Permanent';
 
 export default function BannedUsersPage() {
@@ -520,10 +520,11 @@ export default function BannedUsersPage() {
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${currentPage === 1
-                  ? 'text-gray-300 cursor-not-allowed'
-                  : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  currentPage === 1
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
               >
                 Previous
               </button>
@@ -540,10 +541,11 @@ export default function BannedUsersPage() {
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg font-medium text-sm transition-all ${currentPage === page
-                      ? 'bg-linear-to-r from-teal-500 to-cyan-500 text-white shadow-md'
-                      : 'text-gray-600 hover:bg-gray-100'
-                      }`}
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg font-medium text-sm transition-all ${
+                      currentPage === page
+                        ? 'bg-linear-to-r from-teal-500 to-cyan-500 text-white shadow-md'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
                   >
                     {page}
                   </button>
@@ -555,10 +557,11 @@ export default function BannedUsersPage() {
                   setCurrentPage(p => Math.min(pagination.totalPages, p + 1))
                 }
                 disabled={currentPage === pagination.totalPages}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${currentPage === pagination.totalPages
-                  ? 'text-gray-300 cursor-not-allowed'
-                  : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  currentPage === pagination.totalPages
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
               >
                 Next
               </button>

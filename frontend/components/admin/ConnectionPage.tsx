@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Search,
   Clock,
@@ -49,7 +49,7 @@ export default function ConnectionPageContent() {
     limit: LIMIT,
     totalPages: 1,
   });
-  const [pageCache, setPageCache] = useState<Record<number, CallRecord[]>>({});
+  const pageCache = useRef<Record<number, CallRecord[]>>({});
   const [loading, setLoading] = useState(false);
 
   const connectedUsers = [
@@ -85,11 +85,10 @@ export default function ConnectionPageContent() {
   };
 
   useEffect(() => {
-    if (pageCache[currentPage]) {
-      setCallRecords(pageCache[currentPage]);
+    if (pageCache.current[currentPage]) {
+      setCallRecords(pageCache.current[currentPage]);
       return;
     }
-
     const fetchSessions = async () => {
       setLoading(true);
       try {
@@ -112,7 +111,7 @@ export default function ConnectionPageContent() {
         // ✅ Backend returns total/page/limit flat — compute totalPages here
         const totalPages = Math.ceil(res.data.total / LIMIT);
 
-        setPageCache(prev => ({ ...prev, [currentPage]: formatted }));
+        pageCache.current[currentPage] = formatted;
         setCallRecords(formatted);
         setPagination({
           total: res.data.total,
@@ -282,18 +281,16 @@ export default function ConnectionPageContent() {
                                 </span>
                               </p>
                               <span
-                                className={`px-2.5 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold inline-flex items-center gap-1.5 shadow-sm ${
-                                  record.status === 'Completed'
-                                    ? 'bg-linear-to-r from-emerald-50 to-green-50 text-emerald-700 ring-1 ring-emerald-200'
-                                    : 'bg-linear-to-r from-red-50 to-pink-50 text-red-700 ring-1 ring-red-200'
-                                }`}
+                                className={`px-2.5 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold inline-flex items-center gap-1.5 shadow-sm ${record.status === 'Completed'
+                                  ? 'bg-linear-to-r from-emerald-50 to-green-50 text-emerald-700 ring-1 ring-emerald-200'
+                                  : 'bg-linear-to-r from-red-50 to-pink-50 text-red-700 ring-1 ring-red-200'
+                                  }`}
                               >
                                 <div
-                                  className={`w-1.5 h-1.5 rounded-full ${
-                                    record.status === 'Completed'
-                                      ? 'bg-emerald-500'
-                                      : 'bg-red-500'
-                                  }`}
+                                  className={`w-1.5 h-1.5 rounded-full ${record.status === 'Completed'
+                                    ? 'bg-emerald-500'
+                                    : 'bg-red-500'
+                                    }`}
                                 />
                                 {record.status}
                               </span>
@@ -377,11 +374,10 @@ export default function ConnectionPageContent() {
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className={`p-2 rounded-lg transition-all duration-200 ${
-                      currentPage === 1
-                        ? 'text-gray-300 cursor-not-allowed'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
+                    className={`p-2 rounded-lg transition-all duration-200 ${currentPage === 1
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      }`}
                   >
                     <ChevronLeft size={18} />
                   </button>
@@ -389,11 +385,10 @@ export default function ConnectionPageContent() {
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className={`hidden sm:flex px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      currentPage === 1
-                        ? 'text-gray-300 cursor-not-allowed'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                    className={`hidden sm:flex px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${currentPage === 1
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-100'
+                      }`}
                   >
                     Previous
                   </button>
@@ -411,11 +406,10 @@ export default function ConnectionPageContent() {
                         <button
                           key={page}
                           onClick={() => setCurrentPage(page)}
-                          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg font-medium text-sm transition-all duration-200 ${
-                            currentPage === page
-                              ? 'bg-linear-to-r from-teal-500 to-emerald-600 text-white shadow-md scale-110'
-                              : 'text-gray-600 hover:bg-gray-100'
-                          }`}
+                          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg font-medium text-sm transition-all duration-200 ${currentPage === page
+                            ? 'bg-linear-to-r from-teal-500 to-emerald-600 text-white shadow-md scale-110'
+                            : 'text-gray-600 hover:bg-gray-100'
+                            }`}
                         >
                           {page}
                         </button>
@@ -430,11 +424,10 @@ export default function ConnectionPageContent() {
                       )
                     }
                     disabled={currentPage === pagination.totalPages}
-                    className={`hidden sm:flex px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      currentPage === pagination.totalPages
-                        ? 'text-gray-300 cursor-not-allowed'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                    className={`hidden sm:flex px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${currentPage === pagination.totalPages
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-100'
+                      }`}
                   >
                     Next
                   </button>
@@ -446,11 +439,10 @@ export default function ConnectionPageContent() {
                       )
                     }
                     disabled={currentPage === pagination.totalPages}
-                    className={`p-2 rounded-lg transition-all duration-200 ${
-                      currentPage === pagination.totalPages
-                        ? 'text-gray-300 cursor-not-allowed'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
+                    className={`p-2 rounded-lg transition-all duration-200 ${currentPage === pagination.totalPages
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      }`}
                   >
                     <ChevronRight size={18} />
                   </button>
