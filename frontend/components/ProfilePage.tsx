@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import SkillEditor from '@/components/SkillEditor';
 import { updateProfile } from '@/services/userService';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -83,7 +83,14 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [avatarEditOpen, setAvatarEditOpen] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [callCount, setCallCount] = useState(0); // ← add this
 
+  useEffect(() => {
+    axiosInstance
+      .get('/users/me/call-count')
+      .then(res => setCallCount(res.data.count))
+      .catch(() => {});
+  }, []);
   const router = useRouter();
 
   function safeImage(src: string | null | undefined, fallback: string) {
@@ -598,7 +605,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
               />
               <StatRow
                 label="Connections"
-                value={savedUser.connections?.length ?? 0}
+                value={callCount}
                 icon={<Users className="w-4 h-4 text-blue-600" />}
               />
               <StatRow

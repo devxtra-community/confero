@@ -549,15 +549,15 @@ export default function FindMatchPage() {
       )}
 
       {matchFound && (
-        <div className="relative min-h-screen flex items-center justify-center px-4 py-14 sm:py-16 md:py-6">
+        <div className="relative min-h-screen flex items-center justify-center px-4 py-4 sm:py-16 md:py-4">
           <button
             onClick={handleBackFromMatch}
-            className="absolute top-7 left-10 flex font-semibold text-primary"
+            className="absolute top-7 left-10 hidden md:flex font-semibold text-primary"
           >
             <ChevronLeft size={23} className="mt-0.5" />
             Go Back
           </button>
-          <div className="w-full max-w-4xl mx-auto text-center space-y-8 sm:space-y-5">
+          <div className="w-full max-w-4xl mx-auto text-center space-y-4 sm:space-y-5">
             <div className="space-y-3 sm:space-y-3">
               <div className="inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-6  py-1.5 sm:py-2 bg-linear-to-r from-primary to-favor text-white rounded-full shadow-md sm:shadow-lg">
                 <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -566,7 +566,7 @@ export default function FindMatchPage() {
                 </span>
               </div>
 
-              <h2 className="font-sans text-2xl sm:text-4xl md:text-6xl font-bold text-foreground leading-tight">
+              <h2 className="font-sans text-xl sm:text-2xl md:text-4xl font-bold text-foreground leading-tight">
                 Meet Your New Connection
               </h2>
 

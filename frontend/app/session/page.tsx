@@ -211,7 +211,7 @@ function VideoCallInner() {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStreamRef.current;
         setHasRemoteVideo(true);
-        remoteVideoRef.current.play().catch(() => {});
+        remoteVideoRef.current.play().catch(() => { });
       }
     };
 
@@ -364,7 +364,7 @@ function VideoCallInner() {
       if (pcRef.current?.remoteDescription?.type) {
         pcRef.current
           .addIceCandidate(new RTCIceCandidate(candidate))
-          .catch(() => {});
+          .catch(() => { });
       } else {
         pendingIceRef.current.push(candidate);
       }
@@ -429,8 +429,6 @@ function VideoCallInner() {
     cleanup();
     setSelfLeft(true);
   };
-
-  // ── Screens ───────────────────────────────────────────────────────────────
 
   if (selfLeft) {
     return (
@@ -517,7 +515,6 @@ function VideoCallInner() {
       </div>
     );
   }
-
   if (isDuplicateTab) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0b] px-4">
@@ -692,10 +689,9 @@ function VideoCallInner() {
 
           {/* Local video PiP */}
           <div
-            className="absolute top-16 right-3 sm:bottom-20 sm:top-auto sm:right-4 z-30 w-34 sm:w-44 md:w-52 xl:w-72 rounded-xl overflow-hidden"
+            className="absolute top-16 right-3 sm:bottom-20 sm:top-auto sm:right-4 z-30 w-24 sm:w-44 md:w-52 xl:w-72 rounded-xl overflow-hidden aspect-3/4 sm:aspect-video"
             style={{
               border: '1px solid rgba(255,255,255,0.1)',
-              aspectRatio: '16/9',
             }}
           >
             <video
