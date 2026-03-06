@@ -7,6 +7,7 @@ import {
   hashRefreshToken,
 } from '../utils/jwtService.js';
 import { authSessionRepository } from '../repositories/authSessionRepository.js';
+import { redis } from '../config/redis.js';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -42,17 +43,18 @@ export const googleAuthService = {
         profilePicture: picture,
       } as any);
     }
+    const userId = user._id.toString();
+
+    const isBanned = await redis.exists(`banned:${userId}`);
+
+    if (isBanned) {
+      throw new AppError('ACCOUNT_BANNED', 403);
+    }
 
     user.lastLoginAt = new Date();
     await user.save();
 
-    // if (user.accountStatus !== 'active') {
-    //   throw new AppError('user account is suspended', 403);
-    // }
-
     await authSessionRepository.revokeAllForUser(user._id);
-
-    const userId = user._id.toString();
 
     const accessToken = generateAccessToken(userId, user.email, user.role);
     const refreshToken = generateRefreshToken();

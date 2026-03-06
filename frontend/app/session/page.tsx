@@ -417,7 +417,6 @@ function VideoCallInner() {
     }
   };
 
-  // ── endCall — FIX 4: removed duplicate setSelfLeft, uncommented redirect ──
   const endCall = () => {
     selfEndedRef.current = true;
     finalDurationRef.current = callDurationRef.current;
