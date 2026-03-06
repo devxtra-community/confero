@@ -654,16 +654,8 @@ function VideoCallInner() {
           <span className="text-white/15 text-xs font-mono">{iceState}</span>
         </header>
 
-        {/* ── Video area ── */}
-        {/*
-          h-full is critical: section must have explicit height so absolute
-          children (controls, local video) are positioned within the viewport.
-          Without it, section collapses to 0 and controls overflow below screen.
-          Layout mirrors Google Meet: remote video fills section, controls float
-          over video at bottom, local video sits just above controls on the right.
-        */}
+       
         <section className="flex-1 relative h-full overflow-hidden">
-          {/* Remote video — fills entire section */}
           <video
             ref={remoteVideoRef}
             autoPlay
@@ -709,10 +701,9 @@ function VideoCallInner() {
 
           {/* Local video PiP — top-right on mobile, bottom-right on sm+ */}
           <div
-            className="absolute top-16 right-3 sm:bottom-20 sm:top-auto sm:right-4 z-30 w-34 sm:w-44 md:w-52 xl:w-72 rounded-xl overflow-hidden"
+            className="absolute top-16 right-3 sm:bottom-20 sm:top-auto sm:right-4 z-30 w-24 sm:w-44 md:w-52 xl:w-72 rounded-xl overflow-hidden [aspect-ratio:3/4] sm:[aspect-ratio:16/9]"
             style={{
               border: '1px solid rgba(255,255,255,0.1)',
-              aspectRatio: '16/9',
             }}
           >
             <video

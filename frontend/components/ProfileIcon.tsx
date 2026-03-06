@@ -73,8 +73,11 @@ export default function ProfileHover() {
 
               <div className="h-px bg-slate-200 dark:bg-slate-800 my-2 mx-2" />
 
-              <button className="w-full flex items-center justify-between p-2.5 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all group">
-                <div className="flex items-center gap-3" onClick={handleLogout}>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all group"
+              >
+                <div className="flex items-center gap-3">
                   <LogOut
                     size={16}
                     className="group-hover:rotate-12 transition-transform"
