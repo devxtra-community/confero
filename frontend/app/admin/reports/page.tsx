@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Search,
   AlertTriangle,
@@ -67,7 +67,7 @@ export default function ReportedUsersPage() {
   const [openBanModal, setOpenBanModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [reason, setReason] = useState<string>('');
-  const [pageCache, setPageCache] = useState<Record<number, ReportedUser[]>>({});
+  const pageCache = useRef<Record<number, ReportedUser[]>>({});
   const [loading, setLoading] = useState(false);
 
   const filteredUsers = reports.filter(
@@ -99,12 +99,11 @@ export default function ReportedUsersPage() {
   };
 
   useEffect(() => {
-    // ✅ If cached, load instantly with no spinner
-    if (pageCache[currentPage]) {
-      setReports(pageCache[currentPage]);
+
+    if (pageCache.current[currentPage]) {
+      setReports(pageCache.current[currentPage]);
       return;
     }
-
     const fetchReports = async () => {
       setLoading(true);
       try {
@@ -128,7 +127,7 @@ export default function ReportedUsersPage() {
           witnesses: [],
         }));
 
-        setPageCache(prev => ({ ...prev, [currentPage]: formatted }));
+        pageCache.current[currentPage] = formatted;
         setReports(formatted);
         setPagination(res.data.pagination);
       } catch (error: unknown) {
@@ -172,7 +171,6 @@ export default function ReportedUsersPage() {
   return (
     <div className="min-h-screen bg-linear-to-br from-foreground-50 via-background to-foreground-50">
       <div className="p-4 sm:p-6 lg:p-8">
-
         {/* Header */}
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -328,7 +326,7 @@ export default function ReportedUsersPage() {
             reason={reason}
             onBanSuccess={userId => {
               setReports(prev => prev.filter(r => r.userId !== userId));
-              setPageCache({});
+              pageCache.current = {};
             }}
           />
         )}
@@ -380,7 +378,6 @@ export default function ReportedUsersPage() {
             </button>
           </div>
         )}
-
       </div>
     </div>
   );

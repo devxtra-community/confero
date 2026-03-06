@@ -1,10 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Search,
-  ChevronLeft,
-  ChevronRight,
   Trash2,
   Filter,
   Download,
@@ -70,10 +68,10 @@ export default function BannedUsersPage() {
     limit: LIMIT,
     totalPages: 1,
   });
-  const [pageCache, setPageCache] = useState<Record<number, BannedUser[]>>({});
   const [loading, setLoading] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
+  const pageCache = useRef<Record<number, BannedUser[]>>({});
   const filteredUsers = bannedUsers.filter(
     user =>
       user.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -81,8 +79,8 @@ export default function BannedUsersPage() {
   );
 
   useEffect(() => {
-    if (pageCache[currentPage]) {
-      setBannedUsers(pageCache[currentPage]);
+    if (pageCache.current[currentPage]) {
+      setBannedUsers(pageCache.current[currentPage]);
       return;
     }
 
@@ -93,20 +91,22 @@ export default function BannedUsersPage() {
           params: { page: currentPage, limit: LIMIT },
         });
 
-        const formatted: BannedUser[] = res.data.data.map((ban: BackendBan) => ({
-          id: ban._id,
-          userId: ban.userId?._id ?? '',
-          fullName: ban.userId?.fullName ?? 'Unknown',
-          email: ban.userId?.email ?? 'Unknown',
-          active: ban.active,
-          bannedOn: formatDateTime(ban.bannedAt),
-          expires: formatDateTime(ban.expiresAt),
-          reason: '',
-        }));
+        const formatted: BannedUser[] = res.data.data.map(
+          (ban: BackendBan) => ({
+            id: ban._id,
+            userId: ban.userId?._id ?? '',
+            fullName: ban.userId?.fullName ?? 'Unknown',
+            email: ban.userId?.email ?? 'Unknown',
+            active: ban.active,
+            bannedOn: formatDateTime(ban.bannedAt),
+            expires: formatDateTime(ban.expiresAt),
+            reason: '',
+          })
+        );
 
         const totalPages = Math.ceil(res.data.total / LIMIT);
 
-        setPageCache(prev => ({ ...prev, [currentPage]: formatted }));
+        pageCache.current[currentPage] = formatted;
         setBannedUsers(formatted);
         setPagination({
           total: res.data.total,
@@ -116,7 +116,9 @@ export default function BannedUsersPage() {
         });
       } catch (err: unknown) {
         if (axios.isAxiosError(err)) {
-          toast.error(err.response?.data?.message ?? 'Failed to fetch banned users');
+          toast.error(
+            err.response?.data?.message ?? 'Failed to fetch banned users'
+          );
         } else {
           toast.error('Failed to fetch banned users');
         }
@@ -176,7 +178,9 @@ export default function BannedUsersPage() {
 
   const toggleUserSelection = (userId: string) => {
     setSelectedUsers(prev =>
-      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+      prev.includes(userId)
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
     );
   };
 
@@ -190,7 +194,7 @@ export default function BannedUsersPage() {
       await axiosInstance.patch(`/admin/unban/`, { userId });
       toast.success('User unbanned');
       setBannedUsers(prev => prev.filter(u => u.userId !== userId));
-      setPageCache({});
+      pageCache.current = {};
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         toast.error(err.response?.data?.message ?? 'Failed to unban the user');
@@ -203,7 +207,6 @@ export default function BannedUsersPage() {
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-gray-50 p-3 sm:p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
-
         {/* Header */}
         <div className="mb-6 md:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
@@ -243,7 +246,9 @@ export default function BannedUsersPage() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <div className="w-10 h-10 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-gray-400 font-medium">Loading banned users...</p>
+            <p className="text-sm text-gray-400 font-medium">
+              Loading banned users...
+            </p>
           </div>
         ) : (
           <>
@@ -253,25 +258,48 @@ export default function BannedUsersPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="bg-linear-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-                      <th className="text-left p-4 sm:p-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Full Name</th>
-                      <th className="text-left p-4 sm:p-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
-                      <th className="text-left p-4 sm:p-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Banned On</th>
-                      <th className="text-left p-4 sm:p-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Expires</th>
-                      <th className="text-left p-4 sm:p-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Ban Status</th>
-                      <th className="text-left p-4 sm:p-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                      <th className="text-left p-4 sm:p-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Full Name
+                      </th>
+                      <th className="text-left p-4 sm:p-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="text-left p-4 sm:p-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Banned On
+                      </th>
+                      <th className="text-left p-4 sm:p-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Expires
+                      </th>
+                      <th className="text-left p-4 sm:p-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Ban Status
+                      </th>
+                      <th className="text-left p-4 sm:p-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {filteredUsers.map(user => (
-                      <tr key={user.id} className="hover:bg-gray-50 transition-colors duration-150">
+                      <tr
+                        key={user.id}
+                        className="hover:bg-gray-50 transition-colors duration-150"
+                      >
                         <td className="p-4 sm:p-6">
                           <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-full bg-linear-to-br ${getAvatarColor(user.id)} flex items-center justify-center text-white font-semibold text-sm shadow-md`}>
+                            <div
+                              className={`w-10 h-10 rounded-full bg-linear-to-br ${getAvatarColor(user.id)} flex items-center justify-center text-white font-semibold text-sm shadow-md`}
+                            >
                               {getInitials(user.fullName)}
                             </div>
                             <div>
-                              <div className="font-medium text-gray-900">{user.fullName}</div>
-                              {user.reason && <div className="text-xs text-gray-500 mt-0.5">{user.reason}</div>}
+                              <div className="font-medium text-gray-900">
+                                {user.fullName}
+                              </div>
+                              {user.reason && (
+                                <div className="text-xs text-gray-500 mt-0.5">
+                                  {user.reason}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>
@@ -288,10 +316,14 @@ export default function BannedUsersPage() {
                           </div>
                         </td>
                         <td className="p-4 sm:p-6">
-                          <span className="text-sm text-gray-600">{user.expires}</span>
+                          <span className="text-sm text-gray-600">
+                            {user.expires}
+                          </span>
                         </td>
                         <td className="p-4 sm:p-6">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${user.active ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                          <span
+                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${user.active ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}
+                          >
                             {user.active ? 'Banned' : 'Unbanned'}
                           </span>
                         </td>
@@ -314,34 +346,56 @@ export default function BannedUsersPage() {
             {/* Tablet cards */}
             <div className="hidden md:grid lg:hidden grid-cols-1 gap-4">
               {filteredUsers.map(user => (
-                <div key={user.id} className="bg-white rounded-xl shadow-md border border-gray-100 p-5 hover:shadow-lg transition-shadow duration-200">
+                <div
+                  key={user.id}
+                  className="bg-white rounded-xl shadow-md border border-gray-100 p-5 hover:shadow-lg transition-shadow duration-200"
+                >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3 flex-1">
-                      <div className={`w-10 h-10 rounded-full bg-linear-to-br ${getAvatarColor(user.id)} flex items-center justify-center text-white font-semibold text-sm shadow-md shrink-0`}>
+                      <div
+                        className={`w-10 h-10 rounded-full bg-linear-to-br ${getAvatarColor(user.id)} flex items-center justify-center text-white font-semibold text-sm shadow-md shrink-0`}
+                      >
                         {getInitials(user.fullName)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 truncate">{user.fullName}</h3>
-                        <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                        <h3 className="font-semibold text-gray-900 truncate">
+                          {user.fullName}
+                        </h3>
+                        <p className="text-sm text-gray-500 truncate">
+                          {user.email}
+                        </p>
                       </div>
                     </div>
-                    <button onClick={() => handleUnban(user.userId)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all shrink-0">
+                    <button
+                      onClick={() => handleUnban(user.userId)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all shrink-0"
+                    >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <p className="text-gray-500 text-xs mb-1">Banned On</p>
-                      <p className="text-gray-900 font-medium">{user.bannedOn}</p>
+                      <p className="text-gray-900 font-medium">
+                        {user.bannedOn}
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs mb-1">Expires</p>
-                      <p className="text-gray-900 font-medium">{user.expires}</p>
+                      <p className="text-gray-900 font-medium">
+                        {user.expires}
+                      </p>
                     </div>
                   </div>
                   <div className="mt-3 flex items-center justify-between">
-                    {user.reason && <p className="text-xs text-gray-600 italic flex-1">{user.reason}</p>}
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${user.active ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                    {user.reason && (
+                      <p className="text-xs text-gray-600 italic flex-1">
+                        {user.reason}
+                      </p>
+                    )}
+                    <span
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${user.active ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}
+                    >
                       {user.active ? 'Banned' : 'Unbanned'}
                     </span>
                   </div>
@@ -352,7 +406,10 @@ export default function BannedUsersPage() {
             {/* Mobile cards */}
             <div className="md:hidden space-y-3">
               {filteredUsers.map(user => (
-                <div key={user.id} className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow duration-200">
+                <div
+                  key={user.id}
+                  className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow duration-200"
+                >
                   <div className="p-4 bg-linear-to-r from-gray-50 to-white border-b border-gray-100">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -362,17 +419,26 @@ export default function BannedUsersPage() {
                           onChange={() => toggleUserSelection(user.id)}
                           className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer shrink-0"
                         />
-                        <div className={`w-10 h-10 rounded-full bg-linear-to-br ${getAvatarColor(user.id)} flex items-center justify-center text-white font-semibold text-sm shadow-md shrink-0`}>
+                        <div
+                          className={`w-10 h-10 rounded-full bg-linear-to-br ${getAvatarColor(user.id)} flex items-center justify-center text-white font-semibold text-sm shadow-md shrink-0`}
+                        >
                           {getInitials(user.fullName)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-900 text-sm truncate">{user.fullName}</h3>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${user.active ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                          <h3 className="font-semibold text-gray-900 text-sm truncate">
+                            {user.fullName}
+                          </h3>
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${user.active ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}
+                          >
                             {user.active ? 'Banned' : 'Unbanned'}
                           </span>
                         </div>
                       </div>
-                      <button onClick={() => handleUnban(user.userId)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all shrink-0">
+                      <button
+                        onClick={() => handleUnban(user.userId)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all shrink-0"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -380,26 +446,34 @@ export default function BannedUsersPage() {
                   <div className="p-4 space-y-3">
                     <div className="flex items-center gap-2 text-sm">
                       <Mail className="w-4 h-4 text-gray-400 shrink-0" />
-                      <span className="text-gray-600 truncate">{user.email}</span>
+                      <span className="text-gray-600 truncate">
+                        {user.email}
+                      </span>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
                           <Calendar className="w-3 h-3" /> Banned On
                         </p>
-                        <p className="text-xs text-gray-900 font-medium">{user.bannedOn}</p>
+                        <p className="text-xs text-gray-900 font-medium">
+                          {user.bannedOn}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
                           <AlertCircle className="w-3 h-3" /> Expires
                         </p>
-                        <p className="text-xs text-gray-900 font-medium">{user.expires}</p>
+                        <p className="text-xs text-gray-900 font-medium">
+                          {user.expires}
+                        </p>
                       </div>
                     </div>
                     {user.reason && (
                       <div className="pt-2 border-t border-gray-100">
                         <p className="text-xs text-gray-500 mb-1">Reason</p>
-                        <p className="text-xs text-gray-700 italic line-clamp-2">{user.reason}</p>
+                        <p className="text-xs text-gray-700 italic line-clamp-2">
+                          {user.reason}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -413,9 +487,13 @@ export default function BannedUsersPage() {
                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-linear-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
                   <User className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">No banned users found</h3>
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
+                  No banned users found
+                </h3>
                 <p className="text-sm sm:text-base text-gray-600">
-                  {searchQuery ? `No results for "${searchQuery}"` : 'There are no banned users at the moment.'}
+                  {searchQuery
+                    ? `No results for "${searchQuery}"`
+                    : 'There are no banned users at the moment.'}
                 </p>
               </div>
             )}
@@ -428,10 +506,13 @@ export default function BannedUsersPage() {
             <div className="text-xs sm:text-sm text-gray-600">
               Showing{' '}
               <span className="font-semibold text-gray-900">
-                {(currentPage - 1) * LIMIT + 1}–{Math.min(currentPage * LIMIT, pagination.total)}
+                {(currentPage - 1) * LIMIT + 1}–
+                {Math.min(currentPage * LIMIT, pagination.total)}
               </span>{' '}
               of{' '}
-              <span className="font-semibold text-gray-900">{pagination.total}</span>{' '}
+              <span className="font-semibold text-gray-900">
+                {pagination.total}
+              </span>{' '}
               users
             </div>
 
@@ -440,8 +521,8 @@ export default function BannedUsersPage() {
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${currentPage === 1
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-600 hover:bg-gray-100'
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : 'text-gray-600 hover:bg-gray-100'
                   }`}
               >
                 Previous
@@ -449,7 +530,10 @@ export default function BannedUsersPage() {
 
               {getPageNumbers().map((page, idx) =>
                 page === '...' ? (
-                  <span key={`ellipsis-${idx}`} className="w-9 h-9 flex items-center justify-center text-gray-400 text-sm">
+                  <span
+                    key={`ellipsis-${idx}`}
+                    className="w-9 h-9 flex items-center justify-center text-gray-400 text-sm"
+                  >
                     ...
                   </span>
                 ) : (
@@ -457,8 +541,8 @@ export default function BannedUsersPage() {
                     key={page}
                     onClick={() => setCurrentPage(page)}
                     className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg font-medium text-sm transition-all ${currentPage === page
-                        ? 'bg-linear-to-r from-teal-500 to-cyan-500 text-white shadow-md'
-                        : 'text-gray-600 hover:bg-gray-100'
+                      ? 'bg-linear-to-r from-teal-500 to-cyan-500 text-white shadow-md'
+                      : 'text-gray-600 hover:bg-gray-100'
                       }`}
                   >
                     {page}
@@ -467,11 +551,13 @@ export default function BannedUsersPage() {
               )}
 
               <button
-                onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
+                onClick={() =>
+                  setCurrentPage(p => Math.min(pagination.totalPages, p + 1))
+                }
                 disabled={currentPage === pagination.totalPages}
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${currentPage === pagination.totalPages
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-600 hover:bg-gray-100'
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : 'text-gray-600 hover:bg-gray-100'
                   }`}
               >
                 Next
@@ -479,7 +565,6 @@ export default function BannedUsersPage() {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

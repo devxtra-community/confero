@@ -28,9 +28,24 @@ export default function Sidebar() {
 
   const menuItems = [
     { id: 'home', label: 'Home', icon: Home, href: '/admin' },
-    { id: 'connection', label: 'Connection', icon: Users, href: '/admin/connection' },
-    { id: 'banned', label: 'Banned Users', icon: Ban, href: '/admin/banned-users' },
-    { id: 'reports', label: 'Reports', icon: BarChart3, href: '/admin/reports' },
+    {
+      id: 'connection',
+      label: 'Connection',
+      icon: Users,
+      href: '/admin/connection',
+    },
+    {
+      id: 'banned',
+      label: 'Banned Users',
+      icon: Ban,
+      href: '/admin/banned-users',
+    },
+    {
+      id: 'reports',
+      label: 'Reports',
+      icon: BarChart3,
+      href: '/admin/reports',
+    },
   ];
 
   const isActive = (href: string) => {
@@ -41,7 +56,7 @@ export default function Sidebar() {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
-      console.log("hi")
+      console.log('hi');
       await axiosInstance.post('/auth/logout');
       toast.success('Logged out successfully');
       router.push('/login');
@@ -118,7 +133,10 @@ export default function Sidebar() {
 
         <nav
           className="flex-1 p-4 overflow-y-auto"
-          style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#d1d5db transparent',
+          }}
         >
           <div className="space-y-1">
             {menuItems.map((item, index) => {
@@ -130,7 +148,12 @@ export default function Sidebar() {
                   key={item.id}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.07, type: 'spring', stiffness: 300, damping: 25 }}
+                  transition={{
+                    delay: index * 0.07,
+                    type: 'spring',
+                    stiffness: 300,
+                    damping: 25,
+                  }}
                 >
                   <Link
                     href={item.href}
@@ -140,9 +163,10 @@ export default function Sidebar() {
                     className={`
                       w-full flex items-center gap-3 px-4 py-3.5 rounded-xl
                       transition-colors duration-200 group relative overflow-hidden
-                      ${active
-                        ? 'bg-linear-to-r from-teal-50 to-emerald-50 text-teal-700 shadow-sm'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      ${
+                        active
+                          ? 'bg-linear-to-r from-teal-50 to-emerald-50 text-teal-700 shadow-sm'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                       }
                     `}
                   >
@@ -150,18 +174,27 @@ export default function Sidebar() {
                       <motion.div
                         layoutId="activeIndicator"
                         className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-linear-to-b from-teal-500 to-emerald-600 rounded-r-full shadow-md"
-                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                        transition={{
+                          type: 'spring',
+                          stiffness: 400,
+                          damping: 30,
+                        }}
                       />
                     )}
 
                     <Icon
                       size={20}
-                      className={`transition-colors duration-200 ${active ? 'text-teal-600' : 'text-gray-500 group-hover:text-teal-600'
-                        }`}
+                      className={`transition-colors duration-200 ${
+                        active
+                          ? 'text-teal-600'
+                          : 'text-gray-500 group-hover:text-teal-600'
+                      }`}
                       strokeWidth={active ? 2.5 : 2}
                     />
 
-                    <span className={`flex-1 font-medium ${active ? 'font-semibold' : ''}`}>
+                    <span
+                      className={`flex-1 font-medium ${active ? 'font-semibold' : ''}`}
+                    >
                       {item.label}
                     </span>
 
@@ -182,7 +215,6 @@ export default function Sidebar() {
         </nav>
 
         <div className="p-4 border-t border-gray-100 bg-linear-to-b from-transparent to-gray-50/50 relative">
-
           <AnimatePresence>
             {showLogout && (
               <motion.div
@@ -199,7 +231,11 @@ export default function Sidebar() {
                 >
                   <motion.div
                     animate={loggingOut ? { rotate: 360 } : { rotate: 0 }}
-                    transition={loggingOut ? { repeat: Infinity, duration: 1, ease: 'linear' } : {}}
+                    transition={
+                      loggingOut
+                        ? { repeat: Infinity, duration: 1, ease: 'linear' }
+                        : {}
+                    }
                   >
                     <LogOut size={18} />
                   </motion.div>
@@ -238,8 +274,18 @@ export default function Sidebar() {
               transition={{ type: 'spring', stiffness: 300, damping: 25 }}
               className="text-gray-400 group-hover:text-teal-600 transition-colors duration-200"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
               </svg>
             </motion.div>
           </motion.div>
@@ -274,10 +320,19 @@ export default function Sidebar() {
       </AnimatePresence>
 
       <style jsx global>{`
-        nav::-webkit-scrollbar { width: 6px; }
-        nav::-webkit-scrollbar-track { background: transparent; }
-        nav::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
-        nav::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+        nav::-webkit-scrollbar {
+          width: 6px;
+        }
+        nav::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        nav::-webkit-scrollbar-thumb {
+          background: #d1d5db;
+          border-radius: 3px;
+        }
+        nav::-webkit-scrollbar-thumb:hover {
+          background: #9ca3af;
+        }
       `}</style>
     </>
   );
