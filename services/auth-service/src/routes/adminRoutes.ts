@@ -15,30 +15,25 @@ const router = Router();
 
 router.get('/admin', verifyAccessToken, requireRole('admin'), adminDashboard);
 
+router.get('/analytics', verifyAccessToken, requireAdminRole, adminDashboard);
+
 router.get('/profile', verifyAccessToken, requireRole('admin'), adminProfile);
 
 router.get('/verify-session', verifyAccessToken, (req: any, res) => {
   res.json({
     success: true,
-    user: {
-      id: req.user.id,
-      email: req.user.email,
-      role: req.user.role,
-    },
+    user: { id: req.user.id, email: req.user.email, role: req.user.role },
   });
 });
 
 router.post('/ban', verifyAccessToken, requireAdminRole, banUser);
-
 router.patch('/unban', verifyAccessToken, requireAdminRole, unbanUser);
-
 router.get(
   '/reported-users',
   verifyAccessToken,
   requireAdminRole,
   getReportedUsers
 );
-
 router.get(
   '/banned-users',
   verifyAccessToken,

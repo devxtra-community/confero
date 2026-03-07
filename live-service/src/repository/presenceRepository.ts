@@ -5,8 +5,6 @@ const SEARCHING_TTL = 300;
 const INCALL_TTL = 7200;
 
 export const presenceRepository = {
-  // ── Existing methods ─────────────────────────────────────────────────────
-
   async addSocket(userId: string, socketId: string) {
     const key = `online:${userId}`;
     await redis.sadd(key, socketId);
@@ -36,10 +34,6 @@ export const presenceRepository = {
     return redis.scard(`online:${userId}`);
   },
 
-  // ── Searching lock ────────────────────────────────────────────────────────
-  // match:searching:{userId} = socketId, SET NX atomic lock.
-  // Only one search per user at a time even on double-click.
-
   async setSearching(userId: string, socketId: string): Promise<boolean> {
     const result = await redis.set(
       `match:searching:${userId}`,
@@ -59,10 +53,6 @@ export const presenceRepository = {
     return redis.get(`match:searching:${userId}`);
   },
 
-  // ── In-call lock ──────────────────────────────────────────────────────────
-  // match:incall:{userId} = callId
-  // Set on match found, cleared on call end / disconnect / logout.
-
   async setInCall(userId: string, callId: string): Promise<void> {
     await redis.set(`match:incall:${userId}`, callId, 'EX', INCALL_TTL);
   },
@@ -74,4 +64,39 @@ export const presenceRepository = {
   async getInCallId(userId: string): Promise<string | null> {
     return redis.get(`match:incall:${userId}`);
   },
+
+  async getOnlineCount(): Promise<number> {
+    let cursor = '0';
+    let count = 0;
+    do {
+      const [nextCursor, keys] = await redis.scan(
+        cursor,
+        'MATCH',
+        'online:*',
+        'COUNT',
+        100
+      );
+      cursor = nextCursor;
+      count += keys.length;
+    } while (cursor !== '0');
+    return count;
+  },
+
+  async getInCallCount(): Promise<number> {
+    let cursor = '0';
+    let count = 0;
+    do {
+      const [nextCursor, keys] = await redis.scan(
+        cursor,
+        'MATCH',
+        'match:incall:*',
+        'COUNT',
+        100
+      );
+      cursor = nextCursor;
+      count += keys.length;
+    } while (cursor !== '0');
+    return count;
+  },
+  // ─────────────────────────────────────────────────────────────────────────
 };

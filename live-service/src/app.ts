@@ -3,6 +3,7 @@ import http from 'http';
 import cors from 'cors';
 import { initSocket } from './socket';
 import healthRouter from './routes/healthRoute';
+import adminPresenceRouter from './routes/adminPresenceRoute';
 import { env } from './config/env';
 
 export const createApp = () => {
@@ -15,6 +16,7 @@ export const createApp = () => {
   );
 
   app.use(healthRouter);
+  app.use(adminPresenceRouter);
   const server = http.createServer(app);
   initSocket(server);
   return server;
