@@ -508,7 +508,7 @@ function buildSlices(
 ): Array<Segment & { dashArray: string; dashOffset: number }> {
   const total = segments.reduce((s, x) => s + x.value, 0);
   let cumulative = 0;
-  return segments.map((seg) => {
+  return segments.map(seg => {
     const arcLen = total > 0 ? (seg.value / total) * C : 0;
     const draw = Math.max(arcLen - 2, 0);
     const dashArray = `${draw} ${C - draw}`;
