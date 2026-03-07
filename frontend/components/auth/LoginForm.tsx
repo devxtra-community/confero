@@ -23,15 +23,7 @@ export function LoginRight() {
 
   const [openForgotModal, setOpenForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
-
-  // ── Single-device block state ────────────────────────────────────────────
-  // When API returns 409 ALREADY_LOGGED_IN, show modal with force logout.
-  // blockedUserId holds the userId returned by the API so we can pass it
-  // to POST /auth/logout { forceUserId } to kill the other session.
-  // forceLoading prevents double-clicks on the Force Logout button.
-  // ─────────────────────────────────────────────────────────────────────────
-  const [showAlreadyLoggedInModal, setShowAlreadyLoggedInModal] =
-    useState(false);
+  const [showAlreadyLoggedInModal, setShowAlreadyLoggedInModal] = useState(false);
   const [blockedUserId, setBlockedUserId] = useState<string | null>(null);
   const [forceLoading, setForceLoading] = useState(false);
 
@@ -46,7 +38,6 @@ export function LoginRight() {
     }
   }, []);
 
-  // LOGIN
   const handleLogin = async () => {
     setLoading(true);
 
@@ -58,17 +49,12 @@ export function LoginRight() {
 
       const role = res.data.role;
       const target = role === 'admin' ? '/admin' : '/home';
-
-      console.log('target route:', target);
-
-      console.log('prefetch success');
-
-      router.push(target);
+      router.replace(target);
+      router.refresh()
 
       console.log('after navigating');
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
-        // ── Single-device block — API returned 409 ───────────────────────
         if (
           err.response?.status === 409 &&
           err.response?.data?.code === 'ALREADY_LOGGED_IN'
@@ -86,7 +72,6 @@ export function LoginRight() {
     }
   };
 
-  // FORCE LOGOUT — kick the other device then retry login automatically
   const handleForceLogout = async () => {
     if (!blockedUserId) return;
     setForceLoading(true);
@@ -97,7 +82,6 @@ export function LoginRight() {
       setShowAlreadyLoggedInModal(false);
       setBlockedUserId(null);
 
-      // Small delay so Redis cleanup propagates, then retry login
       setTimeout(() => {
         handleLogin();
       }, 800);
@@ -192,11 +176,6 @@ export function LoginRight() {
         </div>
       </div>
 
-      {/* ── Already Logged In Modal ──────────────────────────────────────────
-          Shown when API returns 409 ALREADY_LOGGED_IN.
-          Force Logout button calls POST /auth/logout { forceUserId }
-          which kills the other session + Redis, then retries login.
-      ─────────────────────────────────────────────────────────────────── */}
       {showAlreadyLoggedInModal && (
         <div
           className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
