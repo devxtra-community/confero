@@ -505,11 +505,6 @@ export default function BannedUsersPage() {
   });
   const [loading, setLoading] = useState(false);
 
-  // dialog state
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogUserId, setDialogUserId] = useState('');
-  const [dialogReason, setDialogReason] = useState('');
-
   const pageCache = useRef<Record<number, BannedUser[]>>({});
 
   const filteredUsers = bannedUsers.filter(
@@ -610,26 +605,10 @@ export default function BannedUsersPage() {
     }
   };
 
-  const openBanDialog = (user: BannedUser) => {
-    setDialogUserId(user.userId);
-    setDialogReason(user.reason);
-    setDialogOpen(true);
-  };
-
   return (
     <>
       <style>{PAGE_CSS}</style>
 
-      <BanUserDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        userId={dialogUserId}
-        reason={dialogReason}
-        onBanSuccess={id => {
-          pageCache.current = {};
-          setBannedUsers(prev => prev.filter(u => u.userId !== id));
-        }}
-      />
 
       <div className="bu-wrap">
         {/* ── Header ─────────────────────────────────────────────────────── */}
