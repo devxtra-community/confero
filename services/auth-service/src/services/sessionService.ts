@@ -1,4 +1,7 @@
-import { sessionRepository, DailyMinutesPoint } from '../repositories/sessionRepository.js';
+import {
+  sessionRepository,
+  DailyMinutesPoint,
+} from '../repositories/sessionRepository.js';
 
 export const sessionService = {
   getSessions: async (page: number, limit: number) => {
@@ -10,7 +13,8 @@ export const sessionService = {
   },
 
   getDailyMinutes: async () => {
-    const all30: DailyMinutesPoint[] = await sessionRepository.getDailyMinutes();
+    const all30: DailyMinutesPoint[] =
+      await sessionRepository.getDailyMinutes();
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);

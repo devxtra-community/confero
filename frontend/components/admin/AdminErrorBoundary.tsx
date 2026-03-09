@@ -59,7 +59,14 @@ export class AdminErrorBoundary extends Component<Props, State> {
           <div style={{ fontSize: 16, fontWeight: 700, color: '#0A1F14' }}>
             Dashboard failed to load
           </div>
-          <div style={{ fontSize: 13, color: '#8CA898', maxWidth: 320, textAlign: 'center' }}>
+          <div
+            style={{
+              fontSize: 13,
+              color: '#8CA898',
+              maxWidth: 320,
+              textAlign: 'center',
+            }}
+          >
             {this.state.message || 'An unexpected error occurred.'}
           </div>
           <button

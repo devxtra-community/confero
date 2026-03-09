@@ -25,7 +25,7 @@ export const sessionRepository = {
     ]);
     return { data, total };
   },
-  
+
   getAnalytics: async () => {
     const CACHE_KEY = 'analytics:sessions:90d';
 
@@ -49,7 +49,7 @@ export const sessionRepository = {
       .lean()
       .exec();
 
-    const result = sessions.map((s) => ({
+    const result = sessions.map(s => ({
       startedAt: s.startedAt,
       endedAt: s.endedAt ?? null,
       durationSeconds: s.endedAt
@@ -71,7 +71,7 @@ export const sessionRepository = {
   // ── #3 FIX: single 30d query instead of two separate queries ─────────────
   // Service layer slices to 7 days when needed — one DB round trip total.
   // CHANGED: explicit return type so downstream code gets proper inference
-getDailyMinutes: async (): Promise<DailyMinutesPoint[]> => {
+  getDailyMinutes: async (): Promise<DailyMinutesPoint[]> => {
     const CACHE_KEY = 'analytics:daily:30d';
 
     // ── Cache read ────────────────────────────────────────────────────────
@@ -96,9 +96,9 @@ getDailyMinutes: async (): Promise<DailyMinutesPoint[]> => {
       {
         $group: {
           _id: {
-            year:  { $year:  '$startedAt' },
+            year: { $year: '$startedAt' },
             month: { $month: '$startedAt' },
-            day:   { $dayOfMonth: '$startedAt' },
+            day: { $dayOfMonth: '$startedAt' },
           },
           totalSeconds: {
             $sum: { $subtract: ['$endedAt', '$startedAt'] },
@@ -111,9 +111,9 @@ getDailyMinutes: async (): Promise<DailyMinutesPoint[]> => {
           _id: 0,
           date: {
             $dateFromParts: {
-              year:  '$_id.year',
+              year: '$_id.year',
               month: '$_id.month',
-              day:   '$_id.day',
+              day: '$_id.day',
             },
           },
           // Store seconds not minutes — avoids rounding loss for short calls
