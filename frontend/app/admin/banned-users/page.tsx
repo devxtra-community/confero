@@ -248,7 +248,9 @@ export default function BannedUsersPage() {
         });
       } catch (err: unknown) {
         if (axios.isAxiosError(err)) {
-          toast.error(err.response?.data?.message ?? 'Failed to fetch banned users');
+          toast.error(
+            err.response?.data?.message ?? 'Failed to fetch banned users'
+          );
         } else {
           toast.error('Failed to fetch banned users');
         }
@@ -260,11 +262,16 @@ export default function BannedUsersPage() {
   }, [currentPage]);
 
   const getPageNumbers = () => {
-    const total = pagination.totalPages, current = currentPage;
+    const total = pagination.totalPages,
+      current = currentPage;
     if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
     const pages: (number | '...')[] = [1];
     if (current > 3) pages.push('...');
-    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++)
+    for (
+      let i = Math.max(2, current - 1);
+      i <= Math.min(total - 1, current + 1);
+      i++
+    )
       pages.push(i);
     if (current < total - 2) pages.push('...');
     pages.push(total);
@@ -272,7 +279,12 @@ export default function BannedUsersPage() {
   };
 
   const getInitials = (name: string) =>
-    name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
 
   const handleUnban = async (userId: string) => {
     const user = bannedUsers.find(u => u.userId === userId);
@@ -299,22 +311,59 @@ export default function BannedUsersPage() {
       <style>{PAGE_CSS}</style>
 
       <div className="bu-wrap">
-
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <div className="bu-a1" style={{ marginBottom: 18 }}>
           <div style={{ marginBottom: 5 }}>
             <div className="bu-label">
-              <span style={{ color: 'oklch(0.72 0.19 149)', marginRight: 6 }}>◆</span>
+              <span style={{ color: 'oklch(0.72 0.19 149)', marginRight: 6 }}>
+                ◆
+              </span>
               User Management
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.15, margin: 0 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 10,
+            }}
+          >
+            <h1
+              style={{
+                fontSize: 22,
+                fontWeight: 800,
+                lineHeight: 1.15,
+                margin: 0,
+              }}
+            >
               Banned Users
             </h1>
-            <div style={{ padding: '4px 12px', background: 'oklch(0.577 0.245 27.325 / 0.08)', border: '1px solid oklch(0.577 0.245 27.325 / 0.18)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 5 }}>
-              <ShieldBan size={11} style={{ color: 'oklch(0.577 0.245 27.325)' }} strokeWidth={2} />
-              <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: 'oklch(0.577 0.245 27.325)', letterSpacing: '0.06em' }}>
+            <div
+              style={{
+                padding: '4px 12px',
+                background: 'oklch(0.577 0.245 27.325 / 0.08)',
+                border: '1px solid oklch(0.577 0.245 27.325 / 0.18)',
+                borderRadius: 99,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+              }}
+            >
+              <ShieldBan
+                size={11}
+                style={{ color: 'oklch(0.577 0.245 27.325)' }}
+                strokeWidth={2}
+              />
+              <span
+                style={{
+                  fontFamily: "'DM Mono',monospace",
+                  fontSize: 10,
+                  color: 'oklch(0.577 0.245 27.325)',
+                  letterSpacing: '0.06em',
+                }}
+              >
                 {pagination.total} banned
               </span>
             </div>
@@ -334,23 +383,53 @@ export default function BannedUsersPage() {
 
         {/* ── Loading ─────────────────────────────────────────────────────── */}
         {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', gap: 12 }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '64px 0',
+              gap: 12,
+            }}
+          >
             <div className="bu-spinner" />
             <span className="bu-label">Loading banned users…</span>
           </div>
-
         ) : filteredUsers.length === 0 ? (
           /* ── Empty ──────────────────────────────────────────────────────── */
-          <div className="bu-a2 bu-card" style={{ padding: '48px 24px', textAlign: 'center' }}>
-            <div style={{ width: 48, height: 48, borderRadius: 14, background: 'oklch(0.72 0.19 149 / 0.08)', border: '1.5px solid oklch(0.72 0.19 149 / 0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
-              <User size={20} style={{ color: 'oklch(0.42 0.11 136)' }} strokeWidth={1.8} />
+          <div
+            className="bu-a2 bu-card"
+            style={{ padding: '48px 24px', textAlign: 'center' }}
+          >
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 14,
+                background: 'oklch(0.72 0.19 149 / 0.08)',
+                border: '1.5px solid oklch(0.72 0.19 149 / 0.18)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 14px',
+              }}
+            >
+              <User
+                size={20}
+                style={{ color: 'oklch(0.42 0.11 136)' }}
+                strokeWidth={1.8}
+              />
             </div>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 5 }}>No banned users found</div>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 5 }}>
+              No banned users found
+            </div>
             <div className="bu-label">
-              {searchQuery ? `No results for "${searchQuery}"` : 'There are currently no banned users.'}
+              {searchQuery
+                ? `No results for "${searchQuery}"`
+                : 'There are currently no banned users.'}
             </div>
           </div>
-
         ) : (
           /* ── Table ──────────────────────────────────────────────────────── */
           <div className="bu-a2 bu-card">
@@ -370,12 +449,29 @@ export default function BannedUsersPage() {
                   {filteredUsers.map(user => (
                     <tr key={user.id} className="bu-tr">
                       <td className="bu-td">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div className="bu-avatar">{getInitials(user.fullName)}</div>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 10,
+                          }}
+                        >
+                          <div className="bu-avatar">
+                            {getInitials(user.fullName)}
+                          </div>
                           <div>
-                            <div style={{ fontSize: 13, fontWeight: 600 }}>{user.fullName}</div>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>
+                              {user.fullName}
+                            </div>
                             {user.reason && (
-                              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 9.5, color: 'var(--muted-foreground)', marginTop: 1 }}>
+                              <div
+                                style={{
+                                  fontFamily: "'DM Mono',monospace",
+                                  fontSize: 9.5,
+                                  color: 'var(--muted-foreground)',
+                                  marginTop: 1,
+                                }}
+                              >
                                 {user.reason}
                               </div>
                             )}
@@ -383,28 +479,82 @@ export default function BannedUsersPage() {
                         </div>
                       </td>
                       <td className="bu-td">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <Mail size={12} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
-                          <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{user.email}</span>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                        >
+                          <Mail
+                            size={12}
+                            style={{
+                              color: 'var(--muted-foreground)',
+                              flexShrink: 0,
+                            }}
+                          />
+                          <span
+                            style={{
+                              fontFamily: "'DM Mono',monospace",
+                              fontSize: 11,
+                            }}
+                          >
+                            {user.email}
+                          </span>
                         </div>
                       </td>
                       <td className="bu-td">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <Calendar size={11} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
-                          <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{user.bannedOn}</span>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                        >
+                          <Calendar
+                            size={11}
+                            style={{
+                              color: 'var(--muted-foreground)',
+                              flexShrink: 0,
+                            }}
+                          />
+                          <span
+                            style={{
+                              fontFamily: "'DM Mono',monospace",
+                              fontSize: 11,
+                            }}
+                          >
+                            {user.bannedOn}
+                          </span>
                         </div>
                       </td>
                       <td className="bu-td">
-                        <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{user.expires}</span>
+                        <span
+                          style={{
+                            fontFamily: "'DM Mono',monospace",
+                            fontSize: 11,
+                          }}
+                        >
+                          {user.expires}
+                        </span>
                       </td>
                       <td className="bu-td">
-                        {user.active
-                          ? <span className="bu-badge-ban"><ShieldBan size={9} strokeWidth={2} /> Banned</span>
-                          : <span className="bu-badge-ok"><ShieldCheck size={9} strokeWidth={2} /> Unbanned</span>
-                        }
+                        {user.active ? (
+                          <span className="bu-badge-ban">
+                            <ShieldBan size={9} strokeWidth={2} /> Banned
+                          </span>
+                        ) : (
+                          <span className="bu-badge-ok">
+                            <ShieldCheck size={9} strokeWidth={2} /> Unbanned
+                          </span>
+                        )}
                       </td>
                       <td className="bu-td">
-                        <button className="bu-unban" onClick={() => handleUnban(user.userId)} title="Unban user">
+                        <button
+                          className="bu-unban"
+                          onClick={() => handleUnban(user.userId)}
+                          title="Unban user"
+                        >
                           <Trash2 size={14} strokeWidth={2} />
                         </button>
                       </td>
@@ -418,37 +568,75 @@ export default function BannedUsersPage() {
 
         {/* ── Pagination ──────────────────────────────────────────────────── */}
         {!loading && pagination.totalPages > 1 && (
-          <div className="bu-a3 bu-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, padding: '12px 16px', marginTop: 12 }}>
+          <div
+            className="bu-a3 bu-card"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 10,
+              padding: '12px 16px',
+              marginTop: 12,
+            }}
+          >
             <div className="bu-label">
               Showing{' '}
               <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>
-                {(currentPage - 1) * LIMIT + 1}–{Math.min(currentPage * LIMIT, pagination.total)}
+                {(currentPage - 1) * LIMIT + 1}–
+                {Math.min(currentPage * LIMIT, pagination.total)}
               </span>{' '}
               of{' '}
-              <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>{pagination.total}</span>{' '}
+              <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>
+                {pagination.total}
+              </span>{' '}
               users
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <button className="bu-page-btn" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+              <button
+                className="bu-page-btn"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
                 ← Prev
               </button>
               {getPageNumbers().map((page, idx) =>
                 page === '...' ? (
-                  <span key={`e-${idx}`} style={{ width: 28, textAlign: 'center', fontFamily: "'DM Mono',monospace", fontSize: 11, color: 'var(--muted-foreground)' }}>…</span>
+                  <span
+                    key={`e-${idx}`}
+                    style={{
+                      width: 28,
+                      textAlign: 'center',
+                      fontFamily: "'DM Mono',monospace",
+                      fontSize: 11,
+                      color: 'var(--muted-foreground)',
+                    }}
+                  >
+                    …
+                  </span>
                 ) : (
-                  <button key={page} className={`bu-page-btn${currentPage === page ? ' active' : ''}`} onClick={() => setCurrentPage(page as number)}>
+                  <button
+                    key={page}
+                    className={`bu-page-btn${currentPage === page ? ' active' : ''}`}
+                    onClick={() => setCurrentPage(page as number)}
+                  >
                     {page}
                   </button>
                 )
               )}
-              <button className="bu-page-btn" onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))} disabled={currentPage === pagination.totalPages}>
+              <button
+                className="bu-page-btn"
+                onClick={() =>
+                  setCurrentPage(p => Math.min(pagination.totalPages, p + 1))
+                }
+                disabled={currentPage === pagination.totalPages}
+              >
                 Next →
               </button>
             </div>
           </div>
         )}
-
       </div>
     </>
   );
