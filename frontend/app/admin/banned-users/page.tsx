@@ -9,8 +9,6 @@ import {
   User,
   ShieldBan,
   ShieldCheck,
-  AlertTriangle,
-  X,
 } from 'lucide-react';
 import { axiosInstance } from '@/lib/axiosInstance';
 import { toast } from 'sonner';
@@ -94,14 +92,11 @@ const PAGE_CSS = `
   .bu-a2 { animation: bu-fadeUp .4s cubic-bezier(0.22,1,0.36,1) both .10s; }
   .bu-a3 { animation: bu-fadeUp .4s cubic-bezier(0.22,1,0.36,1) both .16s; }
 
-  /* label */
   .bu-label {
     font-family: 'DM Mono', monospace;
     font-size: 9.5px; letter-spacing: .12em;
     text-transform: uppercase; color: var(--_text2);
   }
-
-  /* card */
   .bu-card {
     background: var(--_surface);
     border: 1.5px solid var(--_border);
@@ -109,8 +104,6 @@ const PAGE_CSS = `
     overflow: hidden;
     transition: border-color .18s, box-shadow .18s;
   }
-
-  /* search */
   .bu-search-wrap { position: relative; }
   .bu-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--_text2); pointer-events: none; }
   .bu-search {
@@ -127,8 +120,6 @@ const PAGE_CSS = `
     border-color: oklch(0.72 0.19 149 / 0.50);
     box-shadow: 0 0 0 3px oklch(0.72 0.19 149 / 0.09);
   }
-
-  /* table */
   .bu-table { width: 100%; border-collapse: collapse; }
   .bu-th {
     text-align: left; padding: 11px 16px;
@@ -147,8 +138,6 @@ const PAGE_CSS = `
   .bu-tr { transition: background .12s; }
   .bu-tr:hover .bu-td { background: oklch(0.72 0.19 149 / 0.03); }
   .bu-tr:last-child .bu-td { border-bottom: none; }
-
-  /* avatar */
   .bu-avatar {
     width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
@@ -157,8 +146,6 @@ const PAGE_CSS = `
     background: linear-gradient(135deg, oklch(0.42 0.11 136), oklch(0.72 0.19 149));
     box-shadow: 0 2px 6px oklch(0.42 0.11 136 / 0.25);
   }
-
-  /* status badge */
   .bu-badge-ban {
     display: inline-flex; align-items: center; gap: 4px;
     font-family: 'DM Mono', monospace; font-size: 9.5px; font-weight: 500;
@@ -174,8 +161,6 @@ const PAGE_CSS = `
     border: 1px solid var(--_green-bdr);
   }
   .dark .bu-badge-ok { color: var(--_green); }
-
-  /* unban button */
   .bu-unban {
     display: inline-flex; align-items: center; justify-content: center;
     width: 30px; height: 30px; border-radius: 8px; border: none;
@@ -185,18 +170,6 @@ const PAGE_CSS = `
   }
   .bu-unban:hover { background: var(--_red-bg); }
   .bu-unban:disabled { opacity: 0.4; cursor: not-allowed; }
-
-  /* mobile row card */
-  .bu-row-card {
-    background: var(--_surface);
-    border: 1.5px solid var(--_border);
-    border-radius: calc(var(--_radius) * 2);
-    padding: 14px 16px;
-    transition: border-color .18s;
-  }
-  .bu-row-card:hover { border-color: var(--_green-bdr); }
-
-  /* pagination */
   .bu-page-btn {
     min-width: 32px; height: 32px; padding: 0 8px; border-radius: 9px;
     border: 1.5px solid transparent;
@@ -211,285 +184,13 @@ const PAGE_CSS = `
     color: #fff; border-color: transparent;
   }
   .bu-page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-
-  /* spinner */
   .bu-spinner {
     width: 28px; height: 28px; border-radius: 50%;
     border: 3px solid oklch(0.72 0.19 149 / 0.15);
     border-top-color: oklch(0.72 0.19 149);
     animation: bu-spin 0.85s linear infinite;
   }
-
-  /* skeleton */
-  .bu-skeleton {
-    background: linear-gradient(90deg,
-      oklch(0.72 0.19 149 / 0.05) 25%, oklch(0.72 0.19 149 / 0.11) 50%, oklch(0.72 0.19 149 / 0.05) 75%);
-    background-size: 200% 100%; animation: bu-shimmer 1.6s infinite;
-    border-radius: calc(var(--_radius) * 1.5);
-  }
-
-  /* ── dialog ──────────────────────────────────────────────────────────── */
-  .bd-overlay {
-    position: fixed; inset: 0; z-index: 50;
-    background: oklch(0 0 0 / 0.42); backdrop-filter: blur(4px);
-    display: flex; align-items: center; justify-content: center; padding: 16px;
-    animation: bu-fadeUp 0.15s ease;
-  }
-  @keyframes bd-up { from { opacity:0; transform: translateY(10px) scale(0.98); } to { opacity:1; transform: none; } }
-  .bd-panel {
-    background: var(--card);
-    border: 1.5px solid var(--border);
-    border-radius: calc(var(--_radius, 0.625rem) * 2.5);
-    width: 100%; max-width: 400px;
-    box-shadow: 0 20px 60px oklch(0 0 0 / 0.13);
-    animation: bd-up 0.2s cubic-bezier(0.22,1,0.36,1);
-    overflow: hidden;
-  }
-  .dark .bd-panel { box-shadow: 0 20px 60px oklch(0 0 0 / 0.45); }
-
-  .bd-close {
-    width: 28px; height: 28px; border-radius: 8px; border: none;
-    background: oklch(0.145 0 0 / 0.05); cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--muted-foreground);
-    transition: background .15s, color .15s; flex-shrink: 0;
-  }
-  .bd-close:hover { background: oklch(0.577 0.245 27.325 / 0.09); color: oklch(0.577 0.245 27.325); }
-
-  .bd-field { display: flex; flex-direction: column; gap: 5px; }
-  .bd-input, .bd-textarea {
-    width: 100%; background: var(--background);
-    border: 1.5px solid var(--border);
-    border-radius: calc(var(--_radius, 0.625rem) * 1.5);
-    color: var(--foreground); font-family: 'DM Mono', monospace; font-size: 12px;
-    transition: border-color .15s, box-shadow .15s; outline: none;
-  }
-  .bd-input { padding: 9px 12px; }
-  .bd-textarea { padding: 9px 12px; resize: vertical; min-height: 76px; line-height: 1.55; }
-  .bd-input:focus, .bd-textarea:focus {
-    border-color: oklch(0.72 0.19 149 / 0.55);
-    box-shadow: 0 0 0 3px oklch(0.72 0.19 149 / 0.09);
-  }
-  .bd-input:disabled { opacity: 0.6; cursor: not-allowed; background: oklch(0.145 0 0 / 0.03); }
-  .bd-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-    opacity: 0.45; cursor: pointer;
-    filter: invert(0.4) sepia(1) saturate(4) hue-rotate(90deg);
-  }
-  .bd-icon-wrap { position: relative; }
-  .bd-icon-wrap .bd-ico { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted-foreground); pointer-events: none; }
-  .bd-icon-wrap .bd-input { padding-left: 32px; }
-  .bd-btn {
-    width: 100%; padding: 11px; border: none;
-    font-family: var(--font-sans, sans-serif); font-size: 13px; font-weight: 700;
-    border-radius: calc(var(--_radius, 0.625rem) * 1.6); cursor: pointer;
-    background: linear-gradient(105deg, oklch(0.42 0.11 136), oklch(0.60 0.14 149));
-    color: #fff; box-shadow: 0 2px 12px oklch(0.42 0.11 136 / 0.25);
-    transition: opacity .15s, transform .15s, box-shadow .15s;
-    display: flex; align-items: center; justify-content: center; gap: 7px;
-  }
-  .bd-btn:hover:not(:disabled) { opacity:.92; transform:translateY(-1px); box-shadow:0 4px 20px oklch(0.42 0.11 136 / 0.32); }
-  .bd-btn:active:not(:disabled) { transform:translateY(0); }
-  .bd-btn:disabled { opacity:.55; cursor:not-allowed; }
-  @keyframes bd-spin { to { transform: rotate(360deg); } }
-  .bd-spinner { width:13px; height:13px; border-radius:50%; border:2px solid oklch(1 0 0 / 0.3); border-top-color:#fff; animation:bd-spin .8s linear infinite; flex-shrink:0; }
 `;
-
-// ─── BanUserDialog ────────────────────────────────────────────────────────────
-
-type DialogProps = {
-  open: boolean;
-  onOpenChange: (val: boolean) => void;
-  userId: string;
-  reason: string;
-  onBanSuccess?: (userId: string) => void;
-};
-
-function BanUserDialog({
-  open,
-  onOpenChange,
-  reason,
-  userId,
-  onBanSuccess,
-}: DialogProps) {
-  const [localReason, setLocalReason] = useState(reason);
-  const [expiry, setExpiry] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleBan = async () => {
-    try {
-      setLoading(true);
-      await axiosInstance.post('/admin/ban', {
-        userId,
-        reason: localReason,
-        expiresAt: expiry ? new Date(expiry) : null,
-      });
-      toast.success('User banned successfully');
-      onBanSuccess?.(userId);
-      onOpenChange(false);
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        toast.error(err.response?.data?.message ?? 'Failed to ban user');
-      } else {
-        toast.error('Failed to ban user');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    setLocalReason(reason);
-  }, [reason]);
-
-  if (!open) return null;
-
-  return (
-    <div className="bd-overlay" onClick={() => !loading && onOpenChange(false)}>
-      <div className="bd-panel bu-wrap" onClick={e => e.stopPropagation()}>
-        {/* header */}
-        <div
-          style={{
-            padding: '16px 18px 0',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            gap: 10,
-          }}
-        >
-          <div>
-            <div className="bu-label" style={{ marginBottom: 4 }}>
-              <span style={{ color: 'oklch(0.72 0.19 149)', marginRight: 5 }}>
-                ◆
-              </span>
-              User Management
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 8,
-                  flexShrink: 0,
-                  background: 'oklch(0.577 0.245 27.325 / 0.09)',
-                  border: '1.5px solid oklch(0.577 0.245 27.325 / 0.20)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <ShieldBan
-                  size={14}
-                  style={{ color: 'oklch(0.577 0.245 27.325)' }}
-                  strokeWidth={2}
-                />
-              </div>
-              <span style={{ fontSize: 15, fontWeight: 800 }}>Ban User</span>
-            </div>
-          </div>
-          <button
-            className="bd-close"
-            onClick={() => !loading && onOpenChange(false)}
-            aria-label="Close"
-          >
-            <X size={13} strokeWidth={2.2} />
-          </button>
-        </div>
-
-        {/* body */}
-        <div
-          style={{
-            padding: '14px 18px 18px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 11,
-          }}
-        >
-          {/* warning */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '8px 11px',
-              background: 'oklch(0.577 0.245 27.325 / 0.07)',
-              border: '1px solid oklch(0.577 0.245 27.325 / 0.17)',
-              borderRadius: 'calc(var(--radius, 0.625rem) * 1.4)',
-            }}
-          >
-            <AlertTriangle
-              size={12}
-              style={{ color: 'oklch(0.577 0.245 27.325)', flexShrink: 0 }}
-              strokeWidth={2}
-            />
-            <span
-              style={{
-                fontFamily: "'DM Mono',monospace",
-                fontSize: 10,
-                color: 'oklch(0.577 0.245 27.325)',
-                letterSpacing: '0.04em',
-              }}
-            >
-              This action restricts the user&apos;s access immediately.
-            </span>
-          </div>
-
-          {/* user id */}
-          <div className="bd-field">
-            <span className="bu-label">User ID</span>
-            <div className="bd-icon-wrap">
-              <User size={12} className="bd-ico" />
-              <input className="bd-input" value={userId} disabled readOnly />
-            </div>
-          </div>
-
-          {/* reason */}
-          <div className="bd-field">
-            <span className="bu-label">Ban Reason</span>
-            <textarea
-              className="bd-textarea"
-              placeholder="Describe why this user is being banned..."
-              value={localReason}
-              onChange={e => setLocalReason(e.target.value)}
-            />
-          </div>
-
-          {/* expiry */}
-          <div className="bd-field">
-            <span className="bu-label">
-              Expiry{' '}
-              <span style={{ opacity: 0.5 }}>
-                (optional — empty = permanent)
-              </span>
-            </span>
-            <div className="bd-icon-wrap">
-              <Calendar size={12} className="bd-ico" />
-              <input
-                className="bd-input"
-                type="datetime-local"
-                value={expiry}
-                onChange={e => setExpiry(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div style={{ height: 1, background: 'var(--border)' }} />
-
-          <button className="bd-btn" onClick={handleBan} disabled={loading}>
-            {loading ? (
-              <>
-                <span className="bd-spinner" /> Banning user…
-              </>
-            ) : (
-              <>
-                <ShieldBan size={13} strokeWidth={2.2} /> Confirm Ban
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── BannedUsersPage ──────────────────────────────────────────────────────────
 
@@ -547,9 +248,7 @@ export default function BannedUsersPage() {
         });
       } catch (err: unknown) {
         if (axios.isAxiosError(err)) {
-          toast.error(
-            err.response?.data?.message ?? 'Failed to fetch banned users'
-          );
+          toast.error(err.response?.data?.message ?? 'Failed to fetch banned users');
         } else {
           toast.error('Failed to fetch banned users');
         }
@@ -561,16 +260,11 @@ export default function BannedUsersPage() {
   }, [currentPage]);
 
   const getPageNumbers = () => {
-    const total = pagination.totalPages,
-      current = currentPage;
+    const total = pagination.totalPages, current = currentPage;
     if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
     const pages: (number | '...')[] = [1];
     if (current > 3) pages.push('...');
-    for (
-      let i = Math.max(2, current - 1);
-      i <= Math.min(total - 1, current + 1);
-      i++
-    )
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++)
       pages.push(i);
     if (current < total - 2) pages.push('...');
     pages.push(total);
@@ -578,12 +272,7 @@ export default function BannedUsersPage() {
   };
 
   const getInitials = (name: string) =>
-    name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
   const handleUnban = async (userId: string) => {
     const user = bannedUsers.find(u => u.userId === userId);
@@ -609,69 +298,28 @@ export default function BannedUsersPage() {
     <>
       <style>{PAGE_CSS}</style>
 
-
       <div className="bu-wrap">
-        {/* ── Header ─────────────────────────────────────────────────────── */}
+
+        {/* ── Header ──────────────────────────────────────────────────────── */}
         <div className="bu-a1" style={{ marginBottom: 18 }}>
           <div style={{ marginBottom: 5 }}>
             <div className="bu-label">
-              <span style={{ color: 'oklch(0.72 0.19 149)', marginRight: 6 }}>
-                ◆
-              </span>
+              <span style={{ color: 'oklch(0.72 0.19 149)', marginRight: 6 }}>◆</span>
               User Management
             </div>
           </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: 10,
-            }}
-          >
-            <h1
-              style={{
-                fontSize: 22,
-                fontWeight: 800,
-                lineHeight: 1.15,
-                margin: 0,
-              }}
-            >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.15, margin: 0 }}>
               Banned Users
             </h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div
-                style={{
-                  padding: '4px 12px',
-                  background: 'oklch(0.577 0.245 27.325 / 0.08)',
-                  border: '1px solid oklch(0.577 0.245 27.325 / 0.18)',
-                  borderRadius: 99,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 5,
-                }}
-              >
-                <ShieldBan
-                  size={11}
-                  style={{ color: 'oklch(0.577 0.245 27.325)' }}
-                  strokeWidth={2}
-                />
-                <span
-                  style={{
-                    fontFamily: "'DM Mono',monospace",
-                    fontSize: 10,
-                    color: 'oklch(0.577 0.245 27.325)',
-                    letterSpacing: '0.06em',
-                  }}
-                >
-                  {pagination.total} banned
-                </span>
-              </div>
+            <div style={{ padding: '4px 12px', background: 'oklch(0.577 0.245 27.325 / 0.08)', border: '1px solid oklch(0.577 0.245 27.325 / 0.18)', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <ShieldBan size={11} style={{ color: 'oklch(0.577 0.245 27.325)' }} strokeWidth={2} />
+              <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: 'oklch(0.577 0.245 27.325)', letterSpacing: '0.06em' }}>
+                {pagination.total} banned
+              </span>
             </div>
           </div>
 
-          {/* search */}
           <div className="bu-search-wrap" style={{ marginTop: 14 }}>
             <Search size={13} className="bu-search-icon" />
             <input
@@ -686,283 +334,121 @@ export default function BannedUsersPage() {
 
         {/* ── Loading ─────────────────────────────────────────────────────── */}
         {loading ? (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '64px 0',
-              gap: 12,
-            }}
-          >
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', gap: 12 }}>
             <div className="bu-spinner" />
             <span className="bu-label">Loading banned users…</span>
           </div>
+
         ) : filteredUsers.length === 0 ? (
-          /* ── Empty state ─────────────────────────────────────────────── */
-          <div
-            className="bu-a2 bu-card"
-            style={{ padding: '48px 24px', textAlign: 'center' }}
-          >
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 14,
-                background: 'oklch(0.72 0.19 149 / 0.08)',
-                border: '1.5px solid oklch(0.72 0.19 149 / 0.18)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 14px',
-              }}
-            >
-              <User
-                size={20}
-                style={{ color: 'oklch(0.42 0.11 136)' }}
-                strokeWidth={1.8}
-              />
+          /* ── Empty ──────────────────────────────────────────────────────── */
+          <div className="bu-a2 bu-card" style={{ padding: '48px 24px', textAlign: 'center' }}>
+            <div style={{ width: 48, height: 48, borderRadius: 14, background: 'oklch(0.72 0.19 149 / 0.08)', border: '1.5px solid oklch(0.72 0.19 149 / 0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+              <User size={20} style={{ color: 'oklch(0.42 0.11 136)' }} strokeWidth={1.8} />
             </div>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 5 }}>
-              No banned users found
-            </div>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 5 }}>No banned users found</div>
             <div className="bu-label">
-              {searchQuery
-                ? `No results for "${searchQuery}"`
-                : 'There are currently no banned users.'}
+              {searchQuery ? `No results for "${searchQuery}"` : 'There are currently no banned users.'}
             </div>
           </div>
-        ) : (
-          <>
-            {/* ── Desktop table ──────────────────────────────────────────── */}
-            <div className="bu-a2 bu-card" style={{ display: 'block' }}>
-              <div style={{ overflowX: 'auto' }}>
-                <table className="bu-table">
-                  <thead>
-                    <tr>
-                      <th className="bu-th">User</th>
-                      <th className="bu-th">Email</th>
-                      <th className="bu-th">Banned On</th>
-                      <th className="bu-th">Expires</th>
-                      <th className="bu-th">Status</th>
-                      <th className="bu-th">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.map(user => (
-                      <tr key={user.id} className="bu-tr">
-                        {/* user */}
-                        <td className="bu-td">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 10,
-                            }}
-                          >
-                            <div className="bu-avatar">
-                              {getInitials(user.fullName)}
-                            </div>
-                            <div>
-                              <div style={{ fontSize: 13, fontWeight: 600 }}>
-                                {user.fullName}
-                              </div>
-                              {user.reason && (
-                                <div
-                                  style={{
-                                    fontFamily: "'DM Mono',monospace",
-                                    fontSize: 9.5,
-                                    color: 'var(--muted-foreground)',
-                                    marginTop: 1,
-                                  }}
-                                >
-                                  {user.reason}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        {/* email */}
-                        <td className="bu-td">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 6,
-                            }}
-                          >
-                            <Mail
-                              size={12}
-                              style={{
-                                color: 'var(--muted-foreground)',
-                                flexShrink: 0,
-                              }}
-                            />
-                            <span
-                              style={{
-                                fontFamily: "'DM Mono',monospace",
-                                fontSize: 11,
-                              }}
-                            >
-                              {user.email}
-                            </span>
-                          </div>
-                        </td>
-                        {/* banned on */}
-                        <td className="bu-td">
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 6,
-                            }}
-                          >
-                            <Calendar
-                              size={11}
-                              style={{
-                                color: 'var(--muted-foreground)',
-                                flexShrink: 0,
-                              }}
-                            />
-                            <span
-                              style={{
-                                fontFamily: "'DM Mono',monospace",
-                                fontSize: 11,
-                              }}
-                            >
-                              {user.bannedOn}
-                            </span>
-                          </div>
-                        </td>
-                        {/* expires */}
-                        <td className="bu-td">
-                          <span
-                            style={{
-                              fontFamily: "'DM Mono',monospace",
-                              fontSize: 11,
-                            }}
-                          >
-                            {user.expires}
-                          </span>
-                        </td>
-                        {/* status */}
-                        <td className="bu-td">
-                          {user.active ? (
-                            <span className="bu-badge-ban">
-                              <ShieldBan size={9} strokeWidth={2} /> Banned
-                            </span>
-                          ) : (
-                            <span className="bu-badge-ok">
-                              <ShieldCheck size={9} strokeWidth={2} /> Unbanned
-                            </span>
-                          )}
-                        </td>
-                        {/* action */}
-                        <td className="bu-td">
-                          <button
-                            className="bu-unban"
-                            onClick={() => handleUnban(user.userId)}
-                            title="Unban user"
-                          >
-                            <Trash2 size={14} strokeWidth={2} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
 
-            {/* ── Mobile cards ───────────────────────────────────────────── */}
-            <div
-              className="bu-a2"
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8,
-                marginTop: 0,
-              }}
-            >
-              {/* (hidden on lg via table above — for now both render, use CSS to toggle if needed) */}
+        ) : (
+          /* ── Table ──────────────────────────────────────────────────────── */
+          <div className="bu-a2 bu-card">
+            <div style={{ overflowX: 'auto' }}>
+              <table className="bu-table">
+                <thead>
+                  <tr>
+                    <th className="bu-th">User</th>
+                    <th className="bu-th">Email</th>
+                    <th className="bu-th">Banned On</th>
+                    <th className="bu-th">Expires</th>
+                    <th className="bu-th">Status</th>
+                    <th className="bu-th">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map(user => (
+                    <tr key={user.id} className="bu-tr">
+                      <td className="bu-td">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div className="bu-avatar">{getInitials(user.fullName)}</div>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>{user.fullName}</div>
+                            {user.reason && (
+                              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 9.5, color: 'var(--muted-foreground)', marginTop: 1 }}>
+                                {user.reason}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="bu-td">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Mail size={12} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+                          <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{user.email}</span>
+                        </div>
+                      </td>
+                      <td className="bu-td">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Calendar size={11} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+                          <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{user.bannedOn}</span>
+                        </div>
+                      </td>
+                      <td className="bu-td">
+                        <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{user.expires}</span>
+                      </td>
+                      <td className="bu-td">
+                        {user.active
+                          ? <span className="bu-badge-ban"><ShieldBan size={9} strokeWidth={2} /> Banned</span>
+                          : <span className="bu-badge-ok"><ShieldCheck size={9} strokeWidth={2} /> Unbanned</span>
+                        }
+                      </td>
+                      <td className="bu-td">
+                        <button className="bu-unban" onClick={() => handleUnban(user.userId)} title="Unban user">
+                          <Trash2 size={14} strokeWidth={2} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </>
+          </div>
         )}
 
         {/* ── Pagination ──────────────────────────────────────────────────── */}
         {!loading && pagination.totalPages > 1 && (
-          <div
-            className="bu-a3 bu-card"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: 10,
-              padding: '12px 16px',
-              marginTop: 12,
-            }}
-          >
+          <div className="bu-a3 bu-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, padding: '12px 16px', marginTop: 12 }}>
             <div className="bu-label">
               Showing{' '}
               <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>
-                {(currentPage - 1) * LIMIT + 1}–
-                {Math.min(currentPage * LIMIT, pagination.total)}
+                {(currentPage - 1) * LIMIT + 1}–{Math.min(currentPage * LIMIT, pagination.total)}
               </span>{' '}
               of{' '}
-              <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>
-                {pagination.total}
-              </span>{' '}
+              <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>{pagination.total}</span>{' '}
               users
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <button
-                className="bu-page-btn"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
+              <button className="bu-page-btn" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
                 ← Prev
               </button>
-
               {getPageNumbers().map((page, idx) =>
                 page === '...' ? (
-                  <span
-                    key={`e-${idx}`}
-                    style={{
-                      width: 28,
-                      textAlign: 'center',
-                      fontFamily: "'DM Mono',monospace",
-                      fontSize: 11,
-                      color: 'var(--muted-foreground)',
-                    }}
-                  >
-                    …
-                  </span>
+                  <span key={`e-${idx}`} style={{ width: 28, textAlign: 'center', fontFamily: "'DM Mono',monospace", fontSize: 11, color: 'var(--muted-foreground)' }}>…</span>
                 ) : (
-                  <button
-                    key={page}
-                    className={`bu-page-btn${currentPage === page ? ' active' : ''}`}
-                    onClick={() => setCurrentPage(page as number)}
-                  >
+                  <button key={page} className={`bu-page-btn${currentPage === page ? ' active' : ''}`} onClick={() => setCurrentPage(page as number)}>
                     {page}
                   </button>
                 )
               )}
-
-              <button
-                className="bu-page-btn"
-                onClick={() =>
-                  setCurrentPage(p => Math.min(pagination.totalPages, p + 1))
-                }
-                disabled={currentPage === pagination.totalPages}
-              >
+              <button className="bu-page-btn" onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))} disabled={currentPage === pagination.totalPages}>
                 Next →
               </button>
             </div>
           </div>
         )}
+
       </div>
     </>
   );
