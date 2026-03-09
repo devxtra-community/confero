@@ -3,51 +3,78 @@ import { env } from './env.js';
 import { logger } from './logger.js';
 import { SessionModel } from '../models/sessionModel.js';
 
+let connection: amqp.Connection | null = null;
+let channel: amqp.Channel | null = null;
+
 export const startRabbitConsumer = async () => {
-  const connection = await amqp.connect(env.RABBITMQ_URL!);
-  const channel = await connection.createChannel();
+  try {
+    const url = env.RABBITMQ_URL!;
 
-  const exchange = 'live.exchange';
-  const queue = 'session.queue';
+    connection = await amqp.connect(url);
 
-  await channel.assertExchange(exchange, 'topic', { durable: true });
-  await channel.assertQueue(queue, { durable: true });
+    connection.on('error', err => {
+      logger.error('RabbitMQ connection error:', err);
+    });
 
-  await channel.bindQueue(queue, exchange, 'session.*');
+    connection.on('close', () => {
+      logger.warn('RabbitMQ connection closed');
+    });
 
-  logger.info('RabbitMQ consumer started..');
+    channel = await connection.createChannel();
 
-  channel.consume(queue, async msg => {
-    if (!msg) return;
+    const exchange = 'live.exchange';
+    const queue = 'session.queue';
 
-    const routingKey = msg.fields.routingKey;
-    const data = JSON.parse(msg.content.toString());
+    await channel.assertExchange(exchange, 'topic', { durable: true });
 
-    logger.info(routingKey, data);
+    await channel.assertQueue(queue, {
+      durable: true,
+    });
 
-    try {
-      if (routingKey === 'session.started') {
-        await SessionModel.create({
-          sessionId: data.sessionId,
-          userA: data.userA,
-          userB: data.userB,
-          startedAt: data.startedAt,
-        });
+    await channel.bindQueue(queue, exchange, 'session.*');
+
+    logger.info('RabbitMQ consumer started...');
+
+    await channel.consume(queue, async msg => {
+      if (!msg) return;
+
+      try {
+        const routingKey = msg.fields.routingKey;
+        const data = JSON.parse(msg.content.toString());
+
+        logger.info(`Received event ${routingKey}`, data);
+
+        if (routingKey === 'session.started') {
+          await SessionModel.create({
+            sessionId: data.sessionId,
+            userA: data.userA,
+            userB: data.userB,
+            startedAt: data.startedAt,
+          });
+        }
+
+        if (routingKey === 'session.ended') {
+          await SessionModel.findOneAndUpdate(
+            { sessionId: data.sessionId },
+            {
+              endedAt: data.endedAt,
+              endReason: data.reason,
+            }
+          );
+        }
+
+        channel!.ack(msg);
+      } catch (err) {
+        logger.error('Consumer error', err);
+
+        channel!.nack(msg, false, false);
       }
+    });
+  } catch (error) {
+    logger.error('Failed to start RabbitMQ consumer:', error);
 
-      if (routingKey === 'session.ended') {
-        await SessionModel.findOneAndUpdate(
-          { sessionId: data.sessionId },
-          {
-            endedAt: data.endedAt,
-            endReason: data.reason,
-          }
-        );
-      }
-
-      channel.ack(msg);
-    } catch (err) {
-      logger.error('Consumer error', err);
-    }
-  });
+    setTimeout(() => {
+      startRabbitConsumer();
+    }, 5000);
+  }
 };

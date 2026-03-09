@@ -8,7 +8,6 @@ export default function CenterLoader({
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
-        {/* circle loader */}
         <span
           className="
             w-8 h-8
@@ -20,7 +19,6 @@ export default function CenterLoader({
           "
         />
 
-        {/* loading text */}
         <span className="text-sm font-medium text-neutral-500 tracking-wide">
           {label}
         </span>

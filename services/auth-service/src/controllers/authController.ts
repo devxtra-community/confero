@@ -144,11 +144,6 @@ export const googleLogin = async (req: Request, res: Response) => {
 export const logout = async (req: Request, res: Response) => {
   const { forceUserId } = req.body;
 
-  // ── Force logout path ─────────────────────────────────────────────────────
-  // Called from the login modal when user wants to kick the other device.
-  // No cookie available — uses forceUserId from body to clean Redis directly
-  // and delete all sessions for that user from the DB.
-  // ─────────────────────────────────────────────────────────────────────────
   if (forceUserId) {
     try {
       await Promise.all([
@@ -158,7 +153,6 @@ export const logout = async (req: Request, res: Response) => {
         redis.del(`match:incall:${forceUserId}`),
       ]);
 
-      // Delete all auth sessions for this user so their token is invalidated
       await authSessionRepository.deleteAllByUserId(forceUserId);
 
       logger.info(`Force logout completed for user ${forceUserId}`);

@@ -7,18 +7,17 @@ let channel: amqp.Channel | null = null;
 let isConnecting = false;
 
 export const connectRabbit = async (): Promise<void> => {
-  if (isConnecting) {
-    logger.warn('Already attempting to connect to RabbitMQ');
+  if (connection || isConnecting) {
+    logger.warn('RabbitMQ already connected or connecting');
     return;
   }
 
   try {
     isConnecting = true;
 
-    // USE CONFIG HERE for URL and heartbeat
-    connection = await amqp.connect(rabbitConfig.url, {
-      heartbeat: rabbitConfig.heartbeat,
-    });
+    const url = rabbitConfig.url;
+
+    connection = await amqp.connect(url);
 
     connection.on('error', err => {
       logger.error('RabbitMQ connection error:', err);
@@ -28,7 +27,7 @@ export const connectRabbit = async (): Promise<void> => {
       logger.warn('RabbitMQ connection closed. Reconnecting...');
       connection = null;
       channel = null;
-      setTimeout(connectRabbit, rabbitConfig.reconnectDelay);
+      setTimeout(() => connectRabbit(), rabbitConfig.reconnectDelay);
     });
 
     channel = await connection.createChannel();
@@ -49,9 +48,11 @@ export const connectRabbit = async (): Promise<void> => {
     logger.info('RabbitMQ connected successfully');
   } catch (error) {
     logger.error('Failed to connect to RabbitMQ:', error);
+
     connection = null;
     channel = null;
-    setTimeout(connectRabbit, rabbitConfig.reconnectDelay);
+
+    setTimeout(() => connectRabbit(), rabbitConfig.reconnectDelay);
   } finally {
     isConnecting = false;
   }
@@ -61,6 +62,7 @@ export const getChannel = (): amqp.Channel => {
   if (!channel) {
     throw new Error('RabbitMQ channel not available');
   }
+
   return channel;
 };
 
@@ -69,9 +71,11 @@ export const closeConnection = async (): Promise<void> => {
     if (channel) {
       await channel.close();
     }
+
     if (connection) {
       await connection.close();
     }
+
     logger.info('RabbitMQ connection closed');
   } catch (error) {
     logger.error('Error closing RabbitMQ connection:', error);

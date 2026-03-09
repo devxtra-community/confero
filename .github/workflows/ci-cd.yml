@@ -68,8 +68,24 @@ jobs:
           name: live-service-prod
           path: live-service-prod
 
+      - name: Build gateway
+        run: pnpm --filter gateway build
+
+      - name: Prepare gateway artifact
+        run: |
+          rm -rf gateway-prod
+          mkdir gateway-prod
+          cp -r gateway/dist gateway-prod/
+          cp gateway/package.json gateway-prod/
+
+      - name: Upload gateway artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gateway-prod
+          path: gateway-prod
+
   cd:
-    name: CD (Deploy to EC2)
+    name: CD (Deploy to Azure VM)
     needs: ci
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -87,32 +103,48 @@ jobs:
           name: live-service-prod
           path: live-service-prod
 
-      - name: Upload services to EC2
-        uses: appleboy/scp-action@v0.1.7
+      - name: Download gateway artifact
+        uses: actions/download-artifact@v4
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_KEY }}
-          source: |
-            auth-service-prod
-            live-service-prod
-          target: /var/www/confero
+          name: gateway-prod
+          path: gateway-prod
 
-      - name: Restart services
+      - name: Clean production directory
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_KEY }}
+          host: ${{ secrets.AZURE_HOST }}
+          username: ${{ secrets.AZURE_USER }}
+          key: ${{ secrets.AZURE_KEY }}
           script: |
-            echo "Restarting auth-service"
-            cd /var/www/confero/auth-service-prod
-            npm install --omit=dev
-            pm2 reload confero-auth-service || pm2 start dist/index.js --name confero-auth-service
+            rm -rf /var/www/confero/auth-service-prod
+            rm -rf /var/www/confero/live-service-prod
+            rm -rf /var/www/confero/gateway-prod
 
-            echo "Restarting live-service"
-            cd /var/www/confero/live-service-prod
-            npm install --omit=dev
-            pm2 reload confero-live-service || pm2 start dist/server.js --name confero-live-service
+      # Upload artifacts
+      - name: Upload services to Azure
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.AZURE_HOST }}
+          username: ${{ secrets.AZURE_USER }}
+          key: ${{ secrets.AZURE_KEY }}
+          source: 'auth-service-prod,live-service-prod,gateway-prod'
+          target: /var/www/confero
+
+      # Restart services properly
+      - name: Reload backend services
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.AZURE_HOST }}
+          username: ${{ secrets.AZURE_USER }}
+          key: ${{ secrets.AZURE_KEY }}
+          script: |
+
+            cd /var/www/confero
+
+            npm install --omit=dev --prefix auth-service-prod
+            npm install --omit=dev --prefix live-service-prod
+            npm install --omit=dev --prefix gateway-prod
+
+            pm2 reload ecosystem.config.js
 
             pm2 save

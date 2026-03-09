@@ -33,8 +33,14 @@ export const adminProfile = async (req: Request, res: Response) => {
 
 export const banUser = async (req: Request, res: Response) => {
   const { userId, reason, expiresAt } = req.body;
-  await banService.banUser(userId, reason, expiresAt);
-  res.json({ message: 'User banned successfully', success: true });
+
+  const expiresDate = new Date(expiresAt);
+  await banService.banUser(userId, reason, expiresDate);
+
+  res.json({
+    message: 'User banned successfully',
+    success: true,
+  });
 };
 
 export const getBannedUsers = async (req: Request, res: Response) => {
@@ -56,7 +62,7 @@ export const unbanUser = async (req: Request, res: Response) => {
 
 export const getReportedUsers = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
-  const limit = Number(req.query.limit) || 6;
+  const limit = Number(req.query.limit) || 4;
   const result = await reportService.getReportedUsers(page, limit);
   res.json({
     success: true,
@@ -67,7 +73,8 @@ export const getReportedUsers = async (req: Request, res: Response) => {
 
 export const getSessionHistory = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
-  const limit = Number(req.query.limit) || 6;
+  const limit = Number(req.query.limit) || 10;
+
   const { data, total } = await sessionService.getSessions(page, limit);
   res.json({ success: true, data, total, page, limit });
 };

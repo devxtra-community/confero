@@ -7,7 +7,7 @@ import {
   LockKeyholeOpen,
   MonitorX,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import GoogleButton from './GoogleButton';
 import Link from 'next/link';
 import { axiosInstance } from '@/lib/axiosInstance';
@@ -23,34 +23,38 @@ export function LoginRight() {
 
   const [openForgotModal, setOpenForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
-
-  // ── Single-device block state ────────────────────────────────────────────
-  // When API returns 409 ALREADY_LOGGED_IN, show modal with force logout.
-  // blockedUserId holds the userId returned by the API so we can pass it
-  // to POST /auth/logout { forceUserId } to kill the other session.
-  // forceLoading prevents double-clicks on the Force Logout button.
-  // ─────────────────────────────────────────────────────────────────────────
-  const [showAlreadyLoggedInModal, setShowAlreadyLoggedInModal] =
-    useState(false);
+  const [showAlreadyLoggedInModal, setShowAlreadyLoggedInModal] = useState(false);
   const [blockedUserId, setBlockedUserId] = useState<string | null>(null);
   const [forceLoading, setForceLoading] = useState(false);
 
   const router = useRouter();
 
-  // LOGIN
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const banned = params.get('banned');
+
+    if (banned) {
+      toast.warning('Your account has been banned.');
+    }
+  }, []);
+
   const handleLogin = async () => {
     setLoading(true);
 
     try {
-      await axiosInstance.post('/auth/login', { email, password });
+      const res = await axiosInstance.post('/auth/login', {
+        email,
+        password,
+      });
 
-      const meRes = await axiosInstance.get('/users/me');
-      const user = meRes.data.user;
+      const role = res.data.role;
+      const target = role === 'admin' ? '/admin' : '/home';
+      router.replace(target);
+      router.refresh()
 
-      router.replace(user.role === 'admin' ? '/admin' : '/home');
+      console.log('after navigating');
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
-        // ── Single-device block — API returned 409 ───────────────────────
         if (
           err.response?.status === 409 &&
           err.response?.data?.code === 'ALREADY_LOGGED_IN'
@@ -68,7 +72,6 @@ export function LoginRight() {
     }
   };
 
-  // FORCE LOGOUT — kick the other device then retry login automatically
   const handleForceLogout = async () => {
     if (!blockedUserId) return;
     setForceLoading(true);
@@ -79,7 +82,6 @@ export function LoginRight() {
       setShowAlreadyLoggedInModal(false);
       setBlockedUserId(null);
 
-      // Small delay so Redis cleanup propagates, then retry login
       setTimeout(() => {
         handleLogin();
       }, 800);
@@ -174,11 +176,6 @@ export function LoginRight() {
         </div>
       </div>
 
-      {/* ── Already Logged In Modal ──────────────────────────────────────────
-          Shown when API returns 409 ALREADY_LOGGED_IN.
-          Force Logout button calls POST /auth/logout { forceUserId }
-          which kills the other session + Redis, then retries login.
-      ─────────────────────────────────────────────────────────────────── */}
       {showAlreadyLoggedInModal && (
         <div
           className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"

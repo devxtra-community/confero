@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Video, Sparkles, Zap, ArrowRight, ChevronLeft } from 'lucide-react';
 import Image from 'next/image';
-import { socket, connectSocket, resetSocket } from '@/lib/socket';
+import { socket, connectSocket } from '@/lib/socket';
 import { axiosInstance } from '@/lib/axiosInstance';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -55,7 +55,6 @@ export default function FindMatchPage() {
   ];
 
   useEffect(() => {
-    resetSocket();
     connectSocket().catch((err: Error) => {
       if (err.message === 'ALREADY_CONNECTED') {
         setIsDuplicateTab(true);
@@ -70,6 +69,7 @@ export default function FindMatchPage() {
       try {
         const res = await axiosInstance.get(`/users/peer/${peerId}`);
         setPeerProfile(res.data);
+        console.log(res);
       } catch {
         toast.warning('Failed to fetch user profile details');
       }

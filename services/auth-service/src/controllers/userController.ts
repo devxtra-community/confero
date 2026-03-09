@@ -311,10 +311,10 @@ export const deleteAvatar = async (req: Request, res: Response) => {
 };
 
 export const reportUser = async (req: Request, res: Response) => {
-  const { reportedUserId, reason } = req.body;
+  const { reportedUserId, reason, description } = req.body;
   const userId = req.user?.id;
 
-  await reportService.reportUser(reportedUserId, userId, reason);
+  await reportService.reportUser(reportedUserId, userId, reason, description);
 
   res.json({ success: true });
 };

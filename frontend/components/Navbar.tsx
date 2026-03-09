@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -28,14 +29,19 @@ export default function Navbar() {
       >
         <div className="flex items-center justify-between gap-6">
           <div className="flex items-center gap-6 font-sans">
-            <h1 className="text-white text-lg sm:text-xl">Confero</h1>
+            <Image src="/af5.svg" width={30} height={30} alt="logo" />
+            {/* <h1 className="text-white text-lg sm:text-xl -ml-7">onferoo</h1> */}
 
             <div className="hidden md:flex items-center justify-around gap-6 text-md cursor-pointer">
-              <Link href="/home" className="text-white/80 hover:text-white">
+              <Link href="#home" className="text-white/80 hover:text-white">
                 Home
               </Link>
-              <a className="text-white/80 hover:text-white">Features</a>
-              <a className="text-white/80 hover:text-white">FAQ</a>
+              <a className="text-white/80 hover:text-white" href="#features">
+                Features
+              </a>
+              <a className="text-white/80 hover:text-white" href="#faq">
+                FAQ
+              </a>
             </div>
           </div>
 
@@ -74,8 +80,13 @@ export default function Navbar() {
             <Link href="/">
               <p onClick={() => setOpen(false)}>Home</p>
             </Link>
-            <p onClick={() => setOpen(false)}>Features</p>
-            <p onClick={() => setOpen(false)}>FAQ</p>
+            <Link href="#features">
+              {' '}
+              <p onClick={() => setOpen(false)}>Features</p>
+            </Link>
+            <Link href="#faq">
+              <p onClick={() => setOpen(false)}>FAQ</p>
+            </Link>
 
             <div className="w-full h-px bg-white/20" />
 
