@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Video,
   CheckCircle,
@@ -10,12 +10,12 @@ import {
   ChevronDown,
   Wifi,
   PhoneCall,
+  Clock,
 } from 'lucide-react';
 import { axiosInstance } from '@/lib/axiosInstance';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-// FIXED: matches actual values written by callHandlers.ts via RabbitMQ
 type EndReason = 'USER_ENDED' | 'ICE_FAILED' | 'TIME_LIMIT' | null;
 
 interface SessionAnalytic {
@@ -52,13 +52,13 @@ interface Segment {
   color: string;
 }
 
-// ─── Reason config — FIXED to match actual DB values ─────────────────────────
+// ─── Reason config ────────────────────────────────────────────────────────────
 
-const REASON_CONFIG: Record<string, { label: string; color: string }> = {
-  USER_ENDED: { label: 'Completed', color: '#1DB87A' },
-  ICE_FAILED: { label: 'ICE Failed', color: '#4A9B7F' },
-  TIME_LIMIT: { label: 'Time Limit', color: '#B2DDD0' },
-  null: { label: 'Canceled', color: '#0A1F14' },
+const REASON_CONFIG: Record<string, { label: string; color: string; light: string }> = {
+  USER_ENDED: { label: 'Completed',  color: 'oklch(0.42 0.11 136)',  light: 'oklch(0.42 0.11 136 / 0.15)' },
+  ICE_FAILED: { label: 'ICE Failed', color: 'oklch(0.60 0.14 149)',  light: 'oklch(0.60 0.14 149 / 0.12)' },
+  TIME_LIMIT: { label: 'Time Limit', color: 'oklch(0.72 0.19 149)',  light: 'oklch(0.72 0.19 149 / 0.12)' },
+  null:       { label: 'Canceled',   color: 'oklch(0.75 0.05 149)',  light: 'oklch(0.75 0.05 149 / 0.10)' },
 };
 
 // ─── Period helpers ───────────────────────────────────────────────────────────
@@ -66,10 +66,10 @@ const REASON_CONFIG: Record<string, { label: string; color: string }> = {
 type Period = 'today' | 'this_week' | 'this_month' | 'all_time';
 
 const PERIOD_LABELS: Record<Period, string> = {
-  today: 'Today',
-  this_week: 'This Week',
+  today:      'Today',
+  this_week:  'This Week',
   this_month: 'This Month',
-  all_time: 'All Time',
+  all_time:   'All Time',
 };
 
 function getPeriodStart(period: Period): Date {
@@ -77,7 +77,7 @@ function getPeriodStart(period: Period): Date {
   if (period === 'today')
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   if (period === 'this_week') {
-    const day = now.getDay();
+    const day  = now.getDay();
     const diff = now.getDate() - day + (day === 0 ? -6 : 1);
     return new Date(now.getFullYear(), now.getMonth(), diff);
   }
@@ -101,44 +101,31 @@ interface DashboardMetrics {
   matchRate: number;
 }
 
-// CHANGED: segments now use durationSeconds instead of minutes internally.
-// A 3-second call contributes 3 to the total instead of rounding to 0.
-// Display conversion happens only at render time.
 function computeMetrics(sessions: SessionAnalytic[]): DashboardMetrics {
-  const totalCalls = sessions.length;
-  const completedCalls = sessions.filter(
-    s => s.endReason === 'USER_ENDED'
-  ).length;
-  const matchRate =
-    totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0;
+  const totalCalls     = sessions.length;
+  const completedCalls = sessions.filter(s => s.endReason === 'USER_ENDED').length;
+  const matchRate      = totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0;
 
-  // Group by endReason in SECONDS — no rounding loss for short calls
   const secondsByReason: Record<string, number> = {};
   for (const s of sessions) {
     const key = s.endReason ?? 'null';
     secondsByReason[key] = (secondsByReason[key] ?? 0) + s.durationSeconds;
   }
 
-  // Build segments — filter only if truly 0 seconds (never filter short calls)
   const segments: Segment[] = Object.entries(REASON_CONFIG)
     .map(([key, cfg]) => ({
       label: cfg.label,
-      value: Math.round(secondsByReason[key] ?? 0), // seconds
+      value: Math.round(secondsByReason[key] ?? 0),
       color: cfg.color,
     }))
     .filter(seg => seg.value > 0);
 
-  // totalMinutes is still used for the donut centre label
   const totalSeconds = segments.reduce((s, x) => s + x.value, 0);
   const totalMinutes = Math.round(totalSeconds / 60);
 
   return { segments, totalMinutes, totalCalls, completedCalls, matchRate };
 }
 
-// Converts seconds to a human-readable string.
-// < 60s  → "45s"
-// < 3600s → "12m 30s"
-// >= 3600s → "1h 12m"
 function formatDuration(totalSeconds: number): string {
   if (totalSeconds < 60) return `${totalSeconds}s`;
   const h = Math.floor(totalSeconds / 3600);
@@ -148,347 +135,300 @@ function formatDuration(totalSeconds: number): string {
   return `${m}m ${s}s`;
 }
 
-// ─── Trend chart helpers ──────────────────────────────────────────────────────
-// Pure SVG — no chart library needed, stays consistent with your inline style.
+// ─── Global CSS — uses your exact CSS variable names ─────────────────────────
 
-function TrendChart({
-  data,
-  range,
-  onRangeChange,
-}: {
-  data: AnalyticsResponse['dailyMinutes'];
-  range: 7 | 30;
-  onRangeChange: (r: 7 | 30) => void;
-}) {
-  const points = range === 7 ? data.last7 : data.last30;
+const GLOBAL_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Poetsen+One&family=DM+Mono:wght@300;400;500&display=swap');
 
-  // Fill in missing days with 0 so the chart always shows a full timeline
-  const filled = (() => {
-    const map = new Map(points.map(p => [p.date.slice(0, 10), p]));
-    const result: { date: string; minutes: number; callCount: number }[] = [];
-    for (let i = range - 1; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      result.push(map.get(key) ?? { date: key, minutes: 0, callCount: 0 });
-    }
-    return result;
-  })();
+  .dh-wrap {
+    font-family: var(--font-sans, 'Poetsen One', sans-serif);
+    background: var(--background);
+    color: var(--foreground);
+    min-height: 100vh;
+    padding: 36px 32px 60px;
+  }
 
-  const W = 520;
-  const H = 120;
-  const PAD = { top: 12, right: 12, bottom: 28, left: 36 };
-  const innerW = W - PAD.left - PAD.right;
-  const innerH = H - PAD.top - PAD.bottom;
+  /* ── tokens re-exposed as local shorthands ───────────────────────────── */
+  .dh-wrap {
+    --_green:      oklch(0.72 0.19 149);
+    --_green-dark: oklch(0.42 0.11 136);
+    --_green-mid:  oklch(0.60 0.147 149);
+    --_green-bg:   oklch(0.72 0.19 149 / 0.08);
+    --_green-bdr:  oklch(0.72 0.19 149 / 0.22);
+    --_green-hover:oklch(0.60 0.148 149);
+    --_text:       var(--foreground);
+    --_text2:      var(--muted-foreground);
+    --_surface:    var(--card);
+    --_border:     var(--border);
+    --_radius:     var(--radius, 0.625rem);
+  }
 
-  const maxMinutes = Math.max(...filled.map(p => p.minutes), 1);
+  .dark .dh-wrap {
+    --_green-bg:  oklch(0.72 0.19 149 / 0.12);
+    --_green-bdr: oklch(0.72 0.19 149 / 0.28);
+  }
 
-  const xScale = (i: number) => PAD.left + (i / (filled.length - 1)) * innerW;
-  const yScale = (v: number) => PAD.top + innerH - (v / maxMinutes) * innerH;
+  .dh-wrap * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  // Build SVG path
-  const pathD = filled
-    .map(
-      (p, i) =>
-        `${i === 0 ? 'M' : 'L'} ${xScale(i).toFixed(1)} ${yScale(p.minutes).toFixed(1)}`
-    )
-    .join(' ');
+  /* ── animations ──────────────────────────────────────────────────────── */
+  @keyframes dh-shimmer {
+    from { background-position: 200% 0; }
+    to   { background-position: -200% 0; }
+  }
+  @keyframes dh-fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes dh-pulse {
+    0%,100% { opacity:1; box-shadow:0 0 0 0 oklch(0.72 0.19 149 / 0.5); }
+    50%     { opacity:0.75; box-shadow:0 0 0 5px oklch(0.72 0.19 149 / 0); }
+  }
+  @keyframes dh-colon {
+    0%,49%   { opacity: 1; }
+    50%,100% { opacity: 0.2; }
+  }
+  @keyframes dh-bar {
+    from { width: 0; }
+  }
 
-  // Area fill path (close below the line)
-  const areaD =
-    pathD +
-    ` L ${xScale(filled.length - 1).toFixed(1)} ${(PAD.top + innerH).toFixed(1)}` +
-    ` L ${PAD.left.toFixed(1)} ${(PAD.top + innerH).toFixed(1)} Z`;
+  .dh-a1 { animation: dh-fadeUp .5s cubic-bezier(0.22,1,0.36,1) both .04s; }
+  .dh-a2 { animation: dh-fadeUp .5s cubic-bezier(0.22,1,0.36,1) both .12s; }
+  .dh-a3 { animation: dh-fadeUp .5s cubic-bezier(0.22,1,0.36,1) both .20s; }
+  .dh-a4 { animation: dh-fadeUp .5s cubic-bezier(0.22,1,0.36,1) both .28s; }
+  .dh-a5 { animation: dh-fadeUp .5s cubic-bezier(0.22,1,0.36,1) both .36s; }
 
-  // Y-axis labels (3 ticks)
-  const yTicks = [0, Math.round(maxMinutes / 2), Math.round(maxMinutes)];
+  /* ── card ────────────────────────────────────────────────────────────── */
+  .dh-card {
+    background: var(--_surface);
+    border: 1.5px solid var(--_border);
+    border-radius: calc(var(--_radius) * 2.5);
+    position: relative;
+    overflow: hidden;
+    transition: border-color .2s, box-shadow .2s, transform .2s;
+  }
+  .dh-card:hover {
+    border-color: var(--_green-bdr);
+    box-shadow: 0 4px 24px oklch(0.72 0.19 149 / 0.10);
+    transform: translateY(-1px);
+  }
+  .dh-card-accent {
+    background: linear-gradient(135deg,
+      oklch(0.42 0.11 136 / 0.06) 0%,
+      var(--_surface) 60%);
+    border-color: var(--_green-bdr);
+  }
+  .dark .dh-card-accent {
+    background: linear-gradient(135deg,
+      oklch(0.72 0.19 149 / 0.10) 0%,
+      var(--_surface) 60%);
+  }
 
-  // X-axis: show every other label for 30-day to avoid crowding
-  const xLabelStep = range === 30 ? 5 : 1;
+  /* ── label / badge ───────────────────────────────────────────────────── */
+  .dh-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--_text2);
+  }
+  .dh-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; font-weight: 500; letter-spacing: .06em;
+    color: var(--_green-dark);
+    background: var(--_green-bg);
+    border: 1px solid var(--_green-bdr);
+    border-radius: 99px; padding: 3px 10px; white-space: nowrap;
+  }
+  .dark .dh-badge { color: var(--_green); }
 
-  const [hovered, setHovered] = useState<number | null>(null);
+  .dh-live {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: .10em;
+    color: var(--_green-dark);
+    background: var(--_green-bg);
+    border: 1px solid var(--_green-bdr);
+    border-radius: 99px; padding: 4px 12px;
+  }
+  .dark .dh-live { color: var(--_green); }
+  .dh-live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--_green);
+    animation: dh-pulse 1.8s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  /* ── progress bar ────────────────────────────────────────────────────── */
+  .dh-track {
+    height: 5px;
+    background: oklch(0.72 0.19 149 / 0.10);
+    border-radius: 99px; overflow: hidden;
+  }
+  .dh-fill {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--_green-dark), var(--_green));
+    animation: dh-bar .8s cubic-bezier(0.22,1,0.36,1) both;
+  }
+
+  /* ── divider ─────────────────────────────────────────────────────────── */
+  .dh-hr { height: 1px; background: var(--_border); }
+
+  /* ── period dropdown ─────────────────────────────────────────────────── */
+  .dh-pdrop-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    letter-spacing: .06em; font-weight: 500;
+    color: var(--_green-dark); background: var(--_green-bg);
+    border: 1.5px solid var(--_green-bdr);
+    border-radius: calc(var(--_radius) * 1.5);
+    padding: 7px 13px; cursor: pointer; white-space: nowrap;
+    transition: background .15s;
+  }
+  .dark .dh-pdrop-btn { color: var(--_green); }
+  .dh-pdrop-btn:hover { background: oklch(0.72 0.19 149 / 0.14); }
+
+  .dh-pdrop-menu {
+    position: absolute; top: calc(100% + 6px); right: 0;
+    background: var(--_surface);
+    border: 1.5px solid var(--_border);
+    border-radius: calc(var(--_radius) * 1.8);
+    box-shadow: 0 12px 40px oklch(0 0 0 / .12);
+    z-index: 100; overflow: hidden; min-width: 148px;
+  }
+  .dark .dh-pdrop-menu { box-shadow: 0 12px 40px oklch(0 0 0 / .45); }
+
+  .dh-pdrop-opt {
+    display: block; width: 100%; text-align: left;
+    padding: 10px 16px;
+    font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: .06em;
+    border: none; cursor: pointer; transition: background .1s;
+    background: transparent; color: var(--_text2);
+  }
+  .dh-pdrop-opt:hover { background: var(--_green-bg); }
+  .dh-pdrop-opt.active {
+    background: var(--_green-bg);
+    color: var(--_green-dark); font-weight: 600;
+  }
+  .dark .dh-pdrop-opt.active { color: var(--_green); }
+
+  /* ── range toggle ────────────────────────────────────────────────────── */
+  .dh-range {
+    display: flex;
+    background: oklch(0.72 0.19 149 / 0.06);
+    border: 1.5px solid var(--_green-bdr);
+    border-radius: calc(var(--_radius) * 1.5); overflow: hidden;
+  }
+  .dh-range-btn {
+    padding: 6px 15px;
+    font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: .06em;
+    border: none; cursor: pointer;
+    transition: background .15s, color .15s;
+    background: transparent; color: var(--_text2);
+  }
+  .dh-range-btn.active {
+    background: var(--_green);
+    color: #fff;
+  }
+
+  /* ── skeleton ────────────────────────────────────────────────────────── */
+  .dh-skeleton {
+    background: linear-gradient(90deg,
+      oklch(0.72 0.19 149 / 0.05) 25%,
+      oklch(0.72 0.19 149 / 0.12) 50%,
+      oklch(0.72 0.19 149 / 0.05) 75%);
+    background-size: 200% 100%;
+    animation: dh-shimmer 1.6s infinite;
+    border-radius: calc(var(--_radius) * 2);
+  }
+
+  /* ── clock colon ─────────────────────────────────────────────────────── */
+  .dh-colon { animation: dh-colon 1s step-end infinite; display: inline-block; }
+
+  /* ── responsive ──────────────────────────────────────────────────────── */
+  @media (max-width: 960px) {
+    .dh-main-grid  { flex-direction: column !important; }
+    .dh-right-col  { flex-direction: row !important; width: 100% !important; }
+    .dh-btm-row    { flex-direction: column !important; }
+  }
+  @media (max-width: 560px) {
+    .dh-right-col  { flex-direction: column !important; }
+    .dh-wrap       { padding: 20px 16px 48px !important; }
+  }
+`;
+
+// ─── Live Clock ───────────────────────────────────────────────────────────────
+
+function LiveClock() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const pad  = (n: number) => String(n).padStart(2, '0');
+  const hrs  = pad(now.getHours());
+  const mins = pad(now.getMinutes());
+  const secs = pad(now.getSeconds());
+  const date = now.toLocaleDateString('en', {
+    weekday: 'short', month: 'short', day: 'numeric',
+  });
 
   return (
-    <div
-      style={{
-        background: '#fff',
-        border: '1.5px solid #E0EDE7',
-        borderRadius: 20,
-        padding: '24px 28px',
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: 20,
-          flexWrap: 'wrap',
-          gap: 10,
-        }}
-      >
-        <div>
-          <div
-            style={{
-              fontSize: 15,
-              fontWeight: 800,
-              color: '#0A1F14',
-              marginBottom: 3,
-            }}
-          >
-            Call Minutes Trend
-          </div>
-          <div style={{ fontSize: 11, color: '#8CA898' }}>
-            Total minutes per day · Last {range} days
-          </div>
-        </div>
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 10,
+      background: 'oklch(0.72 0.19 149 / 0.08)',
+      border: '1.5px solid oklch(0.72 0.19 149 / 0.22)',
+      borderRadius: 'calc(var(--radius, 0.625rem) * 1.8)',
+      padding: '8px 16px',
+    }}>
+      <Clock size={13} style={{ color: 'oklch(0.42 0.11 136)', flexShrink: 0 }} strokeWidth={2} />
 
-        {/* Range toggle */}
-        <div
-          style={{
-            display: 'flex',
-            background: '#F4FAF7',
-            border: '1.5px solid #E0EDE7',
-            borderRadius: 10,
-            overflow: 'hidden',
-          }}
-        >
-          {([7, 30] as const).map(r => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => onRangeChange(r)}
-              style={{
-                padding: '6px 14px',
-                fontSize: 12,
-                fontWeight: 600,
-                border: 'none',
-                cursor: 'pointer',
-                background: range === r ? '#0D6E4F' : 'transparent',
-                color: range === r ? '#fff' : '#4A6355',
-                transition: 'all .15s',
-              }}
-            >
-              {r}d
-            </button>
-          ))}
-        </div>
+      {/* HH */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 0, lineHeight: 1 }}>
+        <span style={{
+          fontFamily: "'DM Mono', monospace", fontSize: 19, fontWeight: 500,
+          color: 'var(--foreground)', letterSpacing: '0.04em',
+        }}>{hrs}</span>
+        <span className="dh-colon" style={{
+          fontFamily: "'DM Mono', monospace", fontSize: 19, fontWeight: 300,
+          color: 'oklch(0.72 0.19 149)', padding: '0 1px',
+        }}>:</span>
+        <span style={{
+          fontFamily: "'DM Mono', monospace", fontSize: 19, fontWeight: 500,
+          color: 'var(--foreground)', letterSpacing: '0.04em',
+        }}>{mins}</span>
+        <span className="dh-colon" style={{
+          fontFamily: "'DM Mono', monospace", fontSize: 19, fontWeight: 300,
+          color: 'oklch(0.72 0.19 149 / 0.5)', padding: '0 1px',
+        }}>:</span>
+        {/* seconds — slightly smaller, accent green */}
+        <span style={{
+          fontFamily: "'DM Mono', monospace", fontSize: 14, fontWeight: 400,
+          color: 'oklch(0.72 0.19 149)', letterSpacing: '0.04em',
+          alignSelf: 'flex-end', paddingBottom: '1px',
+        }}>{secs}</span>
       </div>
 
-      {/* Summary row */}
-      <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
-        <div>
-          <div
-            style={{
-              fontSize: 28,
-              fontWeight: 800,
-              color: '#0A1F14',
-              lineHeight: 1,
-            }}
-          >
-            {filled.reduce((s, p) => s + p.minutes, 0).toFixed(1)}
-          </div>
-          <div style={{ fontSize: 11, color: '#8CA898', marginTop: 2 }}>
-            total minutes
-          </div>
-        </div>
-        <div>
-          <div
-            style={{
-              fontSize: 28,
-              fontWeight: 800,
-              color: '#0A1F14',
-              lineHeight: 1,
-            }}
-          >
-            {filled.reduce((s, p) => s + p.callCount, 0)}
-          </div>
-          <div style={{ fontSize: 11, color: '#8CA898', marginTop: 2 }}>
-            total calls
-          </div>
-        </div>
-        <div>
-          <div
-            style={{
-              fontSize: 28,
-              fontWeight: 800,
-              color: '#0A1F14',
-              lineHeight: 1,
-            }}
-          >
-            {(
-              filled.reduce((s, p) => s + p.minutes, 0) /
-              Math.max(filled.filter(p => p.callCount > 0).length, 1)
-            ).toFixed(1)}
-          </div>
-          <div style={{ fontSize: 11, color: '#8CA898', marginTop: 2 }}>
-            avg min/day
-          </div>
-        </div>
-      </div>
-
-      {/* SVG chart */}
-      <div style={{ overflowX: 'auto' }}>
-        <svg
-          width="100%"
-          viewBox={`0 0 ${W} ${H}`}
-          style={{ display: 'block', minWidth: 280 }}
-        >
-          {/* Grid lines */}
-          {yTicks.map((tick, i) => (
-            <g key={i}>
-              <line
-                x1={PAD.left}
-                y1={yScale(tick)}
-                x2={W - PAD.right}
-                y2={yScale(tick)}
-                stroke="#E0EDE7"
-                strokeWidth={1}
-                strokeDasharray="3 3"
-              />
-              <text
-                x={PAD.left - 6}
-                y={yScale(tick) + 4}
-                textAnchor="end"
-                fontSize={9}
-                fill="#8CA898"
-              >
-                {tick}
-              </text>
-            </g>
-          ))}
-
-          {/* Area fill */}
-          <path d={areaD} fill="url(#chartGrad)" opacity={0.35} />
-
-          {/* Line */}
-          <path
-            d={pathD}
-            fill="none"
-            stroke="#1DB87A"
-            strokeWidth={2}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-
-          {/* Gradient def */}
-          <defs>
-            <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#1DB87A" stopOpacity={0.6} />
-              <stop offset="100%" stopColor="#1DB87A" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-
-          {/* Data points + hover */}
-          {filled.map((p, i) => (
-            <g key={i}>
-              {/* Invisible wider hit area */}
-              <rect
-                x={xScale(i) - 10}
-                y={PAD.top}
-                width={20}
-                height={innerH}
-                fill="transparent"
-                style={{ cursor: 'pointer' }}
-                onMouseEnter={() => setHovered(i)}
-                onMouseLeave={() => setHovered(null)}
-              />
-
-              {/* Dot — only show on hover or if it has data */}
-              {(hovered === i || p.minutes > 0) && (
-                <circle
-                  cx={xScale(i)}
-                  cy={yScale(p.minutes)}
-                  r={hovered === i ? 5 : 3}
-                  fill={hovered === i ? '#0D6E4F' : '#1DB87A'}
-                  stroke="#fff"
-                  strokeWidth={1.5}
-                />
-              )}
-
-              {/* Tooltip on hover */}
-              {hovered === i && (
-                <g>
-                  <rect
-                    x={Math.min(xScale(i) - 42, W - PAD.right - 84)}
-                    y={yScale(p.minutes) - 42}
-                    width={84}
-                    height={34}
-                    rx={6}
-                    ry={6}
-                    fill="#0A1F14"
-                  />
-                  <text
-                    x={Math.min(xScale(i), W - PAD.right - 42)}
-                    y={yScale(p.minutes) - 24}
-                    textAnchor="middle"
-                    fontSize={9.5}
-                    fill="#1DB87A"
-                    fontWeight="700"
-                  >
-                    {p.minutes.toFixed(1)} min
-                  </text>
-                  <text
-                    x={Math.min(xScale(i), W - PAD.right - 42)}
-                    y={yScale(p.minutes) - 13}
-                    textAnchor="middle"
-                    fontSize={9}
-                    fill="#8CA898"
-                  >
-                    {p.callCount} call{p.callCount !== 1 ? 's' : ''} ·{' '}
-                    {new Date(p.date).toLocaleDateString('en', {
-                      month: 'short',
-                      day: 'numeric',
-                    })}
-                  </text>
-                </g>
-              )}
-            </g>
-          ))}
-
-          {/* X-axis labels */}
-          {filled.map((p, i) => {
-            if (i % xLabelStep !== 0 && i !== filled.length - 1) return null;
-            const d = new Date(p.date);
-            return (
-              <text
-                key={i}
-                x={xScale(i)}
-                y={H - 4}
-                textAnchor="middle"
-                fontSize={9}
-                fill="#8CA898"
-              >
-                {d.toLocaleDateString('en', { month: 'short', day: 'numeric' })}
-              </text>
-            );
-          })}
-        </svg>
-      </div>
+      <div style={{ width: 1, height: 20, background: 'oklch(0.72 0.19 149 / 0.2)' }} />
+      <span className="dh-label" style={{ fontSize: 9 }}>{date}</span>
     </div>
   );
 }
 
 // ─── Animated counter ─────────────────────────────────────────────────────────
 
-function Counter({
-  target,
-  duration = 900,
-}: {
-  target: number;
-  duration?: number;
-}) {
+function Counter({ target, duration = 900 }: { target: number; duration?: number }) {
   const [val, setVal] = useState(0);
   useEffect(() => {
     let startTime: number | null = null;
     let rafId: number;
     const step = (ts: number) => {
       if (!startTime) startTime = ts;
-      const progress = Math.min((ts - startTime) / duration, 1);
-      const ease = 1 - Math.pow(1 - progress, 3);
+      const p    = Math.min((ts - startTime) / duration, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
       setVal(Math.floor(ease * target));
-      if (progress < 1) rafId = requestAnimationFrame(step);
+      if (p < 1) rafId = requestAnimationFrame(step);
     };
     rafId = requestAnimationFrame(step);
     return () => cancelAnimationFrame(rafId);
@@ -498,194 +438,81 @@ function Counter({
 
 // ─── Donut chart ──────────────────────────────────────────────────────────────
 
-// ─── Pure helper — lives outside component, no ESLint violation ──────────────
-// Moved out of DonutChart to avoid react-hooks/immutability lint error.
-// `cumulative` mutation is fine here because this is a plain function, not
-// a component render — ESLint only flags mutations inside render scope.
-function buildSlices(
-  segments: Segment[],
-  C: number
-): Array<Segment & { dashArray: string; dashOffset: number }> {
+function buildSlices(segments: Segment[], C: number) {
   const total = segments.reduce((s, x) => s + x.value, 0);
-  let cumulative = 0;
+  let cum = 0;
   return segments.map(seg => {
-    const arcLen = total > 0 ? (seg.value / total) * C : 0;
-    const draw = Math.max(arcLen - 2, 0);
-    const dashArray = `${draw} ${C - draw}`;
-    const dashOffset = C * 0.25 - cumulative;
-    cumulative += arcLen;
+    const arcLen     = total > 0 ? (seg.value / total) * C : 0;
+    const draw       = Math.max(arcLen - 2, 0);
+    const dashArray  = `${draw} ${C - draw}`;
+    const dashOffset = C * 0.25 - cum;
+    cum += arcLen;
     return { ...seg, dashArray, dashOffset };
   });
 }
 
-function DonutChart({
-  segments,
-  size = 180,
-  thickness = 28,
-}: {
-  segments: Segment[];
-  size?: number;
-  thickness?: number;
-}) {
+function DonutChart({ segments, size = 180, thickness = 24 }:
+  { segments: Segment[]; size?: number; thickness?: number }) {
   const total = segments.reduce((s, x) => s + x.value, 0);
-  const cx = size / 2;
-  const cy = size / 2;
-  const R = (size - thickness) / 2;
-  const C = 2 * Math.PI * R;
+  const cx    = size / 2;
+  const cy    = size / 2;
+  const R     = (size - thickness) / 2;
+  const C     = 2 * Math.PI * R;
 
   if (total === 0) {
     return (
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle
-          cx={cx}
-          cy={cy}
-          r={R}
-          fill="none"
-          stroke="#E0EDE7"
-          strokeWidth={thickness}
-        />
-        <circle cx={cx} cy={cy} r={R - thickness / 2 - 3} fill="white" />
+        <circle cx={cx} cy={cy} r={R} fill="none"
+          stroke="oklch(0.72 0.19 149 / 0.10)" strokeWidth={thickness} />
       </svg>
     );
   }
 
-  // CHANGED: slices computed via pure function outside render scope
   const slices = buildSlices(segments, C);
-
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox={`0 0 ${size} ${size}`}
-      style={{ overflow: 'visible', transform: 'rotate(-90deg)' }}
-    >
-      <circle
-        cx={cx}
-        cy={cy}
-        r={R}
-        fill="none"
-        stroke="#E0EDE7"
-        strokeWidth={thickness}
-      />
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}
+      style={{ overflow: 'visible', transform: 'rotate(-90deg)' }}>
+      <defs>
+        <filter id="dh-glow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+      </defs>
+      <circle cx={cx} cy={cy} r={R} fill="none"
+        stroke="oklch(0.72 0.19 149 / 0.08)" strokeWidth={thickness} />
       {slices.map((s, i) => (
-        <circle
-          key={i}
-          cx={cx}
-          cy={cy}
-          r={R}
-          fill="none"
-          stroke={s.color}
-          strokeWidth={thickness}
+        <circle key={i} cx={cx} cy={cy} r={R} fill="none"
+          stroke={s.color} strokeWidth={thickness}
           strokeLinecap="butt"
           strokeDasharray={s.dashArray}
           strokeDashoffset={s.dashOffset}
-        />
+          filter={i === 0 ? 'url(#dh-glow)' : undefined} />
       ))}
-      <circle cx={cx} cy={cy} r={R - thickness / 2 - 3} fill="white" />
+      <circle cx={cx} cy={cy} r={R - thickness / 2 - 2} fill="var(--card)" />
     </svg>
-  );
-}
-// ─── Trend badge ──────────────────────────────────────────────────────────────
-
-function TrendBadge({ value }: { value: string }) {
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 3,
-        fontSize: 11,
-        fontWeight: 700,
-        color: '#0D6E4F',
-        background: '#E8F7F1',
-        border: '1px solid #C4E8D8',
-        borderRadius: 99,
-        padding: '3px 9px',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      <TrendingUp size={10} strokeWidth={3} />
-      {value}
-    </span>
   );
 }
 
 // ─── Period dropdown ──────────────────────────────────────────────────────────
 
-function PeriodDropdown({
-  selected,
-  onSelect,
-}: {
-  selected: Period;
-  onSelect: (p: Period) => void;
-}) {
+function PeriodDropdown({ selected, onSelect }:
+  { selected: Period; onSelect: (p: Period) => void }) {
   const [open, setOpen] = useState(false);
   return (
     <div style={{ position: 'relative' }}>
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 6,
-          fontSize: 12,
-          fontWeight: 600,
-          color: '#0D6E4F',
-          background: '#F4FAF7',
-          border: '1.5px solid #C4E8D8',
-          borderRadius: 10,
-          padding: '6px 12px',
-          cursor: 'pointer',
-          whiteSpace: 'nowrap',
-        }}
-      >
+      <button type="button" className="dh-pdrop-btn" onClick={() => setOpen(o => !o)}>
         {PERIOD_LABELS[selected]}
-        <ChevronDown
-          size={13}
-          strokeWidth={2.5}
-          style={{
-            transition: 'transform .15s',
-            transform: open ? 'rotate(180deg)' : 'none',
-          }}
-        />
+        <ChevronDown size={11} strokeWidth={2.5} style={{
+          transition: 'transform .15s',
+          transform: open ? 'rotate(180deg)' : 'none',
+        }} />
       </button>
       {open && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 6px)',
-            right: 0,
-            background: '#fff',
-            border: '1.5px solid #E0EDE7',
-            borderRadius: 12,
-            boxShadow: '0 8px 24px rgba(13,110,79,.12)',
-            zIndex: 50,
-            overflow: 'hidden',
-            minWidth: 140,
-          }}
-        >
+        <div className="dh-pdrop-menu">
           {(Object.keys(PERIOD_LABELS) as Period[]).map(p => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => {
-                onSelect(p);
-                setOpen(false);
-              }}
-              style={{
-                display: 'block',
-                width: '100%',
-                textAlign: 'left',
-                padding: '9px 14px',
-                fontSize: 12,
-                fontWeight: selected === p ? 700 : 500,
-                color: selected === p ? '#0D6E4F' : '#0A1F14',
-                background: selected === p ? '#F4FAF7' : 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-              }}
-            >
+            <button key={p} type="button"
+              className={`dh-pdrop-opt${selected === p ? ' active' : ''}`}
+              onClick={() => { onSelect(p); setOpen(false); }}>
               {PERIOD_LABELS[p]}
             </button>
           ))}
@@ -695,288 +522,282 @@ function PeriodDropdown({
   );
 }
 
+// ─── Trend chart ──────────────────────────────────────────────────────────────
+
+function TrendChart({ data, range, onRangeChange }:
+  { data: AnalyticsResponse['dailyMinutes']; range: 7 | 30; onRangeChange: (r: 7 | 30) => void }) {
+  const [hovered, setHovered] = useState<number | null>(null);
+
+  const filled = useMemo(() => {
+    const points = range === 7 ? data.last7 : data.last30;
+    const map    = new Map(points.map(p => [p.date.slice(0, 10), p]));
+    const result: { date: string; minutes: number; callCount: number }[] = [];
+    for (let i = range - 1; i >= 0; i--) {
+      const d   = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      result.push(map.get(key) ?? { date: key, minutes: 0, callCount: 0 });
+    }
+    return result;
+  }, [data, range]);
+
+  const W      = 520;
+  const H      = 130;
+  const PAD    = { top: 14, right: 14, bottom: 32, left: 40 };
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+
+  const maxMinutes = Math.max(...filled.map(p => p.minutes), 1);
+  const xScale     = (i: number) => PAD.left + (i / (filled.length - 1)) * innerW;
+  const yScale     = (v: number) => PAD.top + innerH - (v / maxMinutes) * innerH;
+
+  const pathD = filled.map((p, i) =>
+    `${i === 0 ? 'M' : 'L'} ${xScale(i).toFixed(1)} ${yScale(p.minutes).toFixed(1)}`
+  ).join(' ');
+
+  const areaD = pathD
+    + ` L ${xScale(filled.length - 1).toFixed(1)} ${(PAD.top + innerH).toFixed(1)}`
+    + ` L ${PAD.left.toFixed(1)} ${(PAD.top + innerH).toFixed(1)} Z`;
+
+  const yTicks     = [0, Math.round(maxMinutes / 2), Math.round(maxMinutes)];
+  const xLabelStep = range === 30 ? 5 : 1;
+  const totalMins  = filled.reduce((s, p) => s + p.minutes, 0);
+  const totalCalls = filled.reduce((s, p) => s + p.callCount, 0);
+  const avgMinDay  = (totalMins / Math.max(filled.filter(p => p.callCount > 0).length, 1)).toFixed(1);
+
+  return (
+    <div className="dh-card" style={{ padding: '28px 32px' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between',
+        alignItems: 'flex-start', marginBottom: 22, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <div className="dh-label" style={{ marginBottom: 5 }}>Call Minutes Trend</div>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>Last {range} days overview</div>
+        </div>
+        <div className="dh-range">
+          {([7, 30] as const).map(r => (
+            <button key={r} type="button"
+              className={`dh-range-btn${range === r ? ' active' : ''}`}
+              onClick={() => onRangeChange(r)}>
+              {r}d
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Summary stats */}
+      <div style={{ display: 'flex', gap: 32, marginBottom: 22 }}>
+        {[
+          { label: 'Total Minutes', value: totalMins.toFixed(1) },
+          { label: 'Total Calls',   value: String(totalCalls) },
+          { label: 'Avg Min / Day', value: avgMinDay },
+        ].map((s, i) => (
+          <div key={i}>
+            <div style={{ fontSize: 26, fontWeight: 700, lineHeight: 1 }}>{s.value}</div>
+            <div className="dh-label" style={{ marginTop: 4 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* SVG */}
+      <div style={{ overflowX: 'auto' }}>
+        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: 'block', minWidth: 280 }}>
+          <defs>
+            <linearGradient id="dh-cg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stopColor="oklch(0.72 0.19 149)" stopOpacity={0.25} />
+              <stop offset="100%" stopColor="oklch(0.72 0.19 149)" stopOpacity={0} />
+            </linearGradient>
+            <filter id="dh-lglow">
+              <feGaussianBlur stdDeviation="2" result="b" />
+              <feComposite in="SourceGraphic" in2="b" operator="over" />
+            </filter>
+          </defs>
+
+          {yTicks.map((tick, i) => (
+            <g key={i}>
+              <line x1={PAD.left} y1={yScale(tick)} x2={W - PAD.right} y2={yScale(tick)}
+                stroke="oklch(0.72 0.19 149 / 0.10)" strokeWidth={1} />
+              <text x={PAD.left - 8} y={yScale(tick) + 4} textAnchor="end"
+                fontSize={9} fill="var(--muted-foreground)"
+                fontFamily="'DM Mono', monospace">{tick}</text>
+            </g>
+          ))}
+
+          <path d={areaD} fill="url(#dh-cg)" />
+          <path d={pathD} fill="none"
+            stroke="oklch(0.72 0.19 149)" strokeWidth={2}
+            strokeLinejoin="round" strokeLinecap="round"
+            filter="url(#dh-lglow)" />
+
+          {filled.map((p, i) => (
+            <g key={i}>
+              <rect x={xScale(i) - 12} y={PAD.top} width={24} height={innerH}
+                fill="transparent" style={{ cursor: 'pointer' }}
+                onMouseEnter={() => setHovered(i)}
+                onMouseLeave={() => setHovered(null)} />
+              {(hovered === i || p.minutes > 0) && (
+                <circle cx={xScale(i)} cy={yScale(p.minutes)}
+                  r={hovered === i ? 5 : 3}
+                  fill={hovered === i ? 'oklch(0.42 0.11 136)' : 'oklch(0.72 0.19 149)'}
+                  stroke="var(--card)" strokeWidth={1.5} />
+              )}
+              {hovered === i && (
+                <g>
+                  <rect
+                    x={Math.min(xScale(i) - 46, W - PAD.right - 92)}
+                    y={yScale(p.minutes) - 50}
+                    width={92} height={38} rx={7}
+                    fill="var(--card)"
+                    stroke="oklch(0.72 0.19 149 / 0.25)" strokeWidth={1} />
+                  <text
+                    x={Math.min(xScale(i), W - PAD.right - 46)}
+                    y={yScale(p.minutes) - 29}
+                    textAnchor="middle" fontSize={10}
+                    fill="oklch(0.42 0.11 136)" fontWeight="700"
+                    fontFamily="'DM Mono', monospace">
+                    {p.minutes.toFixed(1)} min
+                  </text>
+                  <text
+                    x={Math.min(xScale(i), W - PAD.right - 46)}
+                    y={yScale(p.minutes) - 17}
+                    textAnchor="middle" fontSize={9}
+                    fill="var(--muted-foreground)"
+                    fontFamily="'DM Mono', monospace">
+                    {p.callCount} call{p.callCount !== 1 ? 's' : ''} ·{' '}
+                    {new Date(p.date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                  </text>
+                </g>
+              )}
+            </g>
+          ))}
+
+          {filled.map((p, i) => {
+            if (i % xLabelStep !== 0 && i !== filled.length - 1) return null;
+            return (
+              <text key={i} x={xScale(i)} y={H - 4} textAnchor="middle"
+                fontSize={9} fill="var(--muted-foreground)"
+                fontFamily="'DM Mono', monospace">
+                {new Date(p.date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+              </text>
+            );
+          })}
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function SkeletonCard({ height = 120 }: { height?: number }) {
-  return (
-    <div
-      style={{
-        background: '#fff',
-        border: '1.5px solid #E0EDE7',
-        borderRadius: 18,
-        height,
-        flex: 1,
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background:
-            'linear-gradient(90deg, #f0f7f4 25%, #e0ede7 50%, #f0f7f4 75%)',
-          backgroundSize: '200% 100%',
-          animation: 'shimmer 1.4s infinite',
-        }}
-      />
-    </div>
-  );
+  return <div className="dh-skeleton" style={{ height, flex: 1 }} />;
 }
 
-// ─── Mini card ────────────────────────────────────────────────────────────────
+// ─── Stat card (mini) ─────────────────────────────────────────────────────────
 
-function MiniCard({
-  dark = false,
-  icon: Icon,
-  title,
-  subtitle,
-  value,
-  badge,
-  barPct,
-  barColor,
-  note,
-}: {
-  dark?: boolean;
+function StatCard({ accent = false, icon: Icon, label, sublabel, value, badge, barPct, note }: {
+  accent?: boolean;
   icon: React.ElementType;
-  title: string;
-  subtitle: string;
+  label: string;
+  sublabel: string;
   value: number;
   badge: string;
   barPct: number;
-  barColor: string;
   note: string;
 }) {
-  const [hovered, setHovered] = useState(false);
-  const bg = dark ? '#0A1F14' : '#FFFFFF';
-  const textCol = dark ? '#FFFFFF' : '#0A1F14';
-  const subCol = dark ? '#8CA898' : '#4A6355';
-  const track = dark ? 'rgba(255,255,255,.10)' : '#E0EDE7';
-  const iconBg = dark ? 'rgba(29,184,122,.15)' : '#E8F7F1';
-  const iconCol = dark ? '#1DB87A' : '#0D6E4F';
-  const border = dark
-    ? '1.5px solid rgba(29,184,122,.20)'
-    : '1.5px solid #E0EDE7';
-  const shadow = hovered
-    ? dark
-      ? '0 8px 32px rgba(13,110,79,.35)'
-      : '0 6px 24px rgba(13,110,79,.12)'
-    : 'none';
-
   return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        background: bg,
-        border,
-        borderRadius: 18,
-        padding: '22px 24px',
-        flex: 1,
-        position: 'relative',
-        overflow: 'hidden',
-        boxShadow: shadow,
-        transition: 'box-shadow .2s',
-      }}
-    >
-      {dark && (
-        <div
-          style={{
-            position: 'absolute',
-            top: -40,
-            right: -40,
-            width: 130,
-            height: 130,
-            borderRadius: '50%',
-            background: 'rgba(29,184,122,.06)',
-            pointerEvents: 'none',
-          }}
-        />
+    <div className={`dh-card${accent ? ' dh-card-accent' : ''}`}
+      style={{ flex: 1, padding: '22px 24px' }}>
+      {accent && (
+        <div style={{
+          position: 'absolute', top: -36, right: -36,
+          width: 130, height: 130, borderRadius: '50%',
+          background: 'radial-gradient(circle, oklch(0.72 0.19 149 / 0.12) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
       )}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: 16,
-        }}
-      >
-        <div
-          style={{
-            background: iconBg,
-            borderRadius: 11,
-            padding: 8,
-            display: 'inline-flex',
-          }}
-        >
-          <Icon size={17} color={iconCol} strokeWidth={2.3} />
+      <div style={{ display: 'flex', justifyContent: 'space-between',
+        alignItems: 'flex-start', marginBottom: 16 }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: 'calc(var(--radius, 0.625rem) * 1.5)',
+          background: 'oklch(0.72 0.19 149 / 0.10)',
+          border: '1.5px solid oklch(0.72 0.19 149 / 0.20)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Icon size={16} style={{ color: 'oklch(0.42 0.11 136)' }} strokeWidth={2.2} />
         </div>
-        <TrendBadge value={badge} />
+        <span className="dh-badge">
+          <TrendingUp size={9} strokeWidth={3} /> {badge}
+        </span>
       </div>
-      <div
-        style={{
-          fontSize: 32,
-          fontWeight: 800,
-          color: textCol,
-          lineHeight: 1,
-          marginBottom: 4,
-        }}
-      >
+
+      <div style={{ fontSize: 36, fontWeight: 800, lineHeight: 1, marginBottom: 5,
+        color: accent ? 'oklch(0.42 0.11 136)' : 'var(--foreground)' }}>
         <Counter target={value} />
       </div>
-      <div
-        style={{
-          fontSize: 13,
-          fontWeight: 600,
-          color: textCol,
-          marginBottom: 2,
-        }}
-      >
-        {title}
+      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>{label}</div>
+      <div className="dh-label" style={{ marginBottom: 14 }}>{sublabel}</div>
+
+      <div className="dh-track">
+        <div className="dh-fill" style={{ width: `${barPct}%` }} />
       </div>
-      <div style={{ fontSize: 11, color: subCol, marginBottom: 16 }}>
-        {subtitle}
-      </div>
-      <div
-        style={{
-          height: 5,
-          background: track,
-          borderRadius: 99,
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            width: `${barPct}%`,
-            height: '100%',
-            background: barColor,
-            borderRadius: 99,
-          }}
-        />
-      </div>
-      <div style={{ marginTop: 6, fontSize: 11, color: subCol }}>{note}</div>
+      <div className="dh-label" style={{ marginTop: 7 }}>{note}</div>
     </div>
   );
 }
 
-// ─── Bottom card ──────────────────────────────────────────────────────────────
+// ─── Live / metric card ───────────────────────────────────────────────────────
 
-function BottomCard({
-  icon: Icon,
-  iconBg,
-  iconColor,
-  title,
-  subtitle,
-  value,
-  badge,
-  barPct,
-  barGradient,
-  barNote,
-  barNoteColor,
-}: {
+function MetricCard({ icon: Icon, label, sublabel, value, live, barPct, barNote, barPct2 }: {
   icon: React.ElementType;
-  iconBg: string;
-  iconColor: string;
-  title: string;
-  subtitle: string;
+  label: string;
+  sublabel: string;
   value: number;
-  badge: string;
+  live?: boolean;
   barPct: number;
-  barGradient: string;
   barNote: string;
-  barNoteColor: string;
+  barPct2: number;
 }) {
-  const [hovered, setHovered] = useState(false);
   return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        background: '#FFFFFF',
-        border: '1.5px solid #E0EDE7',
-        borderRadius: 18,
-        padding: '24px 26px',
-        flex: 1,
-        boxShadow: hovered ? '0 6px 24px rgba(13,110,79,.10)' : 'none',
-        transition: 'box-shadow .2s',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 20,
-          flexWrap: 'wrap',
-          gap: 10,
-        }}
-      >
+    <div className="dh-card" style={{ flex: 1, padding: '24px 26px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between',
+        alignItems: 'flex-start', marginBottom: 18 }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <div
-            style={{
-              background: iconBg,
-              borderRadius: 12,
-              padding: 9,
-              display: 'inline-flex',
-            }}
-          >
-            <Icon size={19} color={iconColor} strokeWidth={2.2} />
+          <div style={{
+            width: 40, height: 40, borderRadius: 'calc(var(--radius, 0.625rem) * 1.8)',
+            background: 'oklch(0.72 0.19 149 / 0.08)',
+            border: '1.5px solid oklch(0.72 0.19 149 / 0.18)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Icon size={18} style={{ color: 'oklch(0.42 0.11 136)' }} strokeWidth={2} />
           </div>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#0A1F14' }}>
-              {title}
-            </div>
-            <div style={{ fontSize: 11, color: '#8CA898' }}>{subtitle}</div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>{label}</div>
+            <div className="dh-label" style={{ marginTop: 2 }}>{sublabel}</div>
           </div>
         </div>
+        {live ? (
+          <span className="dh-live">
+            <span className="dh-live-dot" /> LIVE
+          </span>
+        ) : (
+          <span className="dh-badge">
+            <TrendingUp size={9} strokeWidth={3} /> All time
+          </span>
+        )}
       </div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-end',
-          marginBottom: 14,
-        }}
-      >
-        <div
-          style={{
-            fontSize: 38,
-            fontWeight: 800,
-            color: '#0A1F14',
-            lineHeight: 1,
-          }}
-        >
-          <Counter target={value} />
-        </div>
-        <TrendBadge value={badge} />
+
+      <div style={{ fontSize: 44, fontWeight: 800, lineHeight: 1, marginBottom: 18 }}>
+        <Counter target={value} />
       </div>
-      <div
-        style={{
-          height: 7,
-          background: '#E0EDE7',
-          borderRadius: 99,
-          overflow: 'hidden',
-          marginBottom: 8,
-        }}
-      >
-        <div
-          style={{
-            width: `${barPct}%`,
-            height: '100%',
-            background: barGradient,
-            borderRadius: 99,
-          }}
-        />
+
+      <div className="dh-track" style={{ height: 6 }}>
+        <div className="dh-fill" style={{ width: `${barPct}%` }} />
       </div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: 11,
-        }}
-      >
-        <span style={{ color: '#8CA898' }}>{barNote}</span>
-        <span style={{ color: barNoteColor, fontWeight: 700 }}>{barPct}%</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 7 }}>
+        <span className="dh-label">{barNote}</span>
+        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, fontWeight: 600,
+          color: 'oklch(0.42 0.11 136)' }}>{barPct2}%</span>
       </div>
     </div>
   );
@@ -985,12 +806,13 @@ function BottomCard({
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export default function DashboardHome() {
-  const [raw, setRaw] = useState<AnalyticsResponse | null>(null);
-  const [presence, setPresence] = useState<PresenceResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [callPeriod, setCallPeriod] = useState<Period>('this_week');
-  const [chartRange, setChartRange] = useState<7 | 30>(7);
+  const [raw,            setRaw]            = useState<AnalyticsResponse | null>(null);
+  const [presence,       setPresence]       = useState<PresenceResponse | null>(null);
+  const [loading,        setLoading]        = useState(true);
+  const [error,          setError]          = useState<string | null>(null);
+  const [callPeriod,     setCallPeriod]     = useState<Period>('this_week');
+  const [chartRange,     setChartRange]     = useState<7 | 30>(7);
+  const [periodChanging, setPeriodChanging] = useState(false);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -1000,14 +822,9 @@ export default function DashboardHome() {
           axiosInstance.get('/admin/analytics'),
           axiosInstance.get('/live/admin/presence'),
         ]);
-        if (analyticsRes.status === 'fulfilled') {
-          setRaw(analyticsRes.value.data.data);
-        } else {
-          setError('Failed to load analytics');
-        }
-        if (presenceRes.status === 'fulfilled') {
-          setPresence(presenceRes.value.data.data);
-        }
+        if (analyticsRes.status === 'fulfilled') setRaw(analyticsRes.value.data.data);
+        else setError('Failed to load analytics');
+        if (presenceRes.status === 'fulfilled') setPresence(presenceRes.value.data.data);
       } catch (err) {
         console.error(err);
         setError('Failed to load analytics');
@@ -1019,367 +836,170 @@ export default function DashboardHome() {
   }, []);
 
   const filtered = raw ? filterByPeriod(raw.sessions, callPeriod) : [];
-  const metrics = computeMetrics(filtered);
+  const metrics  = computeMetrics(filtered);
 
-  const prevWeekSessions = raw
-    ? raw.sessions.filter(s => {
-        const start = getPeriodStart('this_week');
-        const prevStart = new Date(start.getTime() - 7 * 24 * 60 * 60 * 1000);
-        const d = new Date(s.startedAt);
-        return d >= prevStart && d < start;
-      })
-    : [];
+  const prevWeekSessions = raw ? raw.sessions.filter(s => {
+    const start     = getPeriodStart('this_week');
+    const prevStart = new Date(start.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const d         = new Date(s.startedAt);
+    return d >= prevStart && d < start;
+  }) : [];
 
-  const weekGrowth =
-    prevWeekSessions.length > 0
-      ? `+${Math.round(((filtered.length - prevWeekSessions.length) / prevWeekSessions.length) * 100)}%`
-      : filtered.length > 0
-        ? '+100%'
-        : '0%';
+  const weekGrowth = prevWeekSessions.length > 0
+    ? `+${Math.round(((filtered.length - prevWeekSessions.length) / prevWeekSessions.length) * 100)}%`
+    : filtered.length > 0 ? '+100%' : '0%';
 
+  // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div
-        className="dash-home"
-        style={{
-          fontFamily: 'Plus Jakarta Sans, sans-serif',
-          background: '#F4FAF7',
-          minHeight: '100vh',
-          padding: '32px 28px 48px',
-        }}
-      >
-        <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-          @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-          .dash-home * { box-sizing: border-box; }
-        `}</style>
-        <div
-          style={{
-            marginBottom: 32,
-            height: 52,
-            background: '#fff',
-            borderRadius: 12,
-            opacity: 0.5,
-          }}
-        />
+      <div className="dh-wrap">
+        <style>{GLOBAL_CSS}</style>
+        <div style={{ height: 64, marginBottom: 36 }} className="dh-skeleton" />
         <div style={{ display: 'flex', gap: 18, marginBottom: 18 }}>
-          <SkeletonCard height={280} />
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 16,
-              width: 230,
-            }}
-          >
-            <SkeletonCard height={130} />
-            <SkeletonCard height={130} />
+          <SkeletonCard height={300} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: 240 }}>
+            <SkeletonCard height={140} /><SkeletonCard height={140} />
           </div>
         </div>
         <div style={{ display: 'flex', gap: 18, marginBottom: 18 }}>
-          <SkeletonCard height={150} />
-          <SkeletonCard height={150} />
+          <SkeletonCard height={160} /><SkeletonCard height={160} />
         </div>
-        <SkeletonCard height={220} />
+        <SkeletonCard height={240} />
       </div>
     );
   }
 
+  // ── Error ──────────────────────────────────────────────────────────────────
   if (error) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          fontFamily: 'Plus Jakarta Sans, sans-serif',
-          color: '#4A6355',
-        }}
-      >
-        {error}
+      <div className="dh-wrap" style={{ display: 'flex', alignItems: 'center',
+        justifyContent: 'center', minHeight: '100vh' }}>
+        <style>{GLOBAL_CSS}</style>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 40, marginBottom: 10,
+            color: 'oklch(0.72 0.19 149)', opacity: 0.5 }}>⚠</div>
+          <div className="dh-label">{error}</div>
+        </div>
       </div>
     );
   }
+
+  const onlineBarPct = raw && raw.totalUsers > 0
+    ? Math.min(Math.round(((presence?.onlineCount ?? 0) / raw.totalUsers) * 100), 100) : 0;
+  const inCallBarPct = presence && presence.onlineCount > 0
+    ? Math.min(Math.round((presence.inCallCount / presence.onlineCount) * 100), 100) : 0;
+  const usersBarPct  = raw && raw.totalUsers > 0
+    ? Math.min(Math.round((raw.newUsersThisWeek / raw.totalUsers) * 100) + 70, 100) : 0;
 
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-        .dash-home * { box-sizing: border-box; }
-        .dash-home h1 { margin: 0; }
-        @keyframes fadeSlideUp {
-          from { opacity: 0; transform: translateY(14px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .anim-1 { animation: fadeSlideUp .45s ease both 0s; }
-        .anim-2 { animation: fadeSlideUp .45s ease both .08s; }
-        .anim-3 { animation: fadeSlideUp .45s ease both .16s; }
-        .anim-4 { animation: fadeSlideUp .45s ease both .24s; }
-        .anim-5 { animation: fadeSlideUp .45s ease both .32s; }
-        @media (max-width: 900px) {
-          .dh-main-grid  { flex-direction: column !important; }
-          .dh-right-col  { flex-direction: row !important; width: 100% !important; }
-          .dh-bottom-row { flex-direction: column !important; }
-        }
-        @media (max-width: 560px) {
-          .dh-right-col { flex-direction: column !important; }
-        }
-      `}</style>
+      <style>{GLOBAL_CSS}</style>
+      <div className="dh-wrap">
 
-      <div
-        className="dash-home"
-        style={{
-          fontFamily: 'Plus Jakarta Sans, sans-serif',
-          background: '#F4FAF7',
-          minHeight: '100vh',
-          padding: '32px 28px 48px',
-        }}
-      >
-        {/* ── Header ──────────────────────────────────────────────── */}
-        <div
-          className="anim-1"
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-end',
-            flexWrap: 'wrap',
-            gap: 16,
-            marginBottom: 32,
-          }}
-        >
+        {/* ── Header ──────────────────────────────────────────────────────── */}
+        <div className="dh-a1" style={{
+          display: 'flex', justifyContent: 'space-between',
+          alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 36,
+        }}>
           <div>
-            <h1
-              style={{
-                fontSize: 26,
-                fontWeight: 800,
-                color: '#0A1F14',
-                lineHeight: 1.2,
-              }}
-            >
+            <div className="dh-label" style={{ marginBottom: 8 }}>
+              <span style={{ color: 'oklch(0.72 0.19 149)', marginRight: 8 }}>◆</span>
+              Platform Intelligence
+            </div>
+            <h1 style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.15, margin: 0 }}>
               Admin Dashboard
             </h1>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: 13,
-                color: '#4A6355',
-                marginTop: 6,
-              }}
-            >
-              <Activity size={13} color="#1DB87A" strokeWidth={2.5} />
-              Real-time analytics and insights
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <LiveClock />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Activity size={12} style={{ color: 'oklch(0.72 0.19 149)' }} strokeWidth={2.5} />
+              <span className="dh-label">Real-time analytics</span>
             </div>
           </div>
         </div>
 
-        {/* ── Main row ────────────────────────────────────────────── */}
-        <div
-          className="dh-main-grid anim-2"
-          style={{
-            display: 'flex',
-            gap: 18,
-            marginBottom: 18,
-            alignItems: 'stretch',
-          }}
-        >
+        {/* ── Main row ────────────────────────────────────────────────────── */}
+        <div className="dh-main-grid dh-a2"
+          style={{ display: 'flex', gap: 18, marginBottom: 18, alignItems: 'stretch' }}>
+
           {/* Donut card */}
-          <div
-            style={{
-              background: '#FFFFFF',
-              border: '1.5px solid #E0EDE7',
-              borderRadius: 20,
-              padding: '28px 30px',
-              flex: 1,
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: 26,
-                flexWrap: 'wrap',
-                gap: 10,
-              }}
-            >
+          <div className="dh-card" style={{ flex: 1, padding: '28px 32px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between',
+              alignItems: 'flex-start', marginBottom: 26, flexWrap: 'wrap', gap: 10 }}>
               <div>
-                <div
-                  style={{
-                    fontSize: 16,
-                    fontWeight: 800,
-                    color: '#0A1F14',
-                    marginBottom: 3,
-                  }}
-                >
-                  Total Call Time
-                </div>
-                <div style={{ fontSize: 12, color: '#8CA898' }}>
-                  Distribution by status · {PERIOD_LABELS[callPeriod]}
-                </div>
+                <div className="dh-label" style={{ marginBottom: 5 }}>Call Time Distribution</div>
+                <div style={{ fontSize: 16, fontWeight: 700 }}>Total Call Time</div>
               </div>
-              <PeriodDropdown selected={callPeriod} onSelect={setCallPeriod} />
+              <PeriodDropdown selected={callPeriod} onSelect={p => {
+                setPeriodChanging(true);
+                setTimeout(() => { setCallPeriod(p); setPeriodChanging(false); }, 150);
+              }} />
             </div>
 
-            <div
-              style={{
-                display: 'flex',
-                gap: 32,
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                justifyContent: 'center',
-              }}
-            >
-              <div
-                style={{
-                  position: 'relative',
-                  width: 180,
-                  height: 180,
-                  flexShrink: 0,
-                }}
-              >
-                <DonutChart
-                  segments={metrics.segments}
-                  size={180}
-                  thickness={28}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%,-50%)',
-                    textAlign: 'center',
-                    pointerEvents: 'none',
-                  }}
-                >
-                  {/* CHANGED: show formatted duration instead of raw minute counter */}
-                  <div
-                    style={{
-                      fontSize: metrics.totalMinutes < 60 ? 22 : 26,
-                      fontWeight: 800,
-                      color: '#0A1F14',
-                      lineHeight: 1,
-                    }}
-                  >
-                    {formatDuration(
-                      metrics.segments.reduce((s, x) => s + x.value, 0)
-                    )}
+            <div style={{
+              display: 'flex', gap: 36, alignItems: 'center',
+              flexWrap: 'wrap', justifyContent: 'center',
+              opacity: periodChanging ? 0 : 1, transition: 'opacity .15s',
+            }}>
+              {/* Donut */}
+              <div style={{ position: 'relative', width: 180, height: 180, flexShrink: 0 }}>
+                <DonutChart segments={metrics.segments} size={180} thickness={24} />
+                <div style={{
+                  position: 'absolute', top: '50%', left: '50%',
+                  transform: 'translate(-50%,-50%)',
+                  textAlign: 'center', pointerEvents: 'none',
+                }}>
+                  <div style={{
+                    fontFamily: "'DM Mono', monospace",
+                    fontSize: metrics.totalMinutes < 60 ? 17 : 20,
+                    fontWeight: 600,
+                    color: 'oklch(0.42 0.11 136)',
+                    lineHeight: 1,
+                  }}>
+                    {formatDuration(metrics.segments.reduce((s, x) => s + x.value, 0))}
                   </div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: '#8CA898',
-                      marginTop: 3,
-                      fontWeight: 500,
-                    }}
-                  >
-                    total time
-                  </div>
+                  <div className="dh-label" style={{ marginTop: 4, fontSize: 9 }}>total time</div>
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 13,
-                  flex: 1,
-                  minWidth: 180,
-                }}
-              >
-                {/* FIXED: renders all 4 reason segments dynamically from real data */}
+              {/* Legend */}
+              <div style={{ flex: 1, minWidth: 180,
+                display: 'flex', flexDirection: 'column', gap: 11 }}>
                 {metrics.segments.map((s, i) => {
-                  const totalSecs = metrics.segments.reduce(
-                    (acc, x) => acc + x.value,
-                    0
-                  );
-                  const pct =
-                    totalSecs > 0 ? Math.round((s.value / totalSecs) * 100) : 0;
+                  const totalSecs = metrics.segments.reduce((a, x) => a + x.value, 0);
+                  const pct = totalSecs > 0 ? Math.round((s.value / totalSecs) * 100) : 0;
                   return (
-                    <div
-                      key={i}
-                      style={{ display: 'flex', alignItems: 'center', gap: 10 }}
-                    >
-                      <div
-                        style={{
-                          width: 9,
-                          height: 9,
-                          borderRadius: 3,
-                          background: s.color,
-                          flexShrink: 0,
-                        }}
-                      />
-                      <span
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 500,
-                          color: '#0A1F14',
-                          flex: 1,
-                        }}
-                      >
-                        {s.label}
-                      </span>
-                      {/* CHANGED: shows formatted duration + percentage */}
-                      <span
-                        style={{
-                          fontSize: 11,
-                          color: '#8CA898',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                      <div style={{
+                        width: 9, height: 9, borderRadius: 3,
+                        background: s.color, flexShrink: 0,
+                      }} />
+                      <span style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{s.label}</span>
+                      <span style={{ fontFamily: "'DM Mono', monospace",
+                        fontSize: 10, color: 'var(--muted-foreground)' }}>
                         {formatDuration(s.value)}
                       </span>
-                      <div
-                        style={{
-                          width: 52,
-                          height: 5,
-                          background: '#E0EDE7',
-                          borderRadius: 99,
-                          overflow: 'hidden',
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: `${pct}%`,
-                            height: '100%',
-                            background: s.color,
-                            borderRadius: 99,
-                          }}
-                        />
+                      <div style={{ width: 48, height: 4,
+                        background: 'oklch(0.72 0.19 149 / 0.10)',
+                        borderRadius: 99, overflow: 'hidden' }}>
+                        <div style={{ width: `${pct}%`, height: '100%',
+                          background: s.color, borderRadius: 99 }} />
                       </div>
-                      <span
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 700,
-                          color: '#0A1F14',
-                          width: 32,
-                          textAlign: 'right',
-                        }}
-                      >
-                        {pct}%
-                      </span>
+                      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11,
+                        fontWeight: 700, color: 'var(--foreground)',
+                        width: 30, textAlign: 'right' }}>{pct}%</span>
                     </div>
                   );
                 })}
-                <div
-                  style={{
-                    borderTop: '1.5px solid #E0EDE7',
-                    paddingTop: 13,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <span style={{ fontSize: 12, color: '#8CA898' }}>
-                    Total calls · {PERIOD_LABELS[callPeriod]}
-                  </span>
-                  <span
-                    style={{ fontSize: 20, fontWeight: 800, color: '#0D6E4F' }}
-                  >
+
+                <div className="dh-hr" style={{ marginTop: 5 }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between',
+                  alignItems: 'center' }}>
+                  <span className="dh-label">Total calls · {PERIOD_LABELS[callPeriod]}</span>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 22,
+                    fontWeight: 700, color: 'oklch(0.42 0.11 136)' }}>
                     {metrics.totalCalls}
                   </span>
                 </div>
@@ -1387,141 +1007,80 @@ export default function DashboardHome() {
             </div>
           </div>
 
-          {/* Mini cards */}
-          <div
-            className="dh-right-col"
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 16,
-              width: 230,
-              flexShrink: 0,
-            }}
-          >
-            <MiniCard
-              dark
+          {/* Right mini cards */}
+          <div className="dh-right-col" style={{
+            display: 'flex', flexDirection: 'column', gap: 16,
+            width: 240, flexShrink: 0,
+            opacity: periodChanging ? 0 : 1, transition: 'opacity .15s',
+          }}>
+            <StatCard accent
               icon={Video}
-              title="Total Video Calls"
-              subtitle={`${PERIOD_LABELS[callPeriod]}'s activity`}
+              label="Total Video Calls"
+              sublabel={`${PERIOD_LABELS[callPeriod]}'s activity`}
               value={metrics.totalCalls}
               badge={weekGrowth}
               barPct={Math.min(metrics.totalCalls, 100)}
-              barColor="#1DB87A"
-              note={`calls · ${PERIOD_LABELS[callPeriod]}`}
-            />
-            <MiniCard
+              note={`calls · ${PERIOD_LABELS[callPeriod]}`} />
+            <StatCard
               icon={CheckCircle}
-              title="Successful Matches"
-              subtitle="Completed connections"
+              label="Successful Matches"
+              sublabel="Completed connections"
               value={metrics.completedCalls}
               badge={`${metrics.matchRate}%`}
               barPct={metrics.matchRate}
-              barColor="#0D6E4F"
-              note={`${metrics.matchRate}% match rate`}
-            />
+              note={`${metrics.matchRate}% match rate`} />
           </div>
         </div>
 
-        {/* ── Presence row ─────────────────────────────────────────── */}
-        <div
-          className="dh-bottom-row anim-3"
-          style={{ display: 'flex', gap: 18, marginBottom: 18 }}
-        >
-          <BottomCard
-            icon={Wifi}
-            iconBg="#E8F7F1"
-            iconColor="#0D6E4F"
-            title="Online Now"
-            subtitle="Active socket connections"
-            value={presence?.onlineCount ?? 0}
-            badge="Live"
-            barPct={
-              raw && raw.totalUsers > 0
-                ? Math.min(
-                    Math.round(
-                      ((presence?.onlineCount ?? 0) / raw.totalUsers) * 100
-                    ),
-                    100
-                  )
-                : 0
-            }
-            barGradient="linear-gradient(90deg, #0D6E4F, #1DB87A)"
-            barNote="of total registered users"
-            barNoteColor="#0D6E4F"
-          />
-          <BottomCard
-            icon={PhoneCall}
-            iconBg="#E8F5F0"
-            iconColor="#0A1F14"
-            title="Currently In Call"
-            subtitle="Active video sessions"
-            value={presence?.inCallCount ?? 0}
-            badge="Live"
-            barPct={
-              presence && presence.onlineCount > 0
-                ? Math.min(
-                    Math.round(
-                      (presence.inCallCount / presence.onlineCount) * 100
-                    ),
-                    100
-                  )
-                : 0
-            }
-            barGradient="linear-gradient(90deg, #0A1F14, #1DB87A)"
-            barNote="of online users in a call"
-            barNoteColor="#0D6E4F"
-          />
+        {/* ── Presence row ──────────────────────────────────────────────────── */}
+        <div className="dh-btm-row dh-a3"
+          style={{ display: 'flex', gap: 18, marginBottom: 18 }}>
+          <MetricCard icon={Wifi}
+            label="Online Now" sublabel="Active socket connections"
+            value={presence?.onlineCount ?? 0} live
+            barPct={onlineBarPct}
+            barNote="of total registered users" barPct2={onlineBarPct} />
+          <MetricCard icon={PhoneCall}
+            label="Currently In Call" sublabel="Active video sessions"
+            value={presence?.inCallCount ?? 0} live
+            barPct={inCallBarPct}
+            barNote="of online users in a call" barPct2={inCallBarPct} />
         </div>
 
-        {/* ── Total users row ───────────────────────────────────────── */}
-        <div
-          className="anim-3"
-          style={{ display: 'flex', gap: 18, marginBottom: 18 }}
-        >
-          <BottomCard
-            icon={Users}
-            iconBg="#E8F5F0"
-            iconColor="#0A1F14"
-            title="Total Registered Users"
-            subtitle="All time members"
+        {/* ── Users row ─────────────────────────────────────────────────────── */}
+        <div className="dh-a4" style={{ display: 'flex', gap: 18, marginBottom: 18 }}>
+          <MetricCard icon={Users}
+            label="Total Registered Users" sublabel="All time members"
             value={raw?.totalUsers ?? 0}
-            badge={`+${raw?.newUsersThisWeek ?? 0} this week`}
-            barPct={Math.min(
-              raw && raw.totalUsers > 0
-                ? Math.round((raw.newUsersThisWeek / raw.totalUsers) * 100) + 70
-                : 0,
-              100
-            )}
-            barGradient="linear-gradient(90deg, #0A1F14, #1DB87A)"
+            barPct={usersBarPct}
             barNote={`+${raw?.newUsersThisWeek ?? 0} new users this week`}
-            barNoteColor="#0D6E4F"
-          />
+            barPct2={Math.min(raw && raw.totalUsers > 0
+              ? Math.round((raw.newUsersThisWeek / raw.totalUsers) * 100)
+              : 0, 100)} />
         </div>
 
-        {/* ── Trend chart ───────────────────────────────────────────── */}
+        {/* ── Trend chart ───────────────────────────────────────────────────── */}
         {raw?.dailyMinutes && (
-          <div className="anim-5">
-            <TrendChart
-              data={raw.dailyMinutes}
-              range={chartRange}
-              onRangeChange={setChartRange}
-            />
+          <div className="dh-a5">
+            <TrendChart data={raw.dailyMinutes} range={chartRange} onRangeChange={setChartRange} />
           </div>
         )}
 
-        {/* ── Footer ──────────────────────────────────────────────── */}
-        <div
-          className="anim-4"
-          style={{
-            marginTop: 28,
-            textAlign: 'center',
-            fontSize: 11,
-            color: '#8CA898',
-            letterSpacing: '0.04em',
-          }}
-        >
-          Data refreshes every 5 minutes · Last updated just now
+        {/* ── Footer ───────────────────────────────────────────────────────── */}
+        <div className="dh-a5" style={{
+          marginTop: 28, display: 'flex',
+          alignItems: 'center', justifyContent: 'center', gap: 8,
+        }}>
+          <span style={{
+            width: 5, height: 5, borderRadius: '50%',
+            background: 'oklch(0.72 0.19 149)', display: 'inline-block',
+            animation: 'dh-pulse 2s ease-in-out infinite',
+          }} />
+          <span className="dh-label">
+            Data refreshes every 5 minutes · Last updated just now
+          </span>
         </div>
+
       </div>
     </>
   );

@@ -1,5 +1,10 @@
-import AdminDashboard from '@/components/admin/AdminDashboard';
+import DashboardHome from '@/components/admin/AdminDashboard';
+import { AdminErrorBoundary } from '@/components/admin/AdminErrorBoundary';
 
 export default function AdminPage() {
-  return <AdminDashboard />;
+  return (
+    <AdminErrorBoundary>
+      <DashboardHome />
+    </AdminErrorBoundary>
+  );
 }

@@ -1,4 +1,14 @@
 import { SessionModel } from '../models/sessionModel.js';
+import { redis } from '../config/redis.js';
+
+export interface DailyMinutesPoint {
+  date: Date;
+  seconds: number;
+  minutes: number;
+  callCount: number;
+}
+
+const CACHE_TTL = 300;
 
 export const sessionRepository = {
   getSessions: async ({ page, limit }: { page: number; limit: number }) => {
@@ -15,35 +25,65 @@ export const sessionRepository = {
     ]);
     return { data, total };
   },
-
+  
   getAnalytics: async () => {
+    const CACHE_KEY = 'analytics:sessions:90d';
+
+    // ── Cache read ────────────────────────────────────────────────────────
+    try {
+      const cached = await redis.get(CACHE_KEY);
+      if (cached) return JSON.parse(cached);
+    } catch {
+      // Redis failure is non-fatal — fall through to DB query
+    }
+
+    // ── #5 FIX: bounded 90-day query — no full collection scan ────────────
+    const since = new Date();
+    since.setDate(since.getDate() - 90);
+    since.setHours(0, 0, 0, 0);
+
     const sessions = await SessionModel.find(
-      {},
+      { startedAt: { $gte: since } },
       { startedAt: 1, endedAt: 1, endReason: 1 }
     )
       .lean()
       .exec();
 
-    return sessions.map(s => ({
+    const result = sessions.map((s) => ({
       startedAt: s.startedAt,
       endedAt: s.endedAt ?? null,
       durationSeconds: s.endedAt
         ? (s.endedAt.getTime() - s.startedAt.getTime()) / 1000
         : 0,
-      // Passes the raw string through — 'USER_ENDED' | 'ICE_FAILED' |
-      // 'TIME_LIMIT' | null. Frontend maps these to display labels.
       endReason: s.endReason ?? null,
     }));
+
+    // ── Cache write ───────────────────────────────────────────────────────
+    try {
+      await redis.set(CACHE_KEY, JSON.stringify(result), 'EX', CACHE_TTL);
+    } catch {
+      // Redis failure is non-fatal — analytics still returns correctly
+    }
+
+    return result;
   },
 
-  // ─── NEW ──────────────────────────────────────────────────────────────────
-  // Aggregates total call minutes per calendar day.
-  // Only counts sessions that actually ended (endedAt exists).
-  // `days` param controls the lookback window (7 or 30).
-  // Returns array sorted ascending by date so the chart renders left→right.
-  getDailyMinutes: async (days: 7 | 30) => {
+  // ── #3 FIX: single 30d query instead of two separate queries ─────────────
+  // Service layer slices to 7 days when needed — one DB round trip total.
+  // CHANGED: explicit return type so downstream code gets proper inference
+getDailyMinutes: async (): Promise<DailyMinutesPoint[]> => {
+    const CACHE_KEY = 'analytics:daily:30d';
+
+    // ── Cache read ────────────────────────────────────────────────────────
+    try {
+      const cached = await redis.get(CACHE_KEY);
+      if (cached) return JSON.parse(cached);
+    } catch {
+      // Redis failure is non-fatal — fall through to DB query
+    }
+
     const since = new Date();
-    since.setDate(since.getDate() - days);
+    since.setDate(since.getDate() - 30);
     since.setHours(0, 0, 0, 0);
 
     const result = await SessionModel.aggregate([
@@ -56,14 +96,12 @@ export const sessionRepository = {
       {
         $group: {
           _id: {
-            year: { $year: '$startedAt' },
+            year:  { $year:  '$startedAt' },
             month: { $month: '$startedAt' },
-            day: { $dayOfMonth: '$startedAt' },
+            day:   { $dayOfMonth: '$startedAt' },
           },
           totalSeconds: {
-            $sum: {
-              $subtract: ['$endedAt', '$startedAt'],
-            },
+            $sum: { $subtract: ['$endedAt', '$startedAt'] },
           },
           callCount: { $sum: 1 },
         },
@@ -73,11 +111,13 @@ export const sessionRepository = {
           _id: 0,
           date: {
             $dateFromParts: {
-              year: '$_id.year',
+              year:  '$_id.year',
               month: '$_id.month',
-              day: '$_id.day',
+              day:   '$_id.day',
             },
           },
+          // Store seconds not minutes — avoids rounding loss for short calls
+          seconds: '$totalSeconds',
           minutes: {
             $round: [{ $divide: ['$totalSeconds', 60000] }, 1],
           },
@@ -87,7 +127,18 @@ export const sessionRepository = {
       { $sort: { date: 1 } },
     ]);
 
-    return result as { date: Date; minutes: number; callCount: number }[];
+    // ── Cache write ───────────────────────────────────────────────────────
+    try {
+      await redis.set(CACHE_KEY, JSON.stringify(result), 'EX', CACHE_TTL);
+    } catch {
+      // Redis failure is non-fatal
+    }
+
+    return result as {
+      date: Date;
+      seconds: number;
+      minutes: number;
+      callCount: number;
+    }[];
   },
-  // ─────────────────────────────────────────────────────────────────────────
 };
