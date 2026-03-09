@@ -610,6 +610,11 @@ export default function BannedUsersPage() {
     }
   };
 
+  const openBanDialog = (user: BannedUser) => {
+    setDialogUserId(user.userId);
+    setDialogReason(user.reason);
+    setDialogOpen(true);
+  };
 
   return (
     <>
