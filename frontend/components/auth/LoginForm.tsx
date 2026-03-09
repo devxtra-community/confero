@@ -23,7 +23,8 @@ export function LoginRight() {
 
   const [openForgotModal, setOpenForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
-  const [showAlreadyLoggedInModal, setShowAlreadyLoggedInModal] = useState(false);
+  const [showAlreadyLoggedInModal, setShowAlreadyLoggedInModal] =
+    useState(false);
   const [blockedUserId, setBlockedUserId] = useState<string | null>(null);
   const [forceLoading, setForceLoading] = useState(false);
 
@@ -50,7 +51,7 @@ export function LoginRight() {
       const role = res.data.role;
       const target = role === 'admin' ? '/admin' : '/home';
       router.replace(target);
-      router.refresh()
+      router.refresh();
 
       console.log('after navigating');
     } catch (err: unknown) {

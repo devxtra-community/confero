@@ -9,7 +9,8 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 export default function GoogleButton() {
-  const [showAlreadyLoggedInModal, setShowAlreadyLoggedInModal] = useState(false);
+  const [showAlreadyLoggedInModal, setShowAlreadyLoggedInModal] =
+    useState(false);
   const [blockedUserId, setBlockedUserId] = useState<string | null>(null);
   const [forceLoading, setForceLoading] = useState(false);
   const [pendingIdToken, setPendingIdToken] = useState<string | null>(null);
@@ -36,14 +37,12 @@ export default function GoogleButton() {
 
       router.replace(target);
       router.refresh();
-
     } catch {
       toast.error('Failed to log out other device. Please try again.');
     } finally {
       setForceLoading(false);
     }
   };
-
 
   return (
     <div className="w-full">
