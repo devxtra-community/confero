@@ -136,7 +136,7 @@ export default function Sidebar() {
               }}
             >
               <Image
-                src="/Logo c.svg"
+                src="/Logo C.svg"
                 alt="Confero"
                 fill
                 className="object-cover"
