@@ -9,64 +9,63 @@ import {
   Users,
   Ban,
   BarChart3,
-  Menu,
-  X,
-  ChevronRight,
   LogOut,
+  ChevronUp,
+  Activity,
 } from 'lucide-react';
 import { axiosInstance } from '@/lib/axiosInstance';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const MENU_ITEMS = [
+  {
+    id: 'home',
+    label: 'Home',
+    icon: Home,
+    href: '/admin',
+    desc: 'Overview & stats',
+  },
+  {
+    id: 'connection',
+    label: 'Connection',
+    icon: Users,
+    href: '/admin/connection',
+    desc: 'Manage users',
+  },
+  {
+    id: 'banned',
+    label: 'Banned Users',
+    icon: Ban,
+    href: '/admin/banned-users',
+    desc: 'Restricted accounts',
+  },
+  {
+    id: 'reports',
+    label: 'Reports',
+    icon: BarChart3,
+    href: '/admin/reports',
+    desc: 'Analytics & logs',
+  },
+];
+
 export default function Sidebar() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showLogout, setShowLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const logoutRef = useRef<HTMLDivElement>(null);
 
-  const menuItems = [
-    { id: 'home', label: 'Home', icon: Home, href: '/admin' },
-    {
-      id: 'connection',
-      label: 'Connection',
-      icon: Users,
-      href: '/admin/connection',
-    },
-    {
-      id: 'banned',
-      label: 'Banned Users',
-      icon: Ban,
-      href: '/admin/banned-users',
-    },
-    {
-      id: 'reports',
-      label: 'Reports',
-      icon: BarChart3,
-      href: '/admin/reports',
-    },
-  ];
+  const isActive = (href: string) =>
+    href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
 
-  const isActive = (href: string) => {
-    if (href === '/admin') return pathname === '/admin';
-    return pathname.startsWith(href);
-  };
-
-  // ✅ Close logout popup when clicking outside
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (logoutRef.current && !logoutRef.current.contains(e.target as Node)) {
+    const handler = (e: MouseEvent) => {
+      if (logoutRef.current && !logoutRef.current.contains(e.target as Node))
         setShowLogout(false);
-      }
     };
-
-    if (showLogout) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    if (showLogout) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, [showLogout]);
 
   const handleLogout = async () => {
@@ -88,255 +87,486 @@ export default function Sidebar() {
 
   return (
     <>
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 bg-white rounded-xl shadow-lg hover:scale-105 active:scale-95 transition-all duration-200 border border-gray-100"
-        aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
-      >
-        <AnimatePresence mode="wait" initial={false}>
-          {sidebarOpen ? (
-            <motion.div
-              key="close"
-              initial={{ rotate: -90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: 90, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <X size={24} className="text-gray-700" />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="menu"
-              initial={{ rotate: 90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: -90, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Menu size={24} className="text-gray-700" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </button>
+      <style>{`
+        .sb-link { transition: background 0.15s, color 0.15s, border-color 0.15s; }
+        .sb-link:hover { background: oklch(0.72 0.19 149 / 0.07) !important; color: oklch(0.42 0.11 136) !important; }
+        .sb-link:hover .sb-link-desc { color: oklch(0.42 0.11 136 / 0.7) !important; }
+        .sb-link:hover .sb-link-icon { color: oklch(0.72 0.19 149) !important; }
+        .sb-logout-btn:hover { background: oklch(0.577 0.245 27.325 / 0.06) !important; }
+        .sb-user-btn:hover { border-color: oklch(0.72 0.19 149 / 0.35) !important; box-shadow: 0 2px 14px oklch(0.72 0.19 149 / 0.09) !important; }
+        .sb-nav::-webkit-scrollbar { width: 3px; }
+        .sb-nav::-webkit-scrollbar-track { background: transparent; }
+        .sb-nav::-webkit-scrollbar-thumb { background: oklch(0.72 0.19 149 / 0.2); border-radius: 99px; }
+      `}</style>
 
-      <motion.aside
-        initial={false}
-        animate={{ x: sidebarOpen ? 0 : '-100%' }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="fixed lg:static inset-y-0 left-0 z-40 w-72 bg-white border-r border-gray-200 flex flex-col  lg:shadow-none lg:translate-x-0"
+      <aside
+        style={{
+          position: 'sticky',
+          top: 0,
+          height: '100vh',
+          width: 268,
+          flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          background: 'var(--sidebar)',
+          borderRight: '1px solid var(--sidebar-border)',
+        }}
       >
-        <div className="relative flex items-center gap-3 p-6 border-b border-gray-100 overflow-hidden">
-          <div className="absolute inset-0 bg-linear-to-r from-teal-50/80 via-emerald-50/80 to-teal-50/80 opacity-50" />
-          <motion.div
-            whileHover={{ scale: 1.08, rotate: 3 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-            className="relative w-10 h-10 rounded-xl overflow-hidden -mr-2"
-          >
-            <Image
-              src="/Logo c.svg"
-              alt="Confero Logo"
-              fill
-              className="object-cover"
-              priority
-            />
-          </motion.div>
-          <h1 className="relative text-2xl font-bold bg-linear-to-r from-teal-600 via-emerald-600 to-teal-700 bg-clip-text text-transparent">
-            Confero
-          </h1>
-        </div>
-
-        <nav
-          className="flex-1 p-4 overflow-y-auto"
+        {/* ── Logo ─────────────────────────────────────────────────────── */}
+        <div
           style={{
-            scrollbarWidth: 'thin',
-            scrollbarColor: '#d1d5db transparent',
+            padding: '20px 18px 16px',
+            borderBottom: '1px solid var(--sidebar-border)',
+            background:
+              'linear-gradient(160deg, oklch(0.72 0.19 149 / 0.05) 0%, transparent 70%)',
           }}
         >
-          <div className="space-y-1">
-            {menuItems.map((item, index) => {
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <motion.div
+              whileHover={{ scale: 1.07, rotate: 3 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 11,
+                overflow: 'hidden',
+                position: 'relative',
+                flexShrink: 0,
+                border: '1.5px solid oklch(0.72 0.19 149 / 0.25)',
+              }}
+            >
+              <Image
+                src="/Logo c.svg"
+                alt="Confero"
+                fill
+                className="object-cover"
+                priority
+              />
+            </motion.div>
+
+            <div>
+              <div
+                style={{
+                  fontSize: 21,
+                  fontWeight: 800,
+                  fontFamily: 'var(--font-sans)',
+                  background:
+                    'linear-gradient(100deg, oklch(0.42 0.11 136), oklch(0.72 0.19 149))',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  lineHeight: 1.1,
+                }}
+              >
+                Confero
+              </div>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--muted-foreground)',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  marginTop: 1,
+                }}
+              >
+                Admin Console
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Nav ──────────────────────────────────────────────────────── */}
+        <nav
+          className="sb-nav"
+          style={{
+            flex: 1,
+            padding: '14px 10px',
+            overflowY: 'auto',
+          }}
+        >
+          <p
+            style={{
+              fontSize: 10,
+              letterSpacing: '0.13em',
+              textTransform: 'uppercase',
+              color: 'var(--muted-foreground)',
+              fontFamily: 'var(--font-mono)',
+              padding: '0 10px',
+              margin: '0 0 8px',
+            }}
+          >
+            Navigation
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {MENU_ITEMS.map((item, i) => {
               const Icon = item.icon;
               const active = isActive(item.href);
 
               return (
                 <motion.div
                   key={item.id}
-                  initial={{ opacity: 0, x: -20 }}
+                  initial={{ opacity: 0, x: -12 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{
-                    delay: index * 0.07,
-                    type: 'spring',
-                    stiffness: 300,
-                    damping: 25,
+                    delay: i * 0.055,
+                    duration: 0.22,
+                    ease: 'easeOut',
                   }}
                 >
                   <Link
                     href={item.href}
-                    onClick={() => {
-                      if (window.innerWidth < 1024) setSidebarOpen(false);
+                    className="sb-link"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '10px 12px',
+                      borderRadius: 11,
+                      textDecoration: 'none',
+                      fontFamily: 'var(--font-sans)',
+                      color: active
+                        ? 'oklch(0.42 0.11 136)'
+                        : 'var(--sidebar-foreground)',
+                      background: active
+                        ? 'oklch(0.42 0.11 136 / 0.07)'
+                        : 'transparent',
+                      borderLeft: `3px solid ${active ? 'oklch(0.72 0.19 149)' : 'transparent'}`,
                     }}
-                    className={`
-                      w-full flex items-center gap-3 px-4 py-3.5 rounded-xl
-                      transition-colors duration-200 group relative overflow-hidden
-                      ${
-                        active
-                          ? 'bg-linear-to-r from-teal-50 to-emerald-50 text-teal-700 shadow-sm'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                      }
-                    `}
                   >
+                    {/* icon */}
+                    <div
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: 9,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        background: active
+                          ? 'oklch(0.72 0.19 149 / 0.12)'
+                          : 'oklch(0.145 0 0 / 0.04)',
+                        border: active
+                          ? '1px solid oklch(0.72 0.19 149 / 0.22)'
+                          : '1px solid oklch(0.145 0 0 / 0.06)',
+                      }}
+                    >
+                      <Icon
+                        size={16}
+                        strokeWidth={active ? 2.4 : 2}
+                        className="sb-link-icon"
+                        style={{
+                          color: active
+                            ? 'oklch(0.72 0.19 149)'
+                            : 'var(--muted-foreground)',
+                        }}
+                      />
+                    </div>
+
+                    {/* text */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: active ? 700 : 500,
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        {item.label}
+                      </div>
+                      <div
+                        className="sb-link-desc"
+                        style={{
+                          fontSize: 11,
+                          color: active
+                            ? 'oklch(0.42 0.11 136 / 0.65)'
+                            : 'var(--muted-foreground)',
+                          fontFamily: 'var(--font-mono)',
+                          marginTop: 1,
+                        }}
+                      >
+                        {item.desc}
+                      </div>
+                    </div>
+
+                    {/* active dot */}
                     {active && (
-                      <motion.div
-                        layoutId="activeIndicator"
-                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-linear-to-b from-teal-500 to-emerald-600 rounded-r-full shadow-md"
-                        transition={{
-                          type: 'spring',
-                          stiffness: 400,
-                          damping: 30,
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: '50%',
+                          background: 'oklch(0.72 0.19 149)',
+                          flexShrink: 0,
                         }}
                       />
                     )}
-
-                    <Icon
-                      size={20}
-                      className={`transition-colors duration-200 ${
-                        active
-                          ? 'text-teal-600'
-                          : 'text-gray-500 group-hover:text-teal-600'
-                      }`}
-                      strokeWidth={active ? 2.5 : 2}
-                    />
-
-                    <span
-                      className={`flex-1 font-medium ${active ? 'font-semibold' : ''}`}
-                    >
-                      {item.label}
-                    </span>
-
-                    <motion.div
-                      animate={{ opacity: active ? 1 : 0, x: active ? 0 : -8 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <ChevronRight
-                        size={16}
-                        className={active ? 'text-teal-600' : 'text-gray-400'}
-                      />
-                    </motion.div>
                   </Link>
                 </motion.div>
               );
             })}
           </div>
+
+          {/* ── Divider ──────────────────────────────────────────────────── */}
+          <div
+            style={{
+              margin: '18px 10px 14px',
+              height: 1,
+              background: 'var(--sidebar-border)',
+            }}
+          />
+
+          {/* ── Status pill ──────────────────────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            style={{
+              margin: '0 2px',
+              padding: '12px 14px',
+              borderRadius: 12,
+              border: '1px solid var(--sidebar-border)',
+              background: 'var(--card)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+            }}
+          >
+            <div
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 8,
+                background: 'oklch(0.72 0.19 149 / 0.10)',
+                border: '1px solid oklch(0.72 0.19 149 / 0.18)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Activity
+                size={14}
+                style={{ color: 'oklch(0.72 0.19 149)' }}
+                strokeWidth={2}
+              />
+            </div>
+            <div>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  fontFamily: 'var(--font-sans)',
+                  color: 'var(--sidebar-foreground)',
+                }}
+              >
+                All systems normal
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  marginTop: 2,
+                }}
+              >
+                <span
+                  style={{
+                    width: 5,
+                    height: 5,
+                    borderRadius: '50%',
+                    background: 'oklch(0.72 0.19 149)',
+                    display: 'inline-block',
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontFamily: 'var(--font-mono)',
+                    color: 'var(--muted-foreground)',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  Platform operational
+                </span>
+              </div>
+            </div>
+          </motion.div>
         </nav>
 
+        {/* ── User / Logout ─────────────────────────────────────────────── */}
         <div
           ref={logoutRef}
-          className="p-4 border-t border-gray-100 bg-linear-to-b from-transparent to-gray-50/50 relative"
+          style={{
+            padding: '10px 10px 14px',
+            borderTop: '1px solid var(--sidebar-border)',
+            position: 'relative',
+            background:
+              'linear-gradient(0deg, oklch(0.72 0.19 149 / 0.03) 0%, transparent 100%)',
+          }}
         >
+          {/* logout popup */}
           <AnimatePresence>
             {showLogout && (
               <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                initial={{ opacity: 0, y: 6, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                className="absolute bottom-17 left-4 right-3 mb-2 bg-white rounded-xl  border border-gray-200 overflow-hidden z-50"
+                exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                transition={{ duration: 0.14, ease: 'easeOut' }}
+                style={{
+                  position: 'absolute',
+                  bottom: 'calc(100% + 6px)',
+                  left: 10,
+                  right: 10,
+                  background: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 12,
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 24px oklch(0 0 0 / 0.09)',
+                }}
               >
                 <button
+                  className="sb-logout-btn"
                   onClick={handleLogout}
                   disabled={loggingOut}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-red-600 hover:bg-red-50 cursor-pointer transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '12px 16px',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    fontFamily: 'var(--font-sans)',
+                    color: 'var(--destructive)',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: loggingOut ? 'not-allowed' : 'pointer',
+                    opacity: loggingOut ? 0.6 : 1,
+                    textAlign: 'left',
+                  }}
                 >
-                  <motion.div
+                  <motion.span
                     animate={loggingOut ? { rotate: 360 } : { rotate: 0 }}
                     transition={
                       loggingOut
-                        ? { repeat: Infinity, duration: 1, ease: 'linear' }
+                        ? { repeat: Infinity, duration: 0.9, ease: 'linear' }
                         : {}
                     }
+                    style={{ display: 'flex' }}
                   >
-                    <LogOut size={18} />
-                  </motion.div>
-                  <span className="text-md font-semibold">
-                    {loggingOut ? 'Logging out...' : 'Logout'}
-                  </span>
+                    <LogOut size={15} />
+                  </motion.span>
+                  {loggingOut ? 'Logging out…' : 'Logout'}
                 </button>
               </motion.div>
             )}
           </AnimatePresence>
 
-          <motion.div
-            onClick={() => setShowLogout(prev => !prev)}
+          {/* user row */}
+          <motion.button
+            className="sb-user-btn"
+            onClick={() => setShowLogout(p => !p)}
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
-            className="flex items-center gap-3 p-3 rounded-xl hover:bg-white transition-colors duration-200 cursor-pointer group shadow-sm hover:shadow-md border border-transparent hover:border-teal-100"
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '10px 12px',
+              borderRadius: 12,
+              border: '1px solid var(--sidebar-border)',
+              background: 'var(--card)',
+              cursor: 'pointer',
+              fontFamily: 'var(--font-sans)',
+              transition: 'border-color 0.18s, box-shadow 0.18s',
+            }}
           >
-            <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-linear-to-br from-gray-700 via-gray-800 to-gray-900 flex items-center justify-center text-white font-semibold shadow-md ring-2 ring-white group-hover:ring-teal-100 transition-all">
+            {/* avatar */}
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: '50%',
+                  background:
+                    'linear-gradient(135deg, oklch(0.42 0.11 136), oklch(0.72 0.19 149))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff',
+                  fontSize: 15,
+                  fontWeight: 700,
+                  fontFamily: 'var(--font-sans)',
+                  boxShadow: '0 2px 8px oklch(0.42 0.11 136 / 0.30)',
+                }}
+              >
                 N
               </div>
-              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white shadow-sm" />
+              <span
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  right: 0,
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: 'oklch(0.72 0.19 149)',
+                  border: '2px solid var(--card)',
+                  boxShadow: '0 0 4px oklch(0.72 0.19 149 / 0.5)',
+                }}
+              />
             </div>
 
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold text-gray-900 truncate group-hover:text-teal-700 transition-colors">
+            {/* info */}
+            <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: 'var(--sidebar-foreground)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  lineHeight: 1.2,
+                }}
+              >
                 Admin
               </div>
-              <div className="text-xs text-gray-500 truncate">
+              <div
+                style={{
+                  fontSize: 11,
+                  color: 'var(--muted-foreground)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  fontFamily: 'var(--font-mono)',
+                  marginTop: 1,
+                }}
+              >
                 admin@confero.com
               </div>
             </div>
 
-            <motion.div
-              animate={{ rotate: showLogout ? 180 : 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-              className="text-gray-400 group-hover:text-teal-600 transition-colors duration-200"
+            {/* chevron */}
+            <motion.span
+              animate={{ rotate: showLogout ? 0 : 180 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+              style={{
+                color: 'var(--muted-foreground)',
+                flexShrink: 0,
+                display: 'flex',
+              }}
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </motion.div>
-          </motion.div>
+              <ChevronUp size={14} strokeWidth={2} />
+            </motion.span>
+          </motion.button>
         </div>
-      </motion.aside>
-
-      <AnimatePresence>
-        {sidebarOpen && (
-          <motion.div
-            key="overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-30"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-      </AnimatePresence>
-
-      <style jsx global>{`
-        nav::-webkit-scrollbar {
-          width: 6px;
-        }
-        nav::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        nav::-webkit-scrollbar-thumb {
-          background: #d1d5db;
-          border-radius: 3px;
-        }
-        nav::-webkit-scrollbar-thumb:hover {
-          background: #9ca3af;
-        }
-      `}</style>
+      </aside>
     </>
   );
 }

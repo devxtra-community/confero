@@ -1,23 +1,15 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import {
-  Search,
-  Clock,
-  ChevronLeft,
-  ChevronRight,
-  Filter,
-  Download,
-  Phone,
-  Video as VideoIcon,
-  X,
-} from 'lucide-react';
+import { Search, Clock, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { axiosInstance } from '@/lib/axiosInstance';
+
+// ─── Interfaces ───────────────────────────────────────────────────────────────
 
 interface CallRecord {
   id: string;
-  caller: string;
-  receiver: string;
+  userA: string;
+  userB: string;
   duration: string;
   status: 'Completed' | 'Canceled';
 }
@@ -39,6 +31,346 @@ interface Pagination {
 
 const LIMIT = 10;
 
+// ─── CSS ──────────────────────────────────────────────────────────────────────
+
+const CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap');
+
+  .cp-wrap {
+    font-family: var(--font-sans, sans-serif);
+    background: var(--background);
+    color: var(--foreground);
+    min-height: 100vh;
+    padding: 18px 20px 36px;
+    --_green:      oklch(0.72 0.19 149);
+    --_green-dark: oklch(0.42 0.11 136);
+    --_green-mid:  oklch(0.60 0.147 149);
+    --_green-bg:   oklch(0.72 0.19 149 / 0.08);
+    --_green-bdr:  oklch(0.72 0.19 149 / 0.22);
+    --_text2:      var(--muted-foreground);
+    --_surface:    var(--card);
+    --_border:     var(--border);
+    --_radius:     var(--radius, 0.625rem);
+  }
+  .dark .cp-wrap {
+    --_green-bg:  oklch(0.72 0.19 149 / 0.12);
+    --_green-bdr: oklch(0.72 0.19 149 / 0.28);
+  }
+  .cp-wrap * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  @keyframes cp-fadeUp  { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes cp-shimmer { from { background-position:200% 0; } to { background-position:-200% 0; } }
+  @keyframes cp-pulse   { 0%,100%{box-shadow:0 0 0 0 oklch(0.72 0.19 149 / 0.5)} 50%{box-shadow:0 0 0 4px oklch(0.72 0.19 149 / 0)} }
+
+  .cp-a1 { animation: cp-fadeUp .4s cubic-bezier(0.22,1,0.36,1) both .03s; }
+  .cp-a2 { animation: cp-fadeUp .4s cubic-bezier(0.22,1,0.36,1) both .09s; }
+  .cp-a3 { animation: cp-fadeUp .4s cubic-bezier(0.22,1,0.36,1) both .15s; }
+
+  /* ── Card ── */
+  .cp-card {
+    background: var(--_surface);
+    border: 1.5px solid var(--_border);
+    border-radius: calc(var(--_radius) * 2.5);
+    position: relative; overflow: hidden;
+  }
+
+  /* ── Session row ── */
+  .cp-row {
+    background: var(--_surface);
+    border: 1.5px solid var(--_border);
+    border-radius: calc(var(--_radius) * 2);
+    position: relative; overflow: hidden;
+    transition: border-color .18s, box-shadow .18s, transform .18s;
+    animation: cp-fadeUp .38s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .cp-row:hover {
+    border-color: var(--_green-bdr);
+    box-shadow: 0 6px 24px oklch(0.72 0.19 149 / 0.08);
+    transform: translateY(-1px);
+  }
+  .cp-row::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, var(--_green-dark), var(--_green));
+    border-radius: 99px 0 0 99px;
+    transform: scaleY(0); transform-origin: center;
+    transition: transform .2s cubic-bezier(0.22,1,0.36,1);
+  }
+  .cp-row:hover::before { transform: scaleY(1); }
+
+  /* ── Label ── */
+  .cp-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9.5px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--_text2);
+  }
+
+  /* ── Status pill ── */
+  .cp-status {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px; letter-spacing: .08em;
+    border-radius: 99px; padding: 3px 9px;
+  }
+  .cp-status-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .cp-status-ok  { background: oklch(0.72 0.19 149 / 0.10); border: 1px solid oklch(0.72 0.19 149 / 0.25); color: var(--_green-dark); }
+  .cp-status-err { background: oklch(0.65 0.22 25  / 0.10); border: 1px solid oklch(0.65 0.22 25  / 0.25); color: oklch(0.55 0.20 25); }
+  .dark .cp-status-ok  { color: var(--_green); }
+  .dark .cp-status-err { color: oklch(0.72 0.19 25); }
+
+  /* ── Live dot ── */
+  .cp-live-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--_green);
+    animation: cp-pulse 1.8s ease-in-out infinite; flex-shrink: 0;
+  }
+
+  /* ── Avatar (initials only) ── */
+  .cp-avatar {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    border: 1.5px solid var(--_green-bdr);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500; color: #fff;
+  }
+
+  /* ── Duration chip ── */
+  .cp-duration {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .04em;
+    padding: 5px 10px; border-radius: calc(var(--_radius) * 1.5);
+    background: oklch(0.72 0.19 149 / 0.07);
+    border: 1.5px solid oklch(0.72 0.19 149 / 0.15);
+    color: var(--foreground); white-space: nowrap;
+  }
+
+  /* ── Input ── */
+  .cp-input {
+    width: 100%; padding: 8px 12px 8px 34px;
+    font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: .04em;
+    background: var(--_surface); color: var(--foreground);
+    border: 1.5px solid var(--_border);
+    border-radius: calc(var(--_radius) * 1.8);
+    outline: none; transition: border-color .15s, box-shadow .15s;
+  }
+  .cp-input:focus {
+    border-color: var(--_green-bdr);
+    box-shadow: 0 0 0 3px oklch(0.72 0.19 149 / 0.10);
+  }
+  .cp-input::placeholder { color: var(--_text2); opacity: 0.6; }
+
+  /* ── Pagination button ── */
+  .cp-pg {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px;
+    border-radius: calc(var(--_radius) * 1.2);
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .04em;
+    border: 1.5px solid var(--_border); background: var(--_surface);
+    color: var(--_text2); cursor: pointer;
+    transition: border-color .15s, color .15s, background .15s;
+  }
+  .cp-pg:hover:not(:disabled) {
+    border-color: var(--_green-bdr); color: var(--_green-dark); background: var(--_green-bg);
+  }
+  .dark .cp-pg:hover:not(:disabled) { color: var(--_green); }
+  .cp-pg.active {
+    background: linear-gradient(135deg, var(--_green-dark), var(--_green-mid));
+    color: #fff; border-color: transparent;
+  }
+  .cp-pg:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* ── Skeleton ── */
+  .cp-skel {
+    background: linear-gradient(90deg,
+      oklch(0.72 0.19 149 / 0.05) 25%,
+      oklch(0.72 0.19 149 / 0.11) 50%,
+      oklch(0.72 0.19 149 / 0.05) 75%);
+    background-size: 200% 100%;
+    animation: cp-shimmer 1.6s infinite;
+    border-radius: calc(var(--_radius) * 2);
+  }
+
+  /* ── Connector between avatars ── */
+  .cp-connector {
+    display: flex; align-items: center; gap: 4px;
+    flex-shrink: 0;
+  }
+  .cp-connector-line {
+    width: 18px; height: 1px;
+    background: linear-gradient(90deg,
+      oklch(0.72 0.19 149 / 0.3),
+      oklch(0.72 0.19 149 / 0.7));
+  }
+  .cp-connector-icon {
+    font-size: 9px;
+    color: oklch(0.72 0.19 149);
+    line-height: 1;
+  }
+
+  @media (max-width: 600px) {
+    .cp-wrap { padding: 12px 12px 24px; }
+    .cp-row-grid { grid-template-columns: 1fr auto auto !important; }
+  }
+`;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+// ─── Avatar ───────────────────────────────────────────────────────────────────
+
+function Avatar({
+  name,
+  variant = 'a',
+}: {
+  name: string;
+  variant?: 'a' | 'b';
+}) {
+  const gradA =
+    'linear-gradient(135deg, oklch(0.42 0.11 136), oklch(0.60 0.147 149))';
+  const gradB =
+    'linear-gradient(135deg, oklch(0.55 0.14 149), oklch(0.72 0.19 149))';
+  return (
+    <div
+      className="cp-avatar"
+      style={{ background: variant === 'b' ? gradB : gradA }}
+    >
+      {getInitials(name)}
+    </div>
+  );
+}
+
+// ─── Participants cell ────────────────────────────────────────────────────────
+
+function Participants({ userA, userB }: { userA: string; userB: string }) {
+  return (
+    <div
+      style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}
+    >
+      <Avatar name={userA} variant="a" />
+
+      <div className="cp-connector">
+        <div className="cp-connector-line" />
+        <span className="cp-connector-icon">↔</span>
+        <div
+          className="cp-connector-line"
+          style={{
+            background:
+              'linear-gradient(90deg, oklch(0.72 0.19 149 / 0.7), oklch(0.72 0.19 149 / 0.3))',
+          }}
+        />
+      </div>
+
+      <Avatar name={userB} variant="b" />
+
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 700,
+            lineHeight: 1.3,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            maxWidth: 240,
+          }}
+        >
+          {userA}
+          <span
+            style={{
+              color: 'oklch(0.72 0.19 149)',
+              fontWeight: 400,
+              margin: '0 5px',
+              fontSize: 11,
+            }}
+          >
+            &amp;
+          </span>
+          {userB}
+        </div>
+        <div className="cp-label" style={{ marginTop: 2 }}>
+          Matched session
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Empty state ──────────────────────────────────────────────────────────────
+
+function EmptyState({
+  query,
+  onClear,
+}: {
+  query: string;
+  onClear: () => void;
+}) {
+  return (
+    <div
+      className="cp-card"
+      style={{ padding: '52px 24px', textAlign: 'center' }}
+    >
+      <div
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: '50%',
+          margin: '0 auto 14px',
+          background: 'oklch(0.72 0.19 149 / 0.08)',
+          border: '1.5px solid oklch(0.72 0.19 149 / 0.18)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Search
+          size={18}
+          style={{ color: 'var(--muted-foreground)' }}
+          strokeWidth={1.8}
+        />
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>
+        {query ? `No results for "${query}"` : 'No sessions yet'}
+      </div>
+      <div className="cp-label" style={{ marginBottom: query ? 16 : 0 }}>
+        {query
+          ? 'Try a different name or clear the search'
+          : 'Sessions will appear here once calls are made'}
+      </div>
+      {query && (
+        <button
+          onClick={onClear}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            fontFamily: "'DM Mono', monospace",
+            fontSize: 10,
+            letterSpacing: '.06em',
+            padding: '7px 12px',
+            borderRadius: 'calc(var(--_radius, 0.625rem) * 1.8)',
+            border: '1.5px solid var(--border)',
+            background: 'var(--card)',
+            color: 'var(--muted-foreground)',
+            cursor: 'pointer',
+            margin: '0 auto',
+          }}
+        >
+          <X size={12} /> Clear search
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Main export ──────────────────────────────────────────────────────────────
+
 export default function ConnectionPageContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,18 +384,10 @@ export default function ConnectionPageContent() {
   const pageCache = useRef<Record<number, CallRecord[]>>({});
   const [loading, setLoading] = useState(false);
 
-  const connectedUsers = [
-    { id: 1, name: 'User 1', color: 'from-orange-400 to-pink-400' },
-    { id: 2, name: 'User 2', color: 'from-yellow-400 to-orange-400' },
-    { id: 3, name: 'User 3', color: 'from-blue-400 to-cyan-400' },
-    { id: 4, name: 'User 4', color: 'from-purple-400 to-pink-400' },
-    { id: 5, name: 'User 5', color: 'from-green-400 to-teal-400' },
-  ];
-
   const filteredRecords = callRecords.filter(
     record =>
-      record.caller.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.receiver.toLowerCase().includes(searchQuery.toLowerCase())
+      (record.userA ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (record.userB ?? '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const formatDuration = (start: string, end: string) => {
@@ -73,15 +397,6 @@ export default function ConnectionPageContent() {
     const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
     const s = String(seconds % 60).padStart(2, '0');
     return `${h}:${m}:${s}`;
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
   };
 
   useEffect(() => {
@@ -95,22 +410,18 @@ export default function ConnectionPageContent() {
         const res = await axiosInstance.get(
           `/admin/sessions?page=${currentPage}&limit=${LIMIT}`
         );
-
         const formatted: CallRecord[] = res.data.data.map(
           (session: SessionResponse) => ({
             id: session.sessionId,
-            caller: session.userA.fullName,
-            receiver: session.userB.fullName,
+            userA: session.userA.fullName,
+            userB: session.userB.fullName,
             duration: session.endedAt
               ? formatDuration(session.startedAt, session.endedAt)
               : '00:00:00',
             status: session.endedAt ? 'Completed' : 'Canceled',
           })
         );
-
-        // ✅ Backend returns total/page/limit flat — compute totalPages here
         const totalPages = Math.ceil(res.data.total / LIMIT);
-
         pageCache.current[currentPage] = formatted;
         setCallRecords(formatted);
         setPagination({
@@ -125,340 +436,323 @@ export default function ConnectionPageContent() {
         setLoading(false);
       }
     };
-
     fetchSessions();
   }, [currentPage]);
 
   const getPageNumbers = () => {
     const total = pagination.totalPages;
     const current = currentPage;
-
-    if (total <= 5) {
-      return Array.from({ length: total }, (_, i) => i + 1);
-    }
-
+    if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
     const pages: (number | '...')[] = [1];
     if (current > 3) pages.push('...');
-
     const start = Math.max(2, current - 1);
     const end = Math.min(total - 1, current + 1);
     for (let i = start; i <= end; i++) pages.push(i);
-
     if (current < total - 2) pages.push('...');
     pages.push(total);
-
     return pages;
   };
 
+  const rangeStart = (currentPage - 1) * LIMIT + 1;
+  const rangeEnd = Math.min(currentPage * LIMIT, pagination.total);
+
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-gray-50">
-      <div className="p-4 sm:p-6 lg:p-8">
-        {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4">
-            <span className="hover:text-teal-600 transition-colors cursor-pointer">
-              Connection
+    <>
+      <style>{CSS}</style>
+      <div className="cp-wrap">
+        {/* ── Header ───────────────────────────────────────────────── */}
+        <div className="cp-a1" style={{ marginBottom: 20 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              marginBottom: 10,
+            }}
+          >
+            <span className="cp-label">
+              <span style={{ color: 'oklch(0.72 0.19 149)', marginRight: 5 }}>
+                ◆
+              </span>
+              Platform Intelligence
             </span>
-            <ChevronRight size={14} className="text-gray-400" />
-            <span className="text-gray-900 font-medium">Sessions</span>
+            <span className="cp-label" style={{ opacity: 0.35 }}>
+              /
+            </span>
+            <span
+              className="cp-label"
+              style={{ color: 'var(--foreground)', opacity: 0.65 }}
+            >
+              Call Sessions
+            </span>
           </div>
 
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-linear-to-r from-gray-900 via-teal-800 to-emerald-800 bg-clip-text text-transparent">
-                Call Sessions
-              </h1>
-
-              <div className="flex items-center gap-3">
-                <div className="flex -space-x-2">
-                  {connectedUsers.slice(0, 4).map((user, index) => (
-                    <div
-                      key={user.id}
-                      className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-white bg-linear-to-br ${user.color} flex items-center justify-center text-white text-xs font-semibold shadow-lg hover:scale-110 hover:z-20 transition-all duration-200 cursor-pointer ring-1 ring-gray-100`}
-                      style={{ zIndex: 10 - index }}
-                      title={user.name}
-                    >
-                      {getInitials(user.name)}
-                    </div>
-                  ))}
-                  {connectedUsers.length > 4 && (
-                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-white bg-linear-to-br from-pink-100 to-purple-100 flex items-center justify-center text-xs font-semibold text-pink-600 shadow-lg hover:scale-110 transition-all duration-200 cursor-pointer">
-                      +{connectedUsers.length - 4}
-                    </div>
-                  )}
-                </div>
-
-                <button className="px-3 sm:px-4 py-2 bg-linear-to-r from-emerald-50 to-teal-50 text-teal-600 rounded-xl text-xs sm:text-sm font-medium hover:from-emerald-100 hover:to-teal-100 transition-all duration-200 border border-teal-100 shadow-sm hover:shadow-md flex items-center gap-2">
-                  <Phone size={14} />
-                  <span>Connection</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <div className="relative flex-1 sm:min-w-70 lg:min-w-[320px]">
-                <Search
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
-                  size={18}
-                />
-                <input
-                  type="text"
-                  placeholder="Search by name..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200 text-sm bg-white shadow-sm hover:shadow-md"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <X size={16} />
-                  </button>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <button className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-medium text-gray-700 hover:border-teal-300 hover:bg-teal-50 transition-all duration-200 shadow-sm hover:shadow-md">
-                  <Filter size={16} />
-                  <span className="hidden sm:inline">Filter</span>
-                </button>
-                <button className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-linear-to-r from-teal-500 to-emerald-600 text-white rounded-xl text-xs sm:text-sm font-medium hover:from-teal-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg">
-                  <Download size={16} />
-                  <span className="hidden sm:inline">Export</span>
-                </button>
-              </div>
+          <div>
+            <h1
+              style={{
+                fontSize: 22,
+                fontWeight: 800,
+                lineHeight: 1.15,
+                margin: 0,
+              }}
+            >
+              Call Sessions
+            </h1>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginTop: 7,
+              }}
+            >
+              <span className="cp-live-dot" />
+              <span className="cp-label">Live</span>
+              {pagination.total > 0 && (
+                <>
+                  <span className="cp-label" style={{ opacity: 0.25 }}>
+                    ·
+                  </span>
+                  <span className="cp-label" style={{ opacity: 0.45 }}>
+                    {pagination.total} matched sessions
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        {/* ✅ Loading spinner */}
+        {/* ── Search ───────────────────────────────────────────────── */}
+        <div
+          className="cp-a2"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            flexWrap: 'wrap',
+            marginBottom: 14,
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              flex: 1,
+              minWidth: 200,
+              maxWidth: 340,
+            }}
+          >
+            <Search
+              size={12}
+              strokeWidth={2}
+              style={{
+                position: 'absolute',
+                left: 11,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--muted-foreground)',
+                pointerEvents: 'none',
+              }}
+            />
+            <input
+              type="text"
+              className="cp-input"
+              placeholder="Search by name..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                style={{
+                  position: 'absolute',
+                  right: 9,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--muted-foreground)',
+                  display: 'flex',
+                  padding: 2,
+                }}
+              >
+                <X size={11} />
+              </button>
+            )}
+          </div>
+          {!loading && pagination.total > 0 && (
+            <span className="cp-label" style={{ whiteSpace: 'nowrap' }}>
+              {rangeStart}–{rangeEnd} of {pagination.total}
+            </span>
+          )}
+        </div>
+
+        {/* ── Column headers ────────────────────────────────────────── */}
+        {!loading && filteredRecords.length > 0 && (
+          <div
+            className="cp-a2"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr auto auto',
+              gap: '0 16px',
+              padding: '0 16px 8px 22px',
+            }}
+          >
+            <span className="cp-label">Participants</span>
+            <span className="cp-label">Duration</span>
+            <span className="cp-label">Status</span>
+          </div>
+        )}
+
+        {/* ── Rows ─────────────────────────────────────────────────── */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <div className="w-10 h-10 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-gray-400 font-medium">
-              Loading sessions...
-            </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="cp-skel" style={{ height: 68 }} />
+            ))}
+          </div>
+        ) : filteredRecords.length === 0 ? (
+          <div className="cp-a3">
+            <EmptyState
+              query={searchQuery}
+              onClear={() => setSearchQuery('')}
+            />
           </div>
         ) : (
-          <>
-            {/* Records list */}
-            <div className="space-y-3 sm:space-y-4">
-              {filteredRecords.length > 0 ? (
-                filteredRecords.map((record, index) => (
-                  <div
-                    key={record.id}
-                    className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-xl transition-all duration-300 group relative overflow-hidden"
-                    style={{
-                      animationDelay: `${index * 50}ms`,
-                      animationFillMode: 'backwards',
-                    }}
-                  >
-                    <div className="absolute inset-0 bg-linear-to-br from-teal-50/50 via-transparent to-emerald-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {filteredRecords.map((record, index) => (
+              <div
+                key={record.id}
+                className="cp-row cp-row-grid"
+                style={{
+                  padding: '13px 18px 13px 22px',
+                  animationDelay: `${index * 38}ms`,
+                  display: 'grid',
+                  gridTemplateColumns: '1fr auto auto',
+                  gap: '0 16px',
+                  alignItems: 'center',
+                }}
+              >
+                <Participants userA={record.userA} userB={record.userB} />
 
-                    <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                      <div className="flex-1 space-y-2 sm:space-y-3">
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 bg-linear-to-br from-teal-100 to-emerald-100 rounded-xl group-hover:scale-110 transition-transform duration-300">
-                            <VideoIcon
-                              size={18}
-                              className="text-teal-600"
-                              strokeWidth={2.5}
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 group-hover:text-teal-700 transition-colors">
-                              Video Call Session
-                            </h3>
-                            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                              <p className="text-sm sm:text-base text-gray-700">
-                                <span className="font-semibold text-gray-900">
-                                  {record.caller}
-                                </span>
-                                <span className="text-gray-400 mx-1.5">→</span>
-                                <span className="font-semibold text-gray-900">
-                                  {record.receiver}
-                                </span>
-                              </p>
-                              <span
-                                className={`px-2.5 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold inline-flex items-center gap-1.5 shadow-sm ${
-                                  record.status === 'Completed'
-                                    ? 'bg-linear-to-r from-emerald-50 to-green-50 text-emerald-700 ring-1 ring-emerald-200'
-                                    : 'bg-linear-to-r from-red-50 to-pink-50 text-red-700 ring-1 ring-red-200'
-                                }`}
-                              >
-                                <div
-                                  className={`w-1.5 h-1.5 rounded-full ${
-                                    record.status === 'Completed'
-                                      ? 'bg-emerald-500'
-                                      : 'bg-red-500'
-                                  }`}
-                                />
-                                {record.status}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3 sm:gap-4 justify-end md:justify-start">
-                        <div className="flex items-center gap-2 text-gray-700 bg-linear-to-br from-gray-50 to-gray-100 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-gray-200 shadow-sm group-hover:shadow-md transition-all duration-200">
-                          <Clock
-                            size={18}
-                            className="text-teal-500"
-                            strokeWidth={2.5}
-                          />
-                          <span className="font-mono text-base sm:text-lg font-semibold">
-                            {record.duration}
-                          </span>
-                        </div>
-
-                        <div className="relative">
-                          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-linear-to-br from-orange-400 via-pink-400 to-pink-500 flex items-center justify-center text-white font-bold shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 ring-2 ring-white">
-                            {getInitials(record.receiver)}
-                          </div>
-                          {record.status === 'Completed' && (
-                            <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white shadow-sm" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-linear-to-r from-teal-500 to-emerald-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left rounded-b-2xl" />
-                  </div>
-                ))
-              ) : (
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 sm:p-12 text-center">
-                  <div className="max-w-md mx-auto space-y-4">
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto bg-linear-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
-                      <Search className="text-gray-400" size={32} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
-                        No results found
-                      </h3>
-                      <p className="text-sm sm:text-base text-gray-500">
-                        {searchQuery
-                          ? `No sessions matching "${searchQuery}"`
-                          : 'No sessions available at the moment.'}
-                      </p>
-                    </div>
-                    {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery('')}
-                        className="px-4 py-2 bg-linear-to-r from-teal-500 to-emerald-600 text-white rounded-xl text-sm font-medium hover:from-teal-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg"
-                      >
-                        Clear search
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* ✅ Pagination */}
-            {pagination.totalPages > 1 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 sm:mt-8 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                <div className="text-xs sm:text-sm text-gray-600">
-                  Showing{' '}
-                  <span className="font-semibold text-gray-900">
-                    {(currentPage - 1) * LIMIT + 1}–
-                    {Math.min(currentPage * LIMIT, pagination.total)}
-                  </span>{' '}
-                  of{' '}
-                  <span className="font-semibold text-gray-900">
-                    {pagination.total}
-                  </span>{' '}
-                  sessions
+                <div className="cp-duration">
+                  <Clock
+                    size={11}
+                    style={{ color: 'oklch(0.72 0.19 149)', flexShrink: 0 }}
+                    strokeWidth={2}
+                  />
+                  {record.duration}
                 </div>
 
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <button
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className={`p-2 rounded-lg transition-all duration-200 ${
-                      currentPage === 1
-                        ? 'text-gray-300 cursor-not-allowed'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-
-                  <button
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className={`hidden sm:flex px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      currentPage === 1
-                        ? 'text-gray-300 cursor-not-allowed'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    Previous
-                  </button>
-
-                  <div className="flex items-center gap-1">
-                    {getPageNumbers().map((page, idx) =>
-                      page === '...' ? (
-                        <span
-                          key={`ellipsis-${idx}`}
-                          className="w-9 h-9 flex items-center justify-center text-gray-400 text-sm"
-                        >
-                          ...
-                        </span>
-                      ) : (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg font-medium text-sm transition-all duration-200 ${
-                            currentPage === page
-                              ? 'bg-linear-to-r from-teal-500 to-emerald-600 text-white shadow-md scale-110'
-                              : 'text-gray-600 hover:bg-gray-100'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      )
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() =>
-                      setCurrentPage(p =>
-                        Math.min(pagination.totalPages, p + 1)
-                      )
-                    }
-                    disabled={currentPage === pagination.totalPages}
-                    className={`hidden sm:flex px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      currentPage === pagination.totalPages
-                        ? 'text-gray-300 cursor-not-allowed'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    Next
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      setCurrentPage(p =>
-                        Math.min(pagination.totalPages, p + 1)
-                      )
-                    }
-                    disabled={currentPage === pagination.totalPages}
-                    className={`p-2 rounded-lg transition-all duration-200 ${
-                      currentPage === pagination.totalPages
-                        ? 'text-gray-300 cursor-not-allowed'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                  >
-                    <ChevronRight size={18} />
-                  </button>
+                <div>
+                  {record.status === 'Completed' ? (
+                    <span className="cp-status cp-status-ok">
+                      <span
+                        className="cp-status-dot"
+                        style={{ background: 'oklch(0.72 0.19 149)' }}
+                      />
+                      Completed
+                    </span>
+                  ) : (
+                    <span className="cp-status cp-status-err">
+                      <span
+                        className="cp-status-dot"
+                        style={{ background: 'oklch(0.65 0.22 25)' }}
+                      />
+                      Canceled
+                    </span>
+                  )}
                 </div>
               </div>
-            )}
-          </>
+            ))}
+          </div>
         )}
+
+        {/* ── Pagination ────────────────────────────────────────────── */}
+        {!loading && pagination.totalPages > 1 && (
+          <div
+            className="cp-a3"
+            style={{
+              marginTop: 14,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 10,
+              padding: '11px 16px',
+              background: 'var(--_surface)',
+              border: '1.5px solid var(--_border)',
+              borderRadius: 'calc(var(--_radius) * 2)',
+            }}
+          >
+            <span className="cp-label">
+              Showing {rangeStart}–{rangeEnd} of {pagination.total} sessions
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button
+                className="cp-pg"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              >
+                <ChevronLeft size={13} />
+              </button>
+              {getPageNumbers().map((page, idx) =>
+                page === '...' ? (
+                  <span
+                    key={`e-${idx}`}
+                    className="cp-label"
+                    style={{ width: 32, textAlign: 'center' }}
+                  >
+                    ···
+                  </span>
+                ) : (
+                  <button
+                    key={page}
+                    className={`cp-pg${currentPage === page ? ' active' : ''}`}
+                    onClick={() => setCurrentPage(page as number)}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
+              <button
+                className="cp-pg"
+                disabled={currentPage === pagination.totalPages}
+                onClick={() =>
+                  setCurrentPage(p => Math.min(pagination.totalPages, p + 1))
+                }
+              >
+                <ChevronRight size={13} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Footer ───────────────────────────────────────────────── */}
+        <div
+          style={{
+            marginTop: 20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+          }}
+        >
+          <span
+            style={{
+              width: 4,
+              height: 4,
+              borderRadius: '50%',
+              background: 'oklch(0.72 0.19 149)',
+              display: 'inline-block',
+              animation: 'cp-pulse 2s ease-in-out infinite',
+            }}
+          />
+          <span className="cp-label">
+            Session history · page {currentPage} of {pagination.totalPages || 1}
+          </span>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
