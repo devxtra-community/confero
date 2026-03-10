@@ -52,7 +52,7 @@ export function SignUpForm() {
       const temp_token = res.data.verificationToken;
 
       localStorage.setItem('temp_token', temp_token);
-      posthog.capture('signup_completed'); 
+      posthog.capture('signup_completed');
       router.push('/verifyotp');
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
