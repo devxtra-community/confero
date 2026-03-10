@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import Loading from '@/components/CenterLoader';
 import ProfileHover from '@/components/ProfileIcon';
+import { posthog } from '@/lib/posthog';
 
 export default function FindMatchPage() {
   const [isSearching, setIsSearching] = useState(false);
@@ -165,6 +166,7 @@ export default function FindMatchPage() {
         setPeerProfile(null);
         setCurrentQuote(0);
         socket.emit('match:start', { skills });
+        posthog.capture('match_search_started', { skill_count: skills.length });
       } catch {
         toast.error('Unable to start matching');
       }
@@ -201,6 +203,7 @@ export default function FindMatchPage() {
       setPeerId(peerId);
       setIsSearching(false);
       setMatchFound(true);
+      posthog.capture('match_found', { session_id: sessionId });
     };
 
     socket.on('match:found', onMatchFound);
@@ -229,6 +232,7 @@ export default function FindMatchPage() {
       clearInterval(autoJoinRef.current);
       autoJoinRef.current = null;
     }
+    posthog.capture('match_accepted');
     router.push(`/session?callId=${sessionId}&peerId=${peerId}`);
   };
 
@@ -238,6 +242,7 @@ export default function FindMatchPage() {
       autoJoinRef.current = null;
     }
     socket.emit('match:decline', { sessionId, peerId });
+    posthog.capture('match_declined');
     setMatchFound(false);
     setSessionId(null);
     setPeerId(null);

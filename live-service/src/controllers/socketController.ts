@@ -83,6 +83,6 @@ export const socketController = async (socket: Socket) => {
       PresenceService.clearInCall(user.userId),
     ]);
 
-    logger.info(`User disconnected and Redis cleaned: ${user.userId}`);
+    logger.info('User disconnected & Redis Cleaned', { userId: user.userId });
   });
 };

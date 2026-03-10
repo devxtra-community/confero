@@ -5,6 +5,7 @@ import { GoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 import { ArrowRight, MonitorX } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { posthog } from '@/lib/posthog';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -63,6 +64,10 @@ export default function GoogleButton() {
             const role = res.data.role;
             console.log(role);
             const target = role === 'admin' ? '/admin' : '/home';
+            posthog.identify(res.data.userId, {
+              role,
+            });
+            posthog.capture('login_completed', { method: 'google' });
             console.log('navigating navigating');
             router.replace(target);
             router.refresh();

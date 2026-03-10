@@ -32,5 +32,8 @@ app.use('/auth', authRouter);
 app.use('/live', liveProxy);
 app.use('/users', userRouter);
 app.use('/admin', adminRouter);
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', service: 'gateway' });
+});
 
 export default app;
