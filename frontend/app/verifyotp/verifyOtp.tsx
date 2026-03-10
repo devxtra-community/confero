@@ -69,7 +69,7 @@ export default function VerifyOtpPage() {
       setLoading(true);
 
       await axiosInstance.post(
-        '/auth/verifyOtp',
+        '/auth/verifyotp',
         { otp },
         {
           headers: {
