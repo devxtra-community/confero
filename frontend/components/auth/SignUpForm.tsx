@@ -10,6 +10,7 @@ import { Button } from '../ui/button';
 import { axiosInstance } from '@/lib/axiosInstance';
 import Link from 'next/link';
 import axios from 'axios';
+import { posthog } from '@/lib/posthog';
 
 export function SignUpForm() {
   const router = useRouter();
@@ -51,6 +52,7 @@ export function SignUpForm() {
       const temp_token = res.data.verificationToken;
 
       localStorage.setItem('temp_token', temp_token);
+      posthog.capture('signup_completed');
       router.push('/verifyotp');
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {

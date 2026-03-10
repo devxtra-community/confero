@@ -22,6 +22,7 @@ import {
   Clock,
 } from 'lucide-react';
 import Link from 'next/link';
+import { posthog } from '@/lib/posthog';
 
 type PermissionState = 'idle' | 'requesting' | 'granted' | 'denied';
 type CallEndReason =
@@ -290,6 +291,7 @@ function VideoCallInner() {
       peerUserIdRef.current = peer;
       iceServersRef.current = iceServers;
       setStatus('Partner ready — connecting...');
+      posthog.capture('call_started', { session_id: cId });
 
       try {
         const pc = getOrCreatePC(iceServers);
@@ -377,6 +379,10 @@ function VideoCallInner() {
       localStreamRef.current = null;
       cleanup();
       setCallEndReason(reason ?? 'USER_ENDED');
+      posthog.capture('call_ended', {
+        reason: reason ?? 'USER_ENDED',
+        duration_seconds: callDurationRef.current,
+      });
       setCallEnded(true);
     };
 
@@ -425,6 +431,10 @@ function VideoCallInner() {
     socket.emit('call:end', {
       callId: callIdRef.current,
       reason: 'USER_ENDED',
+    });
+    posthog.capture('call_ended', {
+      reason: 'USER_ENDED',
+      duration_seconds: callDurationRef.current,
     });
     cleanup();
     setSelfLeft(true);

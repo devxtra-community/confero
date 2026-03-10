@@ -9,9 +9,11 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "amqplib": "0.10.3",
     "@aws-sdk/client-s3": "^3.986.0",
     "@aws-sdk/s3-request-presigner": "^3.986.0",
+    "@logtail/node": "^0.5.8",
+    "@logtail/winston": "^0.5.8",
+    "amqplib": "0.10.3",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",

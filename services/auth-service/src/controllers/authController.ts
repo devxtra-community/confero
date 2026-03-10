@@ -26,7 +26,7 @@ export const register = async (req: Request, res: Response) => {
     fullName
   );
 
-  logger.info('OTP sent to email');
+  logger.info('OTP sent to Mail', { email });
 
   res.status(201).json({
     success: true,
@@ -125,7 +125,7 @@ export const googleLogin = async (req: Request, res: Response) => {
     });
   }
 
-  logger.info('Google login successful');
+  logger.info('Login successful', { userId, role });
 
   res.cookie(
     'refreshToken',

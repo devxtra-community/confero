@@ -13,7 +13,7 @@ export const matchingService = {
     skills: string[]
   ): Promise<MatchSession | 'ALREADY_SEARCHING' | null> {
     const isOnline = await presenceRepository.isOnline(userId);
-    console.log(isOnline);
+    // console.log(isOnline);
     if (!isOnline) return null;
 
     const state = await matchingRepository.getState(userId);

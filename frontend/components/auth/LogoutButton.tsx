@@ -3,6 +3,7 @@ import { axiosInstance } from '@/lib/axiosInstance';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { socket } from '@/lib/socket';
+import { posthog } from '@/lib/posthog';
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function LogoutButton() {
     }
 
     setTimeout(() => {
+      posthog.reset();
       router.push('/login');
     }, 1200);
   };

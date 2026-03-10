@@ -14,6 +14,7 @@ import { axiosInstance } from '@/lib/axiosInstance';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { posthog } from '@/lib/posthog';
 
 export function LoginRight() {
   const [email, setEmail] = useState('');
@@ -50,6 +51,11 @@ export function LoginRight() {
 
       const role = res.data.role;
       const target = role === 'admin' ? '/admin' : '/home';
+      posthog.identify(res.data.userId, {
+        email,
+        role,
+      });
+      posthog.capture('login_completed', { method: 'email' });
       router.replace(target);
       router.refresh();
 
