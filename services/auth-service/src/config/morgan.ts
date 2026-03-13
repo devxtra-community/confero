@@ -12,16 +12,16 @@ export const morganMiddleware = morgan((tokens, req, res) => {
     status,
     responseTime,
     contentLength: tokens.res(req, res, 'content-length') || 0,
-    slow: responseTime > 1000,       
-    error: status >= 500,            
+    slow: responseTime > 1000,
+    error: status >= 500,
   };
 
   if (status >= 500) {
-    logger.error(logData);           
+    logger.error(logData);
   } else if (responseTime > 1000) {
-    logger.warn(logData);            
+    logger.warn(logData);
   } else {
-    logger.info(logData);            
+    logger.info(logData);
   }
 
   return null;
