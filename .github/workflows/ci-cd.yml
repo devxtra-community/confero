@@ -18,10 +18,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.4.0
         with:
           node-version: 22
 
@@ -50,7 +50,7 @@ jobs:
           cp services/auth-service/package.json auth-service-prod/
 
       - name: Upload auth-service artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: auth-service-prod
           path: auth-service-prod
@@ -63,7 +63,7 @@ jobs:
           cp live-service/package.json live-service-prod/
 
       - name: Upload live-service artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: live-service-prod
           path: live-service-prod
@@ -79,7 +79,7 @@ jobs:
           cp gateway/package.json gateway-prod/
 
       - name: Upload gateway artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: gateway-prod
           path: gateway-prod
@@ -92,19 +92,19 @@ jobs:
 
     steps:
       - name: Download auth-service artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.3.0
         with:
           name: auth-service-prod
           path: auth-service-prod
 
       - name: Download live-service artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.3.0
         with:
           name: live-service-prod
           path: live-service-prod
 
       - name: Download gateway artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.3.0
         with:
           name: gateway-prod
           path: gateway-prod
